@@ -18,7 +18,7 @@ namespace Alchemy.Editor
 
         const string Name_ScriptAttributeUtility = "UnityEditor.ScriptAttributeUtility";
 
-        public static Type GetDrawerTypeForType(Type classType)
+        public static Type GetDrawerTypeForType(Type classType, bool isManagedReferenceProperty)
         {
             var instance = EditorAssembly.CreateInstance(Name_ScriptAttributeUtility);
             var utilityType = instance.GetType();
@@ -26,7 +26,31 @@ namespace Alchemy.Editor
             var bindingFlags = BindingFlags.NonPublic | BindingFlags.Static;
             var methodInfo = utilityType.GetMethod(nameof(GetDrawerTypeForType), bindingFlags);
 
+#if UNITY_2023_3_OR_NEWER
+            return (Type)methodInfo.Invoke(instance, new object[] { classType, null, isManagedReferenceProperty });
+#elif UNITY_2023_2_OR_NEWER
+            // Unity 2023.2.15f1 added a new parameter to the method
+            var version = UnityEditorInternal.InternalEditorUtility.GetUnityVersion();
+            if (version.Build >= 15)
+            {
+                return (Type)methodInfo.Invoke(instance, new object[] { classType, isManagedReferenceProperty });
+            }
+            else
+            {
+                return (Type)methodInfo.Invoke(instance, new object[] { classType });
+            }
+#elif UNITY_2022_3_OR_NEWER
+            // Unity 2022.3.23f1 added a new parameter to the method
+            var version = UnityEditorInternal.InternalEditorUtility.GetUnityVersion();
+            if (version.Build >= 23)
+            {
+                return (Type)methodInfo?.Invoke(instance, new object[] { classType, isManagedReferenceProperty });
+            }
+            return (Type)methodInfo?.Invoke(instance, new object[] { classType });
+#else
+            _ = isManagedReferenceProperty; // discard
             return (Type)methodInfo.Invoke(instance, new object[] { classType });
+#endif
         }
 
         const string Name_M_Clickable = "m_Clickable";

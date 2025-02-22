@@ -1,6 +1,6 @@
 # Alchemy
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/header.png" width="800">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/header.png" width="800">
 
 [![license](https://img.shields.io/badge/LICENSE-MIT-green.svg)](LICENSE)
 
@@ -12,7 +12,7 @@ Alchemyは属性を使用したInspector拡張を提供するライブラリで�
 
 属性ベースの簡単かつ強力なエディタ拡張を追加するほか、独自のシリアル化プロセスを介してあらゆる型(Dictionary, Hashset, Nullable, Tuple, etc...)をシリアル化し、Inspector上で編集することが可能になります。Source Generatorを用いて必要なコードを動的に生成するため、partialにした対象型に属性を付加するだけで機能します。Odinのように専用のクラスを継承する必要はありません。
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/img-v2.0.png" width="800">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/img-v2.0.png" width="800">
 
 また、v2.0の新機能としてEditorWindow拡張とHierarchy拡張が追加されました。これらを用いることで、エディタでの開発フローを効率化するツールを簡単に作成できるようになります。
 
@@ -39,7 +39,7 @@ Alchemyは属性を使用したInspector拡張を提供するライブラリで�
 3. 以下のURLを入力する
 
 ```
-https://github.com/AnnulusGames/Alchemy.git?path=/Alchemy/Assets/Alchemy
+https://github.com/yn01-dev/Alchemy.git?path=/Alchemy/Assets/Alchemy
 ```
 
 あるいはPackages/manifest.jsonを開き、dependenciesブロックに以下を追記
@@ -47,14 +47,14 @@ https://github.com/AnnulusGames/Alchemy.git?path=/Alchemy/Assets/Alchemy
 ```json
 {
     "dependencies": {
-        "com.annulusgames.alchemy": "https://github.com/AnnulusGames/Alchemy.git?path=/Alchemy/Assets/Alchemy"
+        "com.annulusgames.alchemy": "https://github.com/yn01-dev/Alchemy.git?path=/Alchemy/Assets/Alchemy"
     }
 }
 ```
 
 ## ドキュメント
 
-ドキュメントのフルバージョンは[こちら](https://annulusgames.github.io/Alchemy/)から確認できます。
+ドキュメントのフルバージョンは[こちら](https://docs.yn01.dev/Alchemy/)から確認できます。
 
 ## 基本的な使い方
 
@@ -83,7 +83,7 @@ public class AttributesExample : MonoBehaviour
 }
 ```
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/img-attributes-example.png" width="600">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/img-attributes-example.png" width="600">
 
 各フィールドをグループ化する属性も用意されています。各グループはスラッシュ`/`で区切ることでネストできます。
 
@@ -113,7 +113,7 @@ public class GroupAttributesExample : MonoBehaviour
 }
 ```
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/img-group-1.png" width="600">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/img-group-1.png" width="600">
 
 メソッドに`[Button]`属性を付加することで、メソッドをInspectorから実行することが可能になります。
 
@@ -157,9 +157,9 @@ public class ButtonExample : MonoBehaviour
 }
 ```
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/img-button.png" width="600">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/img-button.png" width="600">
 
-Alchemyでは他にも数多くの属性が提供されています。利用可能な属性の一覧は[ドキュメント](https://annulusgames.github.io/Alchemy/articles/ja/inspector-extension-with-attributes.html)から確認できます。
+Alchemyでは他にも数多くの属性が提供されています。利用可能な属性の一覧は[ドキュメント](https://docs.yn01.dev/Alchemy/articles/ja/inspector-extension-with-attributes.html)から確認できます。
 
 ## インターフェース/抽象クラスを編集する
 
@@ -195,34 +195,34 @@ public class SerializeReferenceExample : MonoBehaviour
 }
 ```
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/img-serialize-reference.png" width="600">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/img-serialize-reference.png" width="600">
 
 インターフェース・抽象クラスは上のように表示され、ドロップダウンから子クラスを選択して生成することができます。
 
-詳細は[SerializeReference](https://annulusgames.github.io/Alchemy/articles/ja/serialize-reference.html)のページを参照してください。
+詳細は[SerializeReference](https://docs.yn01.dev/Alchemy/articles/ja/serialize-reference.html)のページを参照してください。
 
 ## Hierarchy
 
 Alchemyを導入することで、Hierarchyを拡張するいくつかの機能が追加されます。
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/img-hierarchy.png" width="600">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/img-hierarchy.png" width="600">
 
 ### トグルとアイコン
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/gif-hierarchy-toggle.gif" width="600">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/gif-hierarchy-toggle.gif" width="600">
 
 Hierarchyにオブジェクトのアクティブ/非アクティブを切り替えるトグルと、オブジェクトの持つコンポーネントのアイコンの表示を追加できます。これらはProjectSettingsから設定が可能です。
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/img-project-settings.png" width="600">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/img-project-settings.png" width="600">
 
 ### 装飾
 
 また、CreateメニューからHierarchyを装飾するためのオブジェクトを作成可能になります。
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/img-create-hierarchy-object.png" width="600">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/img-create-hierarchy-object.png" width="600">
 
 これらのオブジェクトはビルド時に自動的に除外されます。(子オブジェクトを持つ場合は全てデタッチしてから削除されます。)
-詳細は[Hierarchyの装飾](https://annulusgames.github.io/Alchemy/articles/ja/decorating-hierarchy.html)を参照してください。
+詳細は[Hierarchyの装飾](https://docs.yn01.dev/Alchemy/articles/ja/decorating-hierarchy.html)を参照してください。
 
 ## AlchemyEditorWindow
 
@@ -274,9 +274,9 @@ public class EditorWindowExample : AlchemyEditorWindow
 }
 ```
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/img-editor-window.png" width="600">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/img-editor-window.png" width="600">
 
-`AlchemyEditorWindow`を継承して作成したウィンドウのデータは、プロジェクトのProjectSettingsフォルダにjson形式で保存されます。詳細は[EditorWindowのデータを保存する](https://annulusgames.github.io/Alchemy/articles/ja/saving-editor-window-data.html)のページを参照してください。
+`AlchemyEditorWindow`を継承して作成したウィンドウのデータは、プロジェクトのProjectSettingsフォルダにjson形式で保存されます。詳細は[EditorWindowのデータを保存する](https://docs.yn01.dev/Alchemy/articles/ja/saving-editor-window-data.html)のページを参照してください。
 
 ## シリアル化拡張を使用する
 
@@ -312,9 +312,9 @@ public partial class AlchemySerializationExample : MonoBehaviour
 }
 ```
 
-<img src="https://github.com/AnnulusGames/Alchemy/blob/main/docs/images/img-serialization-sample.png" width="600">
+<img src="https://github.com/yn01-dev/Alchemy/blob/main/docs/images/img-serialization-sample.png" width="600">
 
-シリアル化プロセスの技術的な詳細についてはドキュメントの[Alchemyのシリアル化プロセス](https://annulusgames.github.io/Alchemy/articles/ja/alchemy-serialization-process.html)を参照してください。
+シリアル化プロセスの技術的な詳細についてはドキュメントの[Alchemyのシリアル化プロセス](https://docs.yn01.dev/Alchemy/articles/ja/alchemy-serialization-process.html)を参照してください。
 
 ## ヘルプ
 

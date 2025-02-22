@@ -17,6 +17,8 @@ namespace Alchemy.Editor.Elements
 
             switch (property.propertyType)
             {
+                // NOTE: RectOffset is a generic property type, but it doesn't have a SerializeField. Instead, use PropertyField.
+                case SerializedPropertyType.Generic when property.type == "RectOffset":
                 default:
                     element = new PropertyField(property);
                     break;
@@ -32,8 +34,9 @@ namespace Alchemy.Editor.Elements
                     break;
                 case SerializedPropertyType.Generic:
                     var targetType = property.GetPropertyType(isArrayElement);
+                    var isManagedReferenceProperty = property.propertyType == SerializedPropertyType.ManagedReference;
 
-                    if (InternalAPIHelper.GetDrawerTypeForType(targetType) != null)
+                    if (InternalAPIHelper.GetDrawerTypeForType(targetType, isManagedReferenceProperty) != null)
                     {
                         element = new PropertyField(property);
                     }

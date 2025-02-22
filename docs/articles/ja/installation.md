@@ -16,7 +16,7 @@ Package Managerを利用してAlchemyをインストールできます。
 3. 以下のURLを入力する
 
 ```text
-https://github.com/AnnulusGames/Alchemy.git?path=/Alchemy/Assets/Alchemy
+https://github.com/yn01-dev/Alchemy.git?path=/Alchemy/Assets/Alchemy
 ```
 
 ![img1](../../images/img-setup-1.png)
@@ -26,7 +26,7 @@ https://github.com/AnnulusGames/Alchemy.git?path=/Alchemy/Assets/Alchemy
 ```json
 {
     "dependencies": {
-        "com.annulusgames.alchemy": "https://github.com/AnnulusGames/Alchemy.git?path=/Alchemy/Assets/Alchemy"
+        "com.annulusgames.alchemy": "https://github.com/yn01-dev/Alchemy.git?path=/Alchemy/Assets/Alchemy"
     }
 }
 ```
