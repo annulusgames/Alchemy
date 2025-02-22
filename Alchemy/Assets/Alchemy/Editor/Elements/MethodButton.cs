@@ -8,22 +8,32 @@ namespace Alchemy.Editor.Elements
     {
         const string ButtonLabelText = "Invoke";
 
-        public MethodButton(object target, MethodInfo methodInfo)
+        public MethodButton(object target, MethodInfo methodInfo, bool useParameters)
         {
             var parameters = methodInfo.GetParameters();
+            var parameterObjects = new object[parameters.Length];
+            for(int i = 0; i < parameters.Length; i++)
+            {
+                if(parameters[i].HasDefaultValue)
+                    parameterObjects[i] = parameters[i].DefaultValue;
+                else
+                    parameterObjects[i] = TypeHelper.CreateDefaultInstance(parameters[i].ParameterType);
+            }
 
             // Create parameterless button
-            if (parameters.Length == 0)
+            if (!useParameters || parameters.Length == 0)
             {
-                button = new Button(() => methodInfo.Invoke(target, null))
-                {
-                    text = methodInfo.Name
-                };
+                if(parameters.Length > 0)
+                    button = new Button(() => methodInfo.Invoke(target, parameterObjects));
+                else
+                    button = new Button(() => methodInfo.Invoke(target, null));
+
+                button.text = ObjectNames.NicifyVariableName(methodInfo.Name);
+                button.tooltip = methodInfo.ToString();
                 Add(button);
                 return;
             }
 
-            var parameterObjects = new object[parameters.Length];
 
             var box = new HelpBox();
             Add(box);
@@ -59,7 +69,6 @@ namespace Alchemy.Editor.Elements
             {
                 var index = i;
                 var parameter = parameters[index];
-                parameterObjects[index] = TypeHelper.CreateDefaultInstance(parameter.ParameterType);
                 var element = new GenericField(parameterObjects[index], parameter.ParameterType, ObjectNames.NicifyVariableName(parameter.Name));
                 element.OnValueChanged += x => parameterObjects[index] = x;
                 element.style.paddingRight = 4f;

@@ -18,7 +18,11 @@ namespace Alchemy.Inspector
     }
 
     [AttributeUsage(AttributeTargets.Method)]
-    public sealed class ButtonAttribute : Attribute { }
+    public sealed class ButtonAttribute : Attribute
+	{
+		public ButtonAttribute(bool useParameters =  true) => this.useParameters = useParameters;
+		public readonly bool useParameters;
+	}
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class ShowInInspectorAttribute : Attribute { }
