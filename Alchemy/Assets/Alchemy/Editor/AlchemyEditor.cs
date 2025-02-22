@@ -61,8 +61,9 @@ namespace Alchemy.Editor
         }
 
         public override VisualElement CreateInspectorGUI()
-        {
-            var root = new VisualElement();
+		{
+			var settings = AlchemySettings.GetOrCreateSettings();
+			var root = new VisualElement();
             var targetType = target.GetType();
 
             if (targetType.HasCustomAttribute<DisableAlchemyEditorAttribute>())
@@ -80,7 +81,7 @@ namespace Alchemy.Editor
 #endif
 
             // Add script field
-            if (targetType.GetCustomAttribute<HideScriptFieldAttribute>() == null)
+            if (!settings.AlwaysHideScriptField && targetType.GetCustomAttribute<HideScriptFieldAttribute>() == null)
             {
                 var scriptField = new PropertyField(serializedObject.FindProperty(ScriptFieldName));
                 scriptField.SetEnabled(false);
