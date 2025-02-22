@@ -16,7 +16,7 @@ You can install Alchemy via the Package Manager.
 3. Enter the following URL:
 
 ```text
-https://github.com/AnnulusGames/Alchemy.git?path=/Alchemy/Assets/Alchemy
+https://github.com/yn01-dev/Alchemy.git?path=/Alchemy/Assets/Alchemy
 ```
 
 ![img1](../../images/img-setup-1.png)
@@ -26,7 +26,7 @@ Alternatively, you can add the following line to the dependencies block in your 
 ```json
 {
     "dependencies": {
-        "com.annulusgames.alchemy": "https://github.com/AnnulusGames/Alchemy.git?path=/Alchemy/Assets/Alchemy"
+        "com.annulusgames.alchemy": "https://github.com/yn01-dev/Alchemy.git?path=/Alchemy/Assets/Alchemy"
     }
 }
 ```

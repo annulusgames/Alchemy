@@ -2055,6 +2055,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 10a01c03cb52744d29a15035954b9bd2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  qux:
+    m_Left: 1
+    m_Right: 2
+    m_Top: 3
+    m_Bottom: 4
   foo: 0
   bar: {x: 0, y: 0, z: 0}
   baz: {fileID: 0}

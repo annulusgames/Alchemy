@@ -118,10 +118,11 @@ namespace Alchemy.Editor
 
                     VisualElement element = null;
                     var property = findPropertyFunc(member.Name);
+                    var isManagedReferenceProperty = property?.propertyType == SerializedPropertyType.ManagedReference;
 
                     // Add default PropertyField if the property has a custom PropertyDrawer
-                    if ((member is FieldInfo fieldInfo && InternalAPIHelper.GetDrawerTypeForType(fieldInfo.FieldType) != null) ||
-                        (member is PropertyInfo propertyInfo && InternalAPIHelper.GetDrawerTypeForType(propertyInfo.PropertyType) != null))
+                    if ((member is FieldInfo fieldInfo && InternalAPIHelper.GetDrawerTypeForType(fieldInfo.FieldType, isManagedReferenceProperty) != null) ||
+                        (member is PropertyInfo propertyInfo && InternalAPIHelper.GetDrawerTypeForType(propertyInfo.PropertyType, isManagedReferenceProperty) != null))
                     {
                         if (property != null)
                         {

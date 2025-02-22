@@ -1,5 +1,32 @@
-{
+
     "hierarchyObjectMode": 2,
     "showHierarchyToggles": true,
-    "showComponentIcons": true
+    "showComponentIcons": true,
+    "showTreeMap": false,
+    "treeMapColor": {
+        "r": 0.5299999713897705,
+        "g": 0.5299999713897705,
+        "b": 0.5299999713897705,
+        "a": 0.44999998807907107
+    },
+    "showSeparator": false,
+    "showRowShading": false,
+    "separatorColor": {
+        "r": 0.1899999976158142,
+        "g": 0.1899999976158142,
+        "b": 0.1899999976158142,
+        "a": 0.0
+    },
+    "evenRowColor": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.07000000029802323
+    },
+    "oddRowColor": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+    }
 }

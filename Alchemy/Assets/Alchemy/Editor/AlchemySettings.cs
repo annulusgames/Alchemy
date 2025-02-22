@@ -68,6 +68,32 @@ namespace Alchemy.Editor
                                 EditorGUILayout.PropertyField(serializedObject.FindProperty("hierarchyObjectMode"));
                                 EditorGUILayout.PropertyField(serializedObject.FindProperty("showHierarchyToggles"), new GUIContent("Show Toggles"));
                                 EditorGUILayout.PropertyField(serializedObject.FindProperty("showComponentIcons"));
+                                var showTreeMap = serializedObject.FindProperty("showTreeMap");
+                                EditorGUILayout.PropertyField(showTreeMap);
+                                if (showTreeMap.boolValue)
+                                {
+                                    EditorGUI.indentLevel++;
+                                    EditorGUILayout.PropertyField(serializedObject.FindProperty("treeMapColor"), new GUIContent("Color"));
+                                    EditorGUI.indentLevel--;
+                                }
+
+                                var showSeparator = serializedObject.FindProperty("showSeparator");
+                                EditorGUILayout.PropertyField(showSeparator, new GUIContent("Show Row Separator"));
+                                if (showSeparator.boolValue)
+                                {
+                                    EditorGUI.indentLevel++;
+                                    EditorGUILayout.PropertyField(serializedObject.FindProperty("separatorColor"), new GUIContent("Color"));
+                                    EditorGUI.indentLevel--;
+                                    var showRowShading = serializedObject.FindProperty("showRowShading");
+                                    EditorGUILayout.PropertyField(showRowShading);
+                                    if (showRowShading.boolValue)
+                                    {
+                                        EditorGUI.indentLevel++;
+                                        EditorGUILayout.PropertyField(serializedObject.FindProperty("evenRowColor"));
+                                        EditorGUILayout.PropertyField(serializedObject.FindProperty("oddRowColor"));
+                                        EditorGUI.indentLevel--;
+                                    }
+                                }
 
                                 if (changeCheck.changed)
                                 {
@@ -84,9 +110,23 @@ namespace Alchemy.Editor
         [SerializeField] HierarchyObjectMode hierarchyObjectMode = HierarchyObjectMode.RemoveInBuild;
         [SerializeField] bool showHierarchyToggles;
         [SerializeField] bool showComponentIcons;
+        [SerializeField] bool showTreeMap;
+        [SerializeField] Color treeMapColor = new(0.53f, 0.53f, 0.53f, 0.45f);
+        [SerializeField] bool showSeparator;
+        [SerializeField] bool showRowShading;
+        [SerializeField] Color separatorColor = new(0.19f, 0.19f, 0.19f, 0f);
+        [SerializeField] Color evenRowColor = new(0f, 0f, 0f, 0.07f);
+        [SerializeField] Color oddRowColor = Color.clear;
 
         public HierarchyObjectMode HierarchyObjectMode => hierarchyObjectMode;
         public bool ShowHierarchyToggles => showHierarchyToggles;
         public bool ShowComponentIcons => showComponentIcons;
+        public bool ShowTreeMap => showTreeMap;
+        public Color TreeMapColor => treeMapColor;
+        public bool ShowSeparator => showSeparator;
+        public bool ShowRowShading => showRowShading;
+        public Color SeparatorColor => separatorColor;
+        public Color EvenRowColor => evenRowColor;
+        public Color OddRowColor => oddRowColor;
     }
 }
