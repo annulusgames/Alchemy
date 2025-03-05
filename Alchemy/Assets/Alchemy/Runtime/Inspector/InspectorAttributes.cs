@@ -18,7 +18,12 @@ namespace Alchemy.Inspector
     }
 
     [AttributeUsage(AttributeTargets.Method)]
-    public sealed class ButtonAttribute : Attribute { }
+    public sealed class ButtonAttribute : Attribute
+    {
+        public ButtonAttribute() => LabelText = null;
+        public ButtonAttribute(string labelText) => LabelText = labelText;
+        public string LabelText { get; }
+    }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class ShowInInspectorAttribute : Attribute { }

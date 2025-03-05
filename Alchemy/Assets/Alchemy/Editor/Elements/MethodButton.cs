@@ -1,4 +1,5 @@
 using System.Reflection;
+using Alchemy.Inspector;
 using UnityEditor;
 using UnityEngine.UIElements;
 
@@ -17,7 +18,7 @@ namespace Alchemy.Editor.Elements
             {
                 button = new Button(() => methodInfo.Invoke(target, null))
                 {
-                    text = methodInfo.Name
+                    text = methodInfo.GetCustomAttribute<ButtonAttribute>().LabelText ?? methodInfo.Name
                 };
                 Add(button);
                 return;
@@ -30,7 +31,7 @@ namespace Alchemy.Editor.Elements
 
             foldout = new Foldout()
             {
-                text = methodInfo.Name,
+                text = methodInfo.GetCustomAttribute<ButtonAttribute>().LabelText ?? methodInfo.Name,
                 value = false,
                 style = {
                     flexGrow = 1f
