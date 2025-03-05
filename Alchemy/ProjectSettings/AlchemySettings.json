@@ -2,6 +2,7 @@
     "hierarchyObjectMode": 2,
     "showHierarchyToggles": true,
     "showComponentIcons": true,
+    "alwaysHideScriptField": false
     "showTreeMap": false,
     "treeMapColor": {
         "r": 0.5299999713897705,
