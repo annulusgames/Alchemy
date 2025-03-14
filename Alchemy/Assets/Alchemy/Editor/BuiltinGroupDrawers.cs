@@ -1,59 +1,46 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
-using UnityEngine.UIElements;
+using Alchemy.Editor.Elements;
+using Alchemy.Inspector;
 using UnityEditor;
 using UnityEditor.UIElements;
-using Alchemy.Inspector;
-using Alchemy.Editor.Elements;
+using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Alchemy.Editor.Drawers
 {
     [CustomGroupDrawer(typeof(GroupAttribute))]
     public sealed class GroupDrawer : AlchemyGroupDrawer
     {
+        private readonly StyleSheet _styleSheet = Resources.Load<StyleSheet>("Elements/GroupDrawer-Styles");
+
         public override VisualElement CreateRootElement(string label)
         {
-            return new Box()
-            {
-                style = {
-                    width = Length.Percent(100f),
-                    marginTop = 3f,
-                    paddingBottom = 2f,
-                    paddingRight = 1f,
-                    paddingLeft = 1f,
-                }
-            };
+            Box box = new();
+            box.styleSheets.Add(_styleSheet);
+            box.AddToClassList("group__box");
+            
+            GUIHelper.ModifyChildFoldouts(box, "group__box__child-foldout");
+            
+            return box;
         }
     }
 
     [CustomGroupDrawer(typeof(BoxGroupAttribute))]
     public sealed class BoxGroupDrawer : AlchemyGroupDrawer
     {
+        private readonly StyleSheet _styleSheet = Resources.Load<StyleSheet>("Elements/BoxGroupDrawer-Styles");
+
         public override VisualElement CreateRootElement(string label)
         {
-            var helpBox = new HelpBox()
-            {
-                text = label,
-                style = {
-                    flexDirection = FlexDirection.Column,
-                    width = Length.Percent(100f),
-                    marginTop = 3f,
-                    paddingBottom = 3f,
-                    paddingRight = 3f,
-                    paddingLeft = 3f,
-                }
-            };
+            var helpBox = new HelpBox { text = label };
+            
+            helpBox.styleSheets.Add(_styleSheet);
+            helpBox.AddToClassList("box-group__help-box");
 
-            var labelElement = helpBox.Q<Label>();
-            labelElement.style.top = 2f;
-            labelElement.style.left = 2f;
-            labelElement.style.fontSize = 12f;
-            labelElement.style.minHeight = EditorGUIUtility.singleLineHeight;
-            labelElement.style.unityFontStyleAndWeight = FontStyle.Bold;
-            labelElement.style.alignSelf = Align.Stretch;
-
+            GUIHelper.ModifyChildFoldouts(helpBox, "box-group__help-box__child-foldout");
+            
             return helpBox;
         }
     }
@@ -61,7 +48,10 @@ namespace Alchemy.Editor.Drawers
     [CustomGroupDrawer(typeof(TabGroupAttribute))]
     public sealed class TabGroupDrawer : AlchemyGroupDrawer
     {
+        private readonly StyleSheet _styleSheet = Resources.Load<StyleSheet>("Elements/TabGroupDrawer-Styles");
+        
         VisualElement rootElement;
+        private VisualElement pageRoot;
         readonly Dictionary<string, VisualElement> tabElements = new();
 
         string[] keyArrayCache = new string[0];
@@ -80,19 +70,12 @@ namespace Alchemy.Editor.Drawers
             int.TryParse(EditorUserSettings.GetConfigValue(configKey), out tabIndex);
             prevTabIndex = tabIndex;
 
-            rootElement = new HelpBox()
-            {
-                style = {
-                    flexDirection = FlexDirection.Column,
-                    width = Length.Percent(100f),
-                    marginTop = 3f,
-                    paddingBottom = 3f,
-                    paddingRight = 3f,
-                    paddingLeft = 3f,
-                }
-            };
+            rootElement = new HelpBox();
             rootElement.Remove(rootElement.Q<Label>());
 
+            rootElement.styleSheets.Add(_styleSheet);
+            rootElement.AddToClassList("tab-group__help-box");
+            
             var tabGUIElement = new IMGUIContainer(() =>
             {
                 var rect = EditorGUILayout.GetControlRect();
@@ -111,17 +94,16 @@ namespace Alchemy.Editor.Drawers
                 {
                     kv.Value.style.display = keyArrayCache[tabIndex] == kv.Key ? DisplayStyle.Flex : DisplayStyle.None;
                 }
-            })
-            {
-                style = {
-                    width = Length.Percent(100f),
-                    marginLeft = 0f,
-                    marginRight = 0f,
-                    marginTop = 0f
-                }
-            };
+            });
+            tabGUIElement.AddToClassList("tab-group__tab-section");
+            
             rootElement.Add(tabGUIElement);
 
+            pageRoot = new VisualElement();
+            pageRoot.AddToClassList("tab-group__page-root");
+            
+            rootElement.Add(pageRoot);
+            
             return rootElement;
         }
 
@@ -132,16 +114,14 @@ namespace Alchemy.Editor.Drawers
             var tabName = tabGroupAttribute.TabName;
             if (!tabElements.TryGetValue(tabName, out var element))
             {
-                element = new VisualElement()
-                {
-                    style = {
-                        width = Length.Percent(100f)
-                    }
-                };
-                rootElement.Add(element);
+                element = new VisualElement();
+                element.AddToClassList("tab-group__tab-page");
+                pageRoot.Add(element);
                 tabElements.Add(tabName, element);
 
                 keyArrayCache = tabElements.Keys.ToArray();
+                
+                GUIHelper.ModifyChildFoldouts(element, "tab-group__tab-page__child-foldout");
             }
 
             return element;
@@ -151,19 +131,21 @@ namespace Alchemy.Editor.Drawers
     [CustomGroupDrawer(typeof(FoldoutGroupAttribute))]
     public sealed class FoldoutGroupDrawer : AlchemyGroupDrawer
     {
+        private readonly StyleSheet _styleSheet = Resources.Load<StyleSheet>("Elements/FoldoutGroupDrawer-Styles");
+        
         public override VisualElement CreateRootElement(string label)
         {
             var configKey = UniqueId + "_FoldoutGroup";
             bool.TryParse(EditorUserSettings.GetConfigValue(configKey), out var result);
 
-            var foldout = new Foldout()
+            var foldout = new Foldout
             {
-                style = {
-                    width = Length.Percent(100f)
-                },
                 text = label,
                 value = result
             };
+            
+            foldout.styleSheets.Add(_styleSheet);
+            foldout.AddToClassList("foldout-group__foldout");
 
             foldout.RegisterValueChangedCallback(x =>
             {
@@ -177,38 +159,21 @@ namespace Alchemy.Editor.Drawers
     [CustomGroupDrawer(typeof(HorizontalGroupAttribute))]
     public sealed class HorizontalGroupDrawer : AlchemyGroupDrawer
     {
+        private readonly StyleSheet _styleSheet = Resources.Load<StyleSheet>("Elements/HorizontalGroupDrawer-Styles");
+        
         public override VisualElement CreateRootElement(string label)
         {
-            var root = new VisualElement()
-            {
-                style = {
-                    width = Length.Percent(100f),
-                    flexDirection = FlexDirection.Row
-                }
-            };
+            var root = new VisualElement();
+            
+            root.styleSheets.Add(_styleSheet);
+            root.AddToClassList("horizontal-group__main-element");
 
-            static void AdjustLabel(PropertyField element, VisualElement inspector, int childCount)
-            {
-                if (element.childCount == 0) return;
-                if (element.Q<Foldout>() != null) return;
-
-                var field = element[0];
-                field.RemoveFromClassList("unity-base-field__aligned");
-
-                var labelElement = field.Q<Label>();
-                if (labelElement != null)
-                {
-                    labelElement.style.minWidth = 0f;
-                    labelElement.style.width = GUIHelper.CalculateLabelWidth(element, inspector) * 0.8f / childCount;
-                }
-            }
-
-            root.schedule.Execute(() =>
+            root.RegisterCallback<GeometryChangedEvent>(_ =>
             {
                 if (root.childCount <= 1) return;
 
                 var visualTree = root.panel.visualTree;
-
+                
                 foreach (var field in root.Query<PropertyField>().Build())
                 {
                     AdjustLabel(field, visualTree, root.childCount);
@@ -218,8 +183,30 @@ namespace Alchemy.Editor.Drawers
                     AdjustLabel(field, visualTree, root.childCount);
                 }
             });
-
+            
             return root;
+
+            static void AdjustLabel(PropertyField element, VisualElement inspector, int childCount)
+            {
+                if (element.childCount == 0) return;
+                if (element.Q<Foldout>() != null) return;
+              
+                var field = element[0];
+                field.RemoveFromClassList("unity-base-field__aligned");
+                
+                var labelElement = field.Q<Label>();
+                if (labelElement != null && !labelElement.ClassListContains("horizontal-group__property-field__label"))
+                {
+                    labelElement.AddToClassList("horizontal-group__property-field__label");
+                    labelElement.RegisterCallback<GeometryChangedEvent>(_ =>
+                    {
+                        //I'd like to use stylesheets here, but it seems values are set inline somewhere.
+                        //Therefore we too must inline, aggressively.
+                        labelElement.style.minWidth = 0f;
+                        labelElement.style.width = GUIHelper.CalculateLabelWidth(element, inspector) * 0.8f / childCount;
+                    });
+                }
+            }
         }
     }
     [CustomGroupDrawer(typeof(InlineGroupAttribute))]

@@ -1,0 +1,26 @@
+Foldout.hash-map-field-base__foldout > Toggle > VisualElement > Label {
+    -unity-font-style: bold;
+}
+
+Foldout.hash-map-field-base__foldout > #unity-content {
+    margin-bottom: 4px;
+}
+
+.hash-map-field-base__add-button {
+    min-width: 60px;
+    align-items: flex-end;
+}
+
+.hash-map-field-base__input-form > Box {
+    min-height: 26px;
+    padding-left: 6px;
+}
+
+.hash-map-field-base__input-form > Box > Label {
+    width: 100%;
+    -unity-text-align: middle-left;
+}
+
+.hash-map-field-base__empty-box {
+    padding-top: 4px;
+}

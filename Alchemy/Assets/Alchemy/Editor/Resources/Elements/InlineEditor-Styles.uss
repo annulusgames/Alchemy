@@ -1,0 +1,8 @@
+.inline-editor__object-field {
+    position: absolute;
+    width: 100%;
+}
+
+.inline-editor__foldout > Foldout > #unity-content {
+    padding-top: 2px;
+}

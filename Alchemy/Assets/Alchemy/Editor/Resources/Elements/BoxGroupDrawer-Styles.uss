@@ -1,0 +1,25 @@
+.box-group__help-box {
+    width: 100%;
+    margin-top: 3px;
+    padding-bottom: 3px;
+    padding-right: 5px;
+    padding-left: 3px;
+    flex-direction: column;
+    margin-left: 0;
+}
+
+.box-group__help-box > Label.unity-help-box__label {
+    top: 2px;
+    left: 2px;
+    font-size: 12px;
+    min-height: 18px;
+    -unity-font-style: bold;
+    align-self: stretch;
+}
+
+.box-group__help-box__child-foldout {
+}
+
+.box-group__help-box__child-foldout > Toggle {
+    margin-left: 0;
+}

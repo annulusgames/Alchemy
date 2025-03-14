@@ -14,8 +14,12 @@ namespace Alchemy.Editor.Elements
     /// </summary>
     public sealed class SerializeReferenceField : VisualElement
     {
+        private readonly StyleSheet _styleSheet = Resources.Load<StyleSheet>("Elements/SerializeReferenceField-Styles");
+            
         public SerializeReferenceField(SerializedProperty property)
         {
+            styleSheets.Add(_styleSheet);
+            
             Assert.IsTrue(property.propertyType == SerializedPropertyType.ManagedReference);
 
             style.flexDirection = FlexDirection.Row;
@@ -25,8 +29,9 @@ namespace Alchemy.Editor.Elements
             {
                 text = ObjectNames.NicifyVariableName(property.displayName)
             };
-            foldout.style.flexGrow = 1f;
+            foldout.AddToClassList("serialize-reference-field__foldout");
             foldout.BindProperty(property);
+            
             Add(foldout);
 
             buttonContainer = new IMGUIContainer(() =>
@@ -82,6 +87,7 @@ namespace Alchemy.Editor.Elements
                     dropdown.Show(position);
                 }
             });
+            buttonContainer.AddToClassList("serialize-reference-field__pick-reference-button");
 
             schedule.Execute(() =>
             {
@@ -94,10 +100,7 @@ namespace Alchemy.Editor.Elements
                 buttonContainer.style.width = GUIHelper.CalculateFieldWidth(buttonContainer, visualTree) -
                     (buttonContainer.GetFirstAncestorOfType<Foldout>() != null ? 18f : 0f);
             });
-
-            buttonContainer.style.position = Position.Absolute;
-            buttonContainer.style.top = EditorGUIUtility.standardVerticalSpacing * 0.5f;
-            buttonContainer.style.right = 0f;
+            
             Add(buttonContainer);
 
             Rebuild(property);
@@ -124,6 +127,9 @@ namespace Alchemy.Editor.Elements
             }
 
             this.Bind(property.serializedObject);
+            
+            AddToClassList(property.managedReferenceValue == null ? "serialize-reference-field--empty" : "serialize-reference-field--populated");
+            RemoveFromClassList(property.managedReferenceValue != null ? "serialize-reference-field--empty" : "serialize-reference-field--populated");
         }
     }
 }

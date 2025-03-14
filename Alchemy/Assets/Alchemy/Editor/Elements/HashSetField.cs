@@ -1,4 +1,3 @@
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -6,7 +5,12 @@ namespace Alchemy.Editor.Elements
 {
     public sealed class HashSetField : HashMapFieldBase
     {
-        public HashSetField(object collection, string label) : base(collection, label) { }
+        private readonly StyleSheet _styleSheet = Resources.Load<StyleSheet>("Elements/HashSetField-Styles");
+        
+        public HashSetField(object collection, string label) : base(collection, label)
+        {
+            styleSheets.Add(_styleSheet);
+        }
 
         public override string CollectionTypeName => "HashSet";
 
@@ -44,19 +48,15 @@ namespace Alchemy.Editor.Elements
         {
             public Item(object collection, object elementObj, string label)
             {
-                var box = new Box()
-                {
-                    style = {
-                        marginBottom = 3.5f,
-                        marginRight = -2f,
-                        flexDirection = FlexDirection.Row
-                    }
-                };
+                AddToClassList("hash-set-field__item");
+                
+                var box = new Box();
+                box.AddToClassList("hash-set-field__item__box");
 
                 var valueType = elementObj == null ? collection.GetType().GenericTypeArguments[0] : elementObj.GetType();
 
                 inputField = new GenericField(elementObj, valueType, label);
-                inputField.style.flexGrow = 1f;
+                inputField.AddToClassList("hash-set-field__item__input-field");
                 inputField.OnValueChanged += x =>
                 {
                     value = x;
@@ -66,14 +66,11 @@ namespace Alchemy.Editor.Elements
 
                 var closeButton = new Button(() => OnClose?.Invoke())
                 {
-                    style = {
-                        width = EditorGUIUtility.singleLineHeight,
-                        height = EditorGUIUtility.singleLineHeight,
-                        unityFontStyleAndWeight = FontStyle.Bold,
-                        fontSize = 10f
-                    },
-                    text = "X",
+                    name = "close-button",
+                    text = "X"
                 };
+                closeButton.AddToClassList("hash-set-field__item__close-button");
+                
                 box.Add(closeButton);
                 Add(box);
             }

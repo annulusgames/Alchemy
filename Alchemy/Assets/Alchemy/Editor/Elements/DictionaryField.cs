@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -8,8 +7,12 @@ namespace Alchemy.Editor.Elements
 {
     public sealed class DictionaryField : HashMapFieldBase
     {
+        private readonly StyleSheet _styleSheet = Resources.Load<StyleSheet>("Elements/DictionaryField-Styles");
+        
         public DictionaryField(object collection, string label) : base(collection, label)
         {
+            styleSheets.Add(_styleSheet);
+
             if (collection != null)
             {
                 keyType = collection.GetType().GenericTypeArguments[0];
@@ -69,14 +72,10 @@ namespace Alchemy.Editor.Elements
         {
             public Item(object collection, object keyValuePair)
             {
-                var box = new Box()
-                {
-                    style = {
-                        marginBottom = 3.5f,
-                        marginRight = -2f,
-                        flexDirection = FlexDirection.Row
-                    }
-                };
+                AddToClassList("dictionary-field__item");
+                
+                var box = new Box();
+                box.AddToClassList("dictionary-field__item__box");
 
                 kvType = keyValuePair.GetType();
                 var keyType = kvType.GenericTypeArguments[0];
@@ -88,39 +87,23 @@ namespace Alchemy.Editor.Elements
                 this.collection = collection;
                 this.keyValuePair = keyValuePair;
 
-                var keyValueElement = new VisualElement()
-                {
-                    style = {
-                        flexDirection = FlexDirection.Column,
-                        flexGrow = 1f
-                    }
-                };
+                var keyValueElement = new VisualElement();
+                keyValueElement.AddToClassList("dictionary-field__item__key-value-element");
                 box.Add(keyValueElement);
 
-                keyField = new GenericField(key, keyType, KeyName)
-                {
-                    style = { flexGrow = 1f }
-                };
+                keyField = new GenericField(key, keyType, KeyName);
+                keyField.AddToClassList("dictionary-field__item__key-field");
                 keyField.OnValueChanged += SetKey;
                 keyValueElement.Add(keyField);
 
-                valueField = new GenericField(value, valueType, ValueName)
-                {
-                    style = { flexGrow = 1f }
-                };
+                valueField = new GenericField(value, valueType, ValueName);
+                valueField.AddToClassList("dictionary-field__item__value-field");
                 valueField.OnValueChanged += SetValue;
                 keyValueElement.Add(valueField);
 
-                var closeButton = new Button(() => OnClose?.Invoke())
-                {
-                    style = {
-                        width = EditorGUIUtility.singleLineHeight,
-                        height = EditorGUIUtility.singleLineHeight,
-                        unityFontStyleAndWeight = FontStyle.Bold,
-                        fontSize = 10f
-                    },
-                    text = "X",
-                };
+                var closeButton = new Button(() => OnClose?.Invoke()) { text = "X" };
+                closeButton.AddToClassList("dictionary-field__item__close-button");
+                
                 box.Add(closeButton);
                 Add(box);
             }

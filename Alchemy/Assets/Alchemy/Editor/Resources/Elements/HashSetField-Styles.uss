@@ -1,0 +1,12 @@
+.hash-set-field__item__box {
+    margin-right: -2px;
+    margin-bottom: 3.5px;
+    flex-direction: row;
+}
+
+.hash-set-field__item__close-button {
+    width: 18px;
+    height: 18px;
+    -unity-font-style: bold;
+    font-size: 10px;
+}

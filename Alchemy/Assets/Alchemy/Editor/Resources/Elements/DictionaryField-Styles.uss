@@ -1,0 +1,18 @@
+.dictionary-field__item__box {
+    margin-bottom: 3.5px;
+    margin-right: -2px;
+    flex-direction: row;
+}
+
+.dictionary-field__item__key-value-element {
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.dictionary-field__item__close-button {
+    width: 18px;
+    height: 18px;
+    -unity-font-style: bold;
+    font-size: 10px;
+    margin-left: 6px;
+}

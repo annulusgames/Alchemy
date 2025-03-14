@@ -1,0 +1,13 @@
+.title-attribute__title {
+    -unity-font-style: bold;
+    padding-left: 3px;
+    margin-top: 4px;
+    margin-bottom: -2px;
+}
+
+.title-attribute__subtitle {
+    font-size: 10px;
+    padding-left: 4.5px;
+    margin-top: 2px;
+    color: var(--unity-colors-default-text-hover);
+}
