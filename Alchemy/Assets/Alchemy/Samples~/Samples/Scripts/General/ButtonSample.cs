@@ -6,19 +6,19 @@ namespace Alchemy.Samples
 {
     public class ButtonSample : MonoBehaviour
     {
-        [Button]
+        [Button, LabelText("Label for Foo()")]
         public void Foo()
         {
             Debug.Log("Foo");
         }
 
-        [Button]
+        [Button, LabelText("Foo (int)")]
         public void Foo(int parameter)
         {
             Debug.Log("Foo: " + parameter);
         }
 
-        [Button]
+        [Button, LabelText("Foo (SampleClass)")]
         public void Foo(SampleClass parameter)
         {
             var builder = new StringBuilder();
