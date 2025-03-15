@@ -137,7 +137,19 @@ namespace Alchemy.Inspector
     }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
-    public sealed class PreviewAttribute : Attribute { }
+    public sealed class PreviewAttribute : Attribute { 
+        public PreviewAttribute() : this(40, Align.FlexEnd) { }
+
+        public PreviewAttribute(float size) : this (size, Align.FlexEnd) { }
+
+        public PreviewAttribute(float size, Align align) {
+            Size = size;
+            AlignStyle = align;
+        }
+
+        public float Size { get; }
+        public StyleEnum<Align> AlignStyle { get; }
+    }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class HorizontalLineAttribute : Attribute
