@@ -120,7 +120,7 @@ namespace Alchemy.Editor.Elements
             }
             else
             {
-                InspectorHelper.BuildElements(property.serializedObject, foldout, property.managedReferenceValue, x => property.FindPropertyRelative(x));
+                InspectorHelper.BuildElements(property.serializedObject, foldout, new IdentityAccessor(property.managedReferenceValue), x => property.FindPropertyRelative(x));
             }
 
             this.Bind(property.serializedObject);

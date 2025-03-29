@@ -7,8 +7,8 @@ namespace Alchemy.Editor.Elements
 {
     public sealed class ClassField : VisualElement
     {
-        public ClassField(Type type, string label) : this(TypeHelper.CreateDefaultInstance(type), type, label) { }
-        public ClassField(object obj, Type type, string label)
+       // public ClassField(Type type, string label) : this(TypeHelper.CreateDefaultInstance(type), type, label) { }
+        public ClassField(IObjectAccessor accessor, Type type, string label)
         {
             var foldout = new Foldout
             {
@@ -44,14 +44,14 @@ namespace Alchemy.Editor.Elements
                 // Add member elements
                 foreach (var member in node.Members.OrderByAttributeThenByMemberType())
                 {
-                    var element = new ReflectionField(obj, member);
+                    var element = new ReflectionField(accessor, member);
                     element.style.width = Length.Percent(100f);
-                    element.OnValueChanged += x => OnValueChanged?.Invoke(obj);
+                    element.OnValueChanged += x => OnValueChanged?.Invoke(accessor.Target);
 
                     var e = node.Drawer?.GetGroupElement(member.GetCustomAttribute<PropertyGroupAttribute>());
                     if (e == null) node.VisualElement.Add(element);
                     else e.Add(element);
-                    AlchemyAttributeDrawer.ExecutePropertyDrawers(null, null, obj, member, element);
+                    AlchemyAttributeDrawer.ExecutePropertyDrawers(null, null, accessor.Target, member, element);
                 }
             }
 

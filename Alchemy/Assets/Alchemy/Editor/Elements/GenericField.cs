@@ -14,17 +14,17 @@ namespace Alchemy.Editor.Elements
     public sealed class GenericField : VisualElement
     {
         const string CreateButtonText = "Create...";
-
-        public GenericField(object obj, Type type, string label,bool isDelayed = false)
+        
+        public GenericField(IObjectAccessor accessor, Type type, string label,bool isDelayed = false)
         {
-            Build(obj, type, label, isDelayed);
+            Build(accessor, type, label, isDelayed);
             GUIHelper.ScheduleAdjustLabelWidth(this);
         }
 
-        void Build(object obj, Type type, string label, bool isDelayed)
+        void Build(IObjectAccessor accessor, Type type, string label, bool isDelayed)
         {
             Clear();
-
+            var obj = accessor.Target;
             // Add [Create...] button
             if (obj == null && !typeof(UnityEngine.Object).IsAssignableFrom(type))
             {
@@ -52,7 +52,7 @@ namespace Alchemy.Editor.Elements
                     nullLabelElement.Add(new Button(() =>
                     {
                         var instance = "";
-                        Build(instance, type, label, isDelayed);
+                        Build(new IdentityAccessor(instance), type, label, isDelayed);
                         OnValueChanged?.Invoke(instance);
                     })
                     {
@@ -64,7 +64,7 @@ namespace Alchemy.Editor.Elements
                     nullLabelElement.Add(new Button(() =>
                     {
                         var instance = Activator.CreateInstance(type, Activator.CreateInstance(type.GenericTypeArguments[0]));
-                        Build(instance, type, label, isDelayed);
+                        Build(new IdentityAccessor(instance), type, label, isDelayed);
                         OnValueChanged?.Invoke(instance);
                     })
                     {
@@ -76,7 +76,7 @@ namespace Alchemy.Editor.Elements
                     nullLabelElement.Add(new Button(() =>
                     {
                         var instance = TypeHelper.CreateDefaultInstance(type);
-                        Build(instance, type, label, isDelayed);
+                        Build(new IdentityAccessor(instance), type, label, isDelayed);
                         OnValueChanged?.Invoke(instance);
                     })
                     {
@@ -89,7 +89,6 @@ namespace Alchemy.Editor.Elements
                 return;
             }
 
-            this.isDelayed = isDelayed;
 
             if (type == typeof(bool))
             {
@@ -246,36 +245,46 @@ namespace Alchemy.Editor.Elements
             }
             else
             {
-                var field = new ClassField(obj, type, label);
+                var field = new ClassField(accessor, type, label);
                 field.OnValueChanged += x => OnValueChanged?.Invoke(x);
                 Add(field);
+            }
+            void AddField<T>(BaseField<T> control, T value)
+            {
+                control.value = value;
+                
+                if (isDelayed && control is not ObjectField) // ignore ObjectField
+                {
+                    var changed = false;
+                    control.RegisterValueChangedCallback(_ => changed = true);
+                    control.RegisterCallback<FocusOutEvent>(_ =>
+                    {
+                        if (changed)
+                        {
+                            OnValueChanged?.Invoke(control.value);
+                            changed = false;
+                        }
+                    });
+                }
+                else
+                {
+                    control.RegisterValueChangedCallback(x =>
+                    {
+                        OnValueChanged?.Invoke(x.newValue);
+                       
+                    });
+                }
+                Add(control);
+                if (type.IsValueType&&accessor is not IdentityAccessor)
+                {
+                    control.schedule.Execute(() =>
+                    {
+                        control.value = (T)accessor.Target;
+                    }).Until(()=>control.parent==null);
+                }
             }
         }
 
         public event Action<object> OnValueChanged;
-        bool isDelayed;
-        bool changed;
-
-        void AddField<T>(BaseField<T> control, T value)
-        {
-            control.value = value;
-            if (isDelayed && control is not ObjectField) // ignore ObjectField
-            {
-                control.RegisterValueChangedCallback(x => changed = true);
-                control.RegisterCallback<FocusOutEvent>(x =>
-                {
-                    if (changed)
-                    {
-                        OnValueChanged?.Invoke(control.value);
-                        changed = false;
-                    }
-                });
-            }
-            else
-            {
-                control.RegisterValueChangedCallback(x => OnValueChanged?.Invoke(x.newValue));
-            }
-            Add(control);
-        }
     }
 }

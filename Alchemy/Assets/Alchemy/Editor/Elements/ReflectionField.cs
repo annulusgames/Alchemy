@@ -9,12 +9,12 @@ namespace Alchemy.Editor.Elements
 {
     public sealed class ReflectionField : VisualElement
     {
-        public ReflectionField(object target, MemberInfo memberInfo)
+        public ReflectionField(IObjectAccessor accessor, MemberInfo memberInfo)
         {
-            Rebuild(target, memberInfo);
+            Rebuild(accessor, memberInfo);
         }
 
-        public void Rebuild(object target, MemberInfo memberInfo)
+        public void Rebuild(IObjectAccessor accessor, MemberInfo memberInfo)
         {
             Clear();
 
@@ -22,54 +22,60 @@ namespace Alchemy.Editor.Elements
             {
                 if (methodInfo.HasCustomAttribute<ButtonAttribute>())
                 {
-                    var button = new MethodButton(target, methodInfo);
+                    var button = new MethodButton(accessor, methodInfo);
                     Add(button);
                 }
                 return;
             }
-
-            object value;
             GenericField element;
             switch (memberInfo)
             {
                 default: return;
                 case FieldInfo fieldInfo:
-                    value = fieldInfo.IsStatic ? fieldInfo.GetValue(null) : target == null ? TypeHelper.GetDefaultValue(fieldInfo.FieldType) : fieldInfo.GetValue(target);
+                    var fieldAccessor = accessor.Create(fieldInfo);
+                    var target = accessor.Target;
                     var fieldType = target == null ? fieldInfo.FieldType : fieldInfo.GetValue(target)?.GetType() ?? fieldInfo.FieldType;
-                    element = new GenericField(value, fieldType, ObjectNames.NicifyVariableName(memberInfo.Name), true);
+                    element = new GenericField(fieldAccessor, fieldType, ObjectNames.NicifyVariableName(memberInfo.Name), false);
                     element.OnValueChanged += x =>
                     {
-                        OnBeforeValueChange?.Invoke(target);
-                        fieldInfo.SetValue(target, x);
+                        var currentTarget = accessor.Target;
+                        OnBeforeValueChange?.Invoke(currentTarget);
+                        fieldInfo.SetValue(currentTarget, x);
 
                         // Force serialization
-                        if (target is ISerializationCallbackReceiver receiver)
+                        if (currentTarget is ISerializationCallbackReceiver receiver)
                         {
                             receiver.OnBeforeSerialize();
                         }
 
-                        OnValueChanged?.Invoke(target);
+                        OnValueChanged?.Invoke(currentTarget);
+                        accessor.Target= currentTarget;
                     };
                     break;
                 case PropertyInfo propertyInfo:
                     if (!propertyInfo.HasCustomAttribute<ShowInInspectorAttribute>()) return;
                     if (!propertyInfo.CanRead) return;
-
-                    value = propertyInfo.GetMethod.IsStatic ? propertyInfo.GetValue(null) : target == null ? TypeHelper.GetDefaultValue(propertyInfo.PropertyType) : propertyInfo.GetValue(target);
+                    var propertyAccessor = accessor.Create(propertyInfo);
+                     target = accessor.Target;
                     var propertyType = target == null ? propertyInfo.PropertyType : propertyInfo.GetValue(target)?.GetType() ?? propertyInfo.PropertyType;
-                    element = new GenericField(value, propertyType, ObjectNames.NicifyVariableName(memberInfo.Name), true);
+                    element = new GenericField(propertyAccessor, propertyType, ObjectNames.NicifyVariableName(memberInfo.Name), false);
                     element.OnValueChanged += x =>
                     {
-                        OnBeforeValueChange?.Invoke(target);
-                        if (propertyInfo.CanWrite) propertyInfo.SetValue(target, x);
+                        var currentTarget = accessor.Target;
+                        OnBeforeValueChange?.Invoke(currentTarget);
+                        if (propertyInfo.CanWrite)
+                        {
+                            propertyInfo.SetValue(currentTarget, x);
+                        }
 
                         // Force serialization
-                        if (target is ISerializationCallbackReceiver receiver)
+                        if (currentTarget is ISerializationCallbackReceiver receiver)
                         {
                             receiver.OnBeforeSerialize();
                         }
 
-                        OnValueChanged?.Invoke(target);
+                        OnValueChanged?.Invoke(currentTarget);
+                        accessor.Target= currentTarget;
                     };
                     element.SetEnabled(propertyInfo.CanWrite);
                     break;

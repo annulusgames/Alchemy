@@ -23,6 +23,8 @@ namespace Alchemy.Editor
 #if ALCHEMY_SUPPORT_SERIALIZATION
         const string AlchemySerializationWarning = "In the current version, fields with the [AlchemySerializedField] attribute do not support editing multiple objects.";
 #endif
+        
+        
 
         void OnEnable()
         {
@@ -96,6 +98,7 @@ namespace Alchemy.Editor
 
             return root;
         }
+        
     }
 
 #if !ALCHEMY_DISABLE_DEFAULT_EDITOR

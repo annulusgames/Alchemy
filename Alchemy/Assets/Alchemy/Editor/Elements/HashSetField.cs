@@ -42,7 +42,7 @@ namespace Alchemy.Editor.Elements
 
         public sealed class Item : HashMapItemBase
         {
-            public Item(object collection, object elementObj, string label)
+            public Item(object collection, object  elementObj, string label)
             {
                 var box = new Box()
                 {
@@ -54,13 +54,14 @@ namespace Alchemy.Editor.Elements
                 };
 
                 var valueType = elementObj == null ? collection.GetType().GenericTypeArguments[0] : elementObj.GetType();
-
-                inputField = new GenericField(elementObj, valueType, label);
+                var accessor = new IdentityAccessor(elementObj);
+                inputField = new GenericField(accessor, valueType, label);
                 inputField.style.flexGrow = 1f;
                 inputField.OnValueChanged += x =>
                 {
                     value = x;
                     OnValueChanged?.Invoke(x);
+                    accessor.Target = x;
                 };
                 box.Add(inputField);
 

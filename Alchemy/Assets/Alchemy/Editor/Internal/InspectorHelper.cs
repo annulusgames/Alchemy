@@ -71,9 +71,11 @@ namespace Alchemy.Editor
                 }
             }
         }
+        public static void BuildElements(SerializedObject serializedObject, VisualElement rootElement, UnityEngine.Object target, Func<string, SerializedProperty> findPropertyFunc)=>BuildElements(serializedObject, rootElement, new IdentityAccessor(target), findPropertyFunc);
 
-        public static void BuildElements(SerializedObject serializedObject, VisualElement rootElement, object target, Func<string, SerializedProperty> findPropertyFunc)
+        public static void BuildElements(SerializedObject serializedObject, VisualElement rootElement, IObjectAccessor accessor, Func<string, SerializedProperty> findPropertyFunc)
         {
+            var target = accessor.Target;
             if (target == null) return;
 
             // Build node
@@ -131,7 +133,7 @@ namespace Alchemy.Editor
                     }
                     else
                     {
-                        element = CreateMemberElement(serializedObject, target, member, findPropertyFunc);
+                        element = CreateMemberElement(serializedObject, accessor, member, findPropertyFunc);
                     }
 
                     if (element == null) continue;
@@ -194,15 +196,14 @@ namespace Alchemy.Editor
 
             return rootNode;
         }
-
-        public static VisualElement CreateMemberElement(SerializedObject serializedObject, object target, MemberInfo memberInfo, Func<string, SerializedProperty> findPropertyFunc)
+        public static VisualElement CreateMemberElement(SerializedObject serializedObject, IObjectAccessor accessor, MemberInfo memberInfo, Func<string, SerializedProperty> findPropertyFunc)
         {
             switch (memberInfo)
             {
                 case MethodInfo methodInfo:
                     if (methodInfo.HasCustomAttribute<ButtonAttribute>())
                     {
-                        return new MethodButton(target, methodInfo);
+                        return new MethodButton(accessor, methodInfo);
                     }
                     break;
                 case FieldInfo:
@@ -250,12 +251,12 @@ namespace Alchemy.Editor
                             var p = GetProperty();
                             if (p != null)
                             {
-                                var field = new ReflectionField(target, fieldInfo);
+                                var field = new ReflectionField(accessor, fieldInfo);
                                 var foldout = field.Q<Foldout>();
                                 foldout?.BindProperty(p);
                                 field.TrackPropertyValue(p, p =>
                                 {
-                                    field.Rebuild(target, memberInfo);
+                                    field.Rebuild(accessor, memberInfo);
                                     var foldout = field.Q<Foldout>();
                                     foldout?.BindProperty(p);
                                 });
@@ -283,7 +284,7 @@ namespace Alchemy.Editor
                     // Create element if member has ShowInInspector attribute
                     if (memberInfo.HasCustomAttribute<ShowInInspectorAttribute>())
                     {
-                        return new ReflectionField(target, memberInfo);
+                        return new ReflectionField(accessor, memberInfo);
                     }
                     break;
             }

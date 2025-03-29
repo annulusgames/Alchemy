@@ -49,7 +49,7 @@ namespace Alchemy.Editor.Elements
                         var drawer = AlchemyEditorUtility.CreateGroupDrawer(groupAttribute, targetType);
 
                         var root = drawer.CreateRootElement(labelText);
-                        InspectorHelper.BuildElements(property.serializedObject, root, property.GetValue<object>(), name => property.FindPropertyRelative(name));
+                        InspectorHelper.BuildElements(property.serializedObject, root, IObjectAccessor.Create(property), name => property.FindPropertyRelative(name));
                         if (root is BindableElement bindableElement) bindableElement.BindProperty(property);
                         element = root;
                     }
@@ -59,7 +59,7 @@ namespace Alchemy.Editor.Elements
 
                         var clickable = InternalAPIHelper.GetClickable(foldout.Q<Toggle>());
                         InternalAPIHelper.SetAcceptClicksIfDisabled(clickable, true);
-                        InspectorHelper.BuildElements(property.serializedObject, foldout, property.GetValue<object>(), name => property.FindPropertyRelative(name));
+                        InspectorHelper.BuildElements(property.serializedObject, foldout, IObjectAccessor.Create(property), name => property.FindPropertyRelative(name));
                         foldout.BindProperty(property);
                         element = foldout;
                     }
