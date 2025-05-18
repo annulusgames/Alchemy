@@ -9,6 +9,16 @@ namespace Alchemy.Editor
     public abstract class AlchemyGroupDrawer
     {
         /// <summary>
+        /// ID used to identify the group.
+        /// </summary>
+        public string UniqueId => _uniqueId;
+        
+        /// <summary>
+        /// Drawing order
+        /// </summary>
+        public int Order => _order;
+        
+        /// <summary>
         /// Create a visual element that will be the root of the group.
         /// </summary>
         /// <param name="label">Label text</param>
@@ -20,16 +30,17 @@ namespace Alchemy.Editor
         /// <param name="attribute">Target attribute</param>
         public virtual VisualElement GetGroupElement(Attribute attribute) => null;
 
-        /// <summary>
-        /// ID used to identify the group.
-        /// </summary>
-        public string UniqueId => uniqueId;
-
-        string uniqueId;
+        private string _uniqueId;
+        private int _order;
 
         internal void SetUniqueId(string id)
         {
-            this.uniqueId = id;
+            _uniqueId = id;
+        }
+
+        internal void SetOrder(int order)
+        {
+            _order = order;
         }
     }
 }

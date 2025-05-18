@@ -25,6 +25,7 @@ namespace Alchemy.Editor
             var drawerType = FindGroupDrawerType(attribute);
             var drawer = (AlchemyGroupDrawer)Activator.CreateInstance(drawerType);
             drawer.SetUniqueId("AlchemyGroupId_" + targetType.FullName + "_" + attribute.GroupPath);
+            drawer.SetOrder(attribute.Order);
             return drawer;
         }
     }
