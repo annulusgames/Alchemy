@@ -101,7 +101,10 @@ namespace Alchemy.Editor
                 foreach (var member in node.Members.OrderByAttributeThenByMemberType())
                 {
                     // Exclude if member has HideInInspector attribute
-                    if (member.HasCustomAttribute<HideInInspector>()) continue;
+                    // but not "m_SerializedDataModeController" on EditorWindow
+                    // (Unity added HideInInspector here in 2022.3.23f1)
+                    if (member.HasCustomAttribute<HideInInspector>() && member.Name != "m_SerializedDataModeController") 
+                        continue;
 
                     // Add default PropertyField if member has DisableAlchemyEditorAttribute
                     if (member.GetCustomAttribute<DisableAlchemyEditorAttribute>() != null)
