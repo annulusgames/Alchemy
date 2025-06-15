@@ -20,9 +20,9 @@ namespace Alchemy.Editor.Elements
 
             if (memberInfo is MethodInfo methodInfo)
             {
-                if (methodInfo.HasCustomAttribute<ButtonAttribute>())
+                if (methodInfo.TryGetCustomAttribute<ButtonAttribute>(out var buttonAttribute))
                 {
-                    var button = new MethodButton(target, methodInfo);
+                    var button = new MethodButton(target, methodInfo, buttonAttribute.useParameters);
                     Add(button);
                 }
                 return;
