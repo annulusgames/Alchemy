@@ -1,0 +1,27 @@
+.method-button__help-box {
+    margin-right: 0;
+    margin-left: 0;
+}
+
+.method-button__parameter-button {
+    position: absolute;
+    top: 1.5px;
+    right: 1px;
+    width: 100px;
+}
+
+.method-button__foldout {
+    flex-grow: 1;
+}
+
+Foldout.method-button__foldout > Toggle {
+    margin-left: 0;
+}
+
+Foldout.method-button__foldout > #unity-content {
+    margin-top: 2px;
+}
+
+Foldout.method-button__foldout > GenericField {
+    padding-right: 4px;
+}

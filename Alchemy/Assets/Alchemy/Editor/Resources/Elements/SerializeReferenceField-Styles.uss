@@ -1,0 +1,13 @@
+.serialize-reference-field__pick-reference-button {
+    position: absolute;
+    right: 2px;
+    top: 0;
+}
+
+.serialize-reference-field__foldout {
+    flex-grow: 1;
+}
+
+Foldout.serialize-reference-field__foldout > #unity-content {
+    padding-right: 4px;
+}

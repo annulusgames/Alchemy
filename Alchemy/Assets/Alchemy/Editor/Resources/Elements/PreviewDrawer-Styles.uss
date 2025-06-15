@@ -1,0 +1,32 @@
+.preview-attribute__image {
+    width: 40px;
+    height: 40px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-left-color: rgb(13, 13, 13);
+    border-right-color: rgb(13, 13, 13);
+    border-bottom-color: rgb(13, 13, 13);
+    border-top-color: rgb(13, 13, 13);
+    margin-top: 2px;
+    margin-bottom: 4px;
+    align-self: flex-end;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.preview-attribute__image:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.preview-attribute__image.preview-attribute__image--align-right {
+    align-self: flex-end;
+}
+
+.preview-attribute__image.preview-attribute__image--align-center {
+    align-self: center;
+}
+
+.preview-attribute__image.preview-attribute__image--align-left {
+    align-self: flex-start;
+}

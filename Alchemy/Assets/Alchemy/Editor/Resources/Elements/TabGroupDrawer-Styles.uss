@@ -1,0 +1,30 @@
+.tab-group__help-box {
+    width: 100%;
+    margin-top: 3px;
+    flex-direction: column;
+    overflow: hidden;
+    padding-top: 3px;
+    padding-right: 3px;
+    padding-left: 3px;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.tab-group__tab-section {
+    align-self: stretch;
+}
+
+.tab-group__page-root {
+    width: 100%;
+}
+
+.tab-group__tab-page {
+    width: 100%;
+}
+
+.tab-group__tab-page__child-foldout {
+}
+
+.tab-group__tab-page__child-foldout > Toggle {
+    margin-left: 0;
+}

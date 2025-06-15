@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -8,21 +7,24 @@ namespace Alchemy.Editor.Elements
 {
     public abstract class HashMapFieldBase : VisualElement
     {
+        private readonly StyleSheet _styleSheet = Resources.Load<StyleSheet>("Elements/HashMapFieldBase-Styles");
+        
         public HashMapFieldBase(object collection, string label)
         {
+            styleSheets.Add(_styleSheet);
+            
             this.collection = collection;
 
-            var foldout = new Foldout()
-            {
-                text = label
-            };
+            var foldout = new Foldout { text = label };
+            foldout.AddToClassList("hash-map-field-base__foldout");
             Add(foldout);
-            foldout.Q<Label>().style.unityFontStyleAndWeight = FontStyle.Bold;
 
             contents = new();
+            contents.AddToClassList("hash-map-field-base__contents");
             foldout.Add(contents);
 
             inputForm = new();
+            inputForm.AddToClassList("hash-map-field-base__input-form");
             foldout.Add(inputForm);
 
             addButton = new Button(() =>
@@ -30,16 +32,10 @@ namespace Alchemy.Editor.Elements
                 if (isInputting) EndInput();
                 else StartInput();
             })
-            {
-                style = {
-                    alignSelf = Align.FlexEnd,
-                    minWidth = 60f
-                },
-                text = "+ Add"
-            };
+            { text = "+ Add" };
+            addButton.AddToClassList("hash-map-field-base__add-button");
+            
             foldout.Add(addButton);
-
-            foldout.Add(new VisualElement() { style = { minHeight = 4f } });
 
             Rebuild();
         }
@@ -137,12 +133,11 @@ namespace Alchemy.Editor.Elements
             if (i == 0)
             {
                 var box = new Box();
-                box.style.minHeight = EditorGUIUtility.singleLineHeight * 1.2f;
-                box.style.paddingLeft = 6f;
-
+                box.AddToClassList("hash-map-field-base__empty-box");
+                
                 var label = new Label(CollectionTypeName + " is empty.");
-                label.style.height = Length.Percent(100f);
-                label.style.unityTextAlign = TextAnchor.MiddleLeft;
+                label.AddToClassList("hash-map-field-base__empty-label");
+                
                 box.Add(label);
 
                 inputForm.Add(box);

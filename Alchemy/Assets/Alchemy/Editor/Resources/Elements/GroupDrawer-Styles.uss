@@ -1,0 +1,14 @@
+.group__box {
+    width: 100%;
+    margin-top: 3px;
+    padding-bottom: 2px;
+    padding-right: 2px;
+    padding-left: 1px;
+}
+
+.group__box__child-foldout {
+}
+
+.group__box__child-foldout > Toggle {
+    margin-left: 0;
+}

@@ -191,5 +191,17 @@ namespace Alchemy.Editor
             visualElement.style.minWidth = value;
             visualElement.style.width = value;
         }
+        
+        public static void ModifyChildFoldouts(VisualElement element, string className)
+        {
+            element.schedule.Execute(() =>
+            {
+                foreach (var foldout in element.Query<Foldout>().Build())
+                {
+                    if (foldout.parent == element || foldout.parent.parent == element)
+                        foldout.AddToClassList(className);
+                }
+            });
+        }
     }
 }
