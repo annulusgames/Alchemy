@@ -51,7 +51,7 @@ namespace Alchemy.Editor.Elements
                     var e = node.Drawer?.GetGroupElement(member.GetCustomAttribute<PropertyGroupAttribute>());
                     if (e == null) node.VisualElement.Add(element);
                     else e.Add(element);
-                    AlchemyAttributeDrawer.ExecutePropertyDrawers(null, null, obj, member, element);
+                    AlchemyAttributeDrawerHelper.ExecutePropertyDrawers(null, null, obj, member, element);
                 }
             }
 

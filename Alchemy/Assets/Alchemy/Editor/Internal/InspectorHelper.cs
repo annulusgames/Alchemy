@@ -145,7 +145,7 @@ namespace Alchemy.Editor
 
                     if (e == null) node.VisualElement.Add(element);
                     else e.Add(element);
-                    AlchemyAttributeDrawer.ExecutePropertyDrawers(serializedObject, property, target, member, element);
+                    AlchemyAttributeDrawerHelper.ExecutePropertyDrawers(serializedObject, property, target, member, element);
                 }
             }
         }

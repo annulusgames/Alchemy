@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
@@ -6,17 +7,23 @@ using UnityEngine.UIElements;
 
 namespace Alchemy.Editor
 {
+    public interface IAlchemyAttributeDrawer
+    {
+        void SetContext(SerializedObject serializedObject, SerializedProperty serializedProperty, object target, MemberInfo memberInfo, Attribute attribute, VisualElement targetElement);
+        void OnCreateElement();
+    }
+
     /// <summary>
     /// Base class for extending drawing processing for fields with Alchemy attributes.
     /// </summary>
-    public abstract class AlchemyAttributeDrawer
+    public abstract class AlchemyAttributeDrawer<T> : IAlchemyAttributeDrawer where T : Attribute
     {
-        SerializedObject serializedObject;
-        SerializedProperty serializedProperty;
-        object target;
-        MemberInfo memberInfo;
-        Attribute attribute;
-        VisualElement targetElement;
+        private SerializedObject serializedObject;
+        private SerializedProperty serializedProperty;
+        private object target;
+        private MemberInfo memberInfo;
+        private T attribute;
+        private VisualElement targetElement;
 
         /// <summary>
         /// Target serialized object.
@@ -41,7 +48,7 @@ namespace Alchemy.Editor
         /// <summary>
         /// Target attribute.
         /// </summary>
-        public Attribute Attribute => attribute;
+        public T Attribute => attribute;
 
         /// <summary>
         /// Target visual element.
@@ -53,25 +60,14 @@ namespace Alchemy.Editor
         /// </summary>
         public abstract void OnCreateElement();
 
-        internal static void ExecutePropertyDrawers(SerializedObject serializedObject, SerializedProperty property, object target, MemberInfo memberInfo, VisualElement memberElement)
+        void IAlchemyAttributeDrawer.SetContext(SerializedObject serializedObject, SerializedProperty serializedProperty, object target, MemberInfo memberInfo, Attribute attribute, VisualElement targetElement)
         {
-            var attributes = memberInfo.GetCustomAttributes();
-            var processorTypes = TypeCache.GetTypesWithAttribute(typeof(CustomAttributeDrawerAttribute));
-            foreach (var attribute in attributes)
-            {
-                var processorType = processorTypes.FirstOrDefault(x => x.IsSubclassOf(typeof(AlchemyAttributeDrawer)) && x.GetCustomAttribute<CustomAttributeDrawerAttribute>().targetAttributeType == attribute.GetType());
-                if (processorType == null) continue;
-
-                var processor = (AlchemyAttributeDrawer)Activator.CreateInstance(processorType);
-                processor.serializedObject = serializedObject;
-                processor.serializedProperty = property;
-                processor.target = target;
-                processor.memberInfo = memberInfo;
-                processor.attribute = attribute;
-                processor.targetElement = memberElement;
-
-                processor.OnCreateElement();
-            }
+            this.serializedObject = serializedObject;
+            this.serializedProperty = serializedProperty;
+            this.target = target;
+            this.memberInfo = memberInfo;
+            this.attribute = attribute as T;
+            this.targetElement = targetElement;
         }
     }
 }

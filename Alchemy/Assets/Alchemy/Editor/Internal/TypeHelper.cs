@@ -50,5 +50,20 @@ namespace Alchemy.Editor
         {
             return type.GetConstructors().Any(t => t.GetParameters().Count() == 0);
         }
+
+        public static bool IsSubclassOfGeneric(this Type type, Type genericType)
+        {
+            var current = type.BaseType;
+            while (current != null && current != typeof(object))
+            {
+                if (current.IsGenericType && current.GetGenericTypeDefinition() == genericType)
+                {
+                    return true;
+                }
+                current = current.BaseType;
+            }
+
+            return false;
+        }
     }
 }

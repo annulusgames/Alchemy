@@ -9,7 +9,7 @@ using Alchemy.Editor.Elements;
 namespace Alchemy.Editor.Drawers
 {
     [CustomAttributeDrawer(typeof(ReadOnlyAttribute))]
-    public sealed class ReadOnlyDrawer : AlchemyAttributeDrawer
+    public sealed class ReadOnlyDrawer : AlchemyAttributeDrawer<ReadOnlyAttribute>
     {
         public override void OnCreateElement()
         {
@@ -18,7 +18,7 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(IndentAttribute))]
-    public sealed class IndentDrawer : AlchemyAttributeDrawer
+    public sealed class IndentDrawer : AlchemyAttributeDrawer<IndentAttribute>
     {
         const float IndentPadding = 15f;
 
@@ -36,7 +36,7 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(HideInPlayModeAttribute))]
-    public sealed class HideInPlayModeDrawer : AlchemyAttributeDrawer
+    public sealed class HideInPlayModeDrawer : AlchemyAttributeDrawer<HideInPlayModeAttribute>
     {
         public override void OnCreateElement()
         {
@@ -45,7 +45,7 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(HideInEditModeAttribute))]
-    public sealed class HideInEditModeDrawer : AlchemyAttributeDrawer
+    public sealed class HideInEditModeDrawer : AlchemyAttributeDrawer<HideInEditModeAttribute>
     {
         public override void OnCreateElement()
         {
@@ -54,7 +54,7 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(DisableInPlayModeAttribute))]
-    public sealed class DisableInPlayModeDrawer : AlchemyAttributeDrawer
+    public sealed class DisableInPlayModeDrawer : AlchemyAttributeDrawer<DisableInEditModeAttribute>
     {
         public override void OnCreateElement()
         {
@@ -63,7 +63,7 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(DisableInEditModeAttribute))]
-    public sealed class DisableInEditModeDrawer : AlchemyAttributeDrawer
+    public sealed class DisableInEditModeDrawer : AlchemyAttributeDrawer<DisableInEditModeAttribute>
     {
         public override void OnCreateElement()
         {
@@ -72,7 +72,7 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(HideLabelAttribute))]
-    public sealed class HideLabelDrawer : AlchemyAttributeDrawer
+    public sealed class HideLabelDrawer : AlchemyAttributeDrawer<HideLabelAttribute>
     {
         public override void OnCreateElement()
         {
@@ -89,11 +89,11 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(LabelTextAttribute))]
-    public sealed class LabelTextDrawer : AlchemyAttributeDrawer
+    public sealed class LabelTextDrawer : AlchemyAttributeDrawer<LabelTextAttribute>
     {
         public override void OnCreateElement()
         {
-            var labelTextAttribute = (LabelTextAttribute)Attribute;
+            var labelTextAttribute = Attribute;
 
             switch (TargetElement)
             {
@@ -116,11 +116,11 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(LabelWidthAttribute))]
-    public sealed class LabelWidthDrawer : AlchemyAttributeDrawer
+    public sealed class LabelWidthDrawer : AlchemyAttributeDrawer<LabelWidthAttribute>
     {
         public override void OnCreateElement()
         {
-            var width = ((LabelWidthAttribute)Attribute).Width;
+            var width = Attribute.Width;
 
             if (TargetElement is AlchemyPropertyField field && field.FieldElement is PropertyField)
             {
@@ -141,47 +141,47 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(HideIfAttribute))]
-    public sealed class HideIfDrawer : TrackSerializedObjectAttributeDrawer
+    public sealed class HideIfDrawer : TrackSerializedObjectAttributeDrawer<HideIfAttribute>
     {
         protected override void OnInspectorChanged()
         {
-            var condition = ReflectionHelper.GetValueBool(Target, ((HideIfAttribute)Attribute).Condition);
+            var condition = ReflectionHelper.GetValueBool(Target, Attribute.Condition);
             TargetElement.style.display = condition ? DisplayStyle.None : DisplayStyle.Flex;
         }
     }
 
     [CustomAttributeDrawer(typeof(ShowIfAttribute))]
-    public sealed class ShowIfDrawer : TrackSerializedObjectAttributeDrawer
+    public sealed class ShowIfDrawer : TrackSerializedObjectAttributeDrawer<ShowIfAttribute>
     {
         protected override void OnInspectorChanged()
         {
-            var condition = ReflectionHelper.GetValueBool(Target, ((ShowIfAttribute)Attribute).Condition);
+            var condition = ReflectionHelper.GetValueBool(Target, Attribute.Condition);
             TargetElement.style.display = !condition ? DisplayStyle.None : DisplayStyle.Flex;
         }
     }
 
     [CustomAttributeDrawer(typeof(DisableIfAttribute))]
-    public sealed class DisableIfDrawer : TrackSerializedObjectAttributeDrawer
+    public sealed class DisableIfDrawer : TrackSerializedObjectAttributeDrawer<DisableIfAttribute>
     {
         protected override void OnInspectorChanged()
         {
-            var condition = ReflectionHelper.GetValueBool(Target, ((DisableIfAttribute)Attribute).Condition);
+            var condition = ReflectionHelper.GetValueBool(Target, Attribute.Condition);
             TargetElement.SetEnabled(!condition);
         }
     }
 
     [CustomAttributeDrawer(typeof(EnableIfAttribute))]
-    public sealed class EnableIfDrawer : TrackSerializedObjectAttributeDrawer
+    public sealed class EnableIfDrawer : TrackSerializedObjectAttributeDrawer<EnableIfAttribute>
     {
         protected override void OnInspectorChanged()
         {
-            var condition = ReflectionHelper.GetValueBool(Target, ((EnableIfAttribute)Attribute).Condition);
+            var condition = ReflectionHelper.GetValueBool(Target, Attribute.Condition);
             TargetElement.SetEnabled(condition);
         }
     }
 
     [CustomAttributeDrawer(typeof(RequiredAttribute))]
-    public sealed class RequiredDrawer : TrackSerializedObjectAttributeDrawer
+    public sealed class RequiredDrawer : TrackSerializedObjectAttributeDrawer<RequiredAttribute>
     {
         HelpBox helpBox;
 
@@ -189,7 +189,7 @@ namespace Alchemy.Editor.Drawers
         {
             if (SerializedProperty.propertyType != SerializedPropertyType.ObjectReference) return;
 
-            var message = ((RequiredAttribute)Attribute).Message ?? ObjectNames.NicifyVariableName(SerializedProperty.displayName) + " is required.";
+            var message = Attribute.Message ?? ObjectNames.NicifyVariableName(SerializedProperty.displayName) + " is required.";
             helpBox = new HelpBox(message, HelpBoxMessageType.Error);
 
             var parent = TargetElement.parent;
@@ -205,13 +205,13 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(ValidateInputAttribute))]
-    public sealed class ValidateInputDrawer : TrackSerializedObjectAttributeDrawer
+    public sealed class ValidateInputDrawer : TrackSerializedObjectAttributeDrawer<ValidateInputAttribute>
     {
         HelpBox helpBox;
 
         public override void OnCreateElement()
         {
-            var message = ((ValidateInputAttribute)Attribute).Message ?? ObjectNames.NicifyVariableName(SerializedProperty.displayName) + " is not valid.";
+            var message = Attribute.Message ?? ObjectNames.NicifyVariableName(SerializedProperty.displayName) + " is not valid.";
             helpBox = new HelpBox(message, HelpBoxMessageType.Error);
 
             var parent = TargetElement.parent;
@@ -222,19 +222,19 @@ namespace Alchemy.Editor.Drawers
 
         protected override void OnInspectorChanged()
         {
-            var result = ReflectionHelper.Invoke(Target, ((ValidateInputAttribute)Attribute).Condition, SerializedProperty.GetValue<object>());
+            var result = ReflectionHelper.Invoke(Target, Attribute.Condition, SerializedProperty.GetValue<object>());
             helpBox.style.display = result is bool flag && flag ? DisplayStyle.None : DisplayStyle.Flex;
         }
     }
 
     [CustomAttributeDrawer(typeof(HelpBoxAttribute))]
-    public sealed class HelpBoxDrawer : AlchemyAttributeDrawer
+    public sealed class HelpBoxDrawer : AlchemyAttributeDrawer<HelpBoxAttribute>
     {
         HelpBox helpBox;
 
         public override void OnCreateElement()
         {
-            var att = (HelpBoxAttribute)Attribute;
+            var att = Attribute;
             helpBox = new HelpBox(att.Message, att.MessageType);
 
             var parent = TargetElement.parent;
@@ -243,7 +243,7 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(PreviewAttribute))]
-    public sealed class PreviewDrawer : TrackSerializedObjectAttributeDrawer
+    public sealed class PreviewDrawer : TrackSerializedObjectAttributeDrawer<PreviewAttribute>
     {
         private Image image;
         private const float BorderWidth = 1f;
@@ -253,7 +253,7 @@ namespace Alchemy.Editor.Drawers
         {
             if (SerializedProperty == null || SerializedProperty.propertyType != SerializedPropertyType.ObjectReference) return;
 
-            var att = (PreviewAttribute)Attribute;
+            var att = Attribute;
 
             image = new Image
             {
@@ -306,11 +306,11 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(HorizontalLineAttribute))]
-    public sealed class HorizontalLineDrawer : AlchemyAttributeDrawer
+    public sealed class HorizontalLineDrawer : AlchemyAttributeDrawer<HorizontalLineAttribute>
     {
         public override void OnCreateElement()
         {
-            var att = (HorizontalLineAttribute)Attribute;
+            var att = Attribute;
             var parent = TargetElement.parent;
             var lineColor = att.Color == default ? GUIHelper.LineColor : att.Color;
             var line = GUIHelper.CreateLine(lineColor, EditorGUIUtility.standardVerticalSpacing * 4f);
@@ -319,11 +319,11 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(TitleAttribute))]
-    public sealed class TitleDrawer : AlchemyAttributeDrawer
+    public sealed class TitleDrawer : AlchemyAttributeDrawer<TitleAttribute>
     {
         public override void OnCreateElement()
         {
-            var att = (TitleAttribute)Attribute;
+            var att = Attribute;
             var parent = TargetElement.parent;
 
             var title = new Label(att.TitleText)
@@ -358,7 +358,7 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(BlockquoteAttribute))]
-    public sealed class BlockquoteDrawer : AlchemyAttributeDrawer
+    public sealed class BlockquoteDrawer : AlchemyAttributeDrawer<BlockquoteAttribute>
     {
         public BlockquoteDrawer()
         {
@@ -370,7 +370,7 @@ namespace Alchemy.Editor.Drawers
 
         public override void OnCreateElement()
         {
-            var att = (BlockquoteAttribute)Attribute;
+            var att = Attribute;
             var blockquote = new IMGUIContainer(() =>
             {
                 var width = EditorGUIUtility.currentViewWidth;
@@ -397,13 +397,13 @@ namespace Alchemy.Editor.Drawers
     }
 
     [CustomAttributeDrawer(typeof(OnValueChangedAttribute))]
-    public sealed class OnValueChangedDrawer : AlchemyAttributeDrawer
+    public sealed class OnValueChangedDrawer : AlchemyAttributeDrawer<OnValueChangedAttribute>
     {
         public override void OnCreateElement()
         {
             TargetElement.TrackPropertyValue(SerializedProperty, property =>
             {
-                var methodName = ((OnValueChangedAttribute)Attribute).MethodName;
+                var methodName = Attribute.MethodName;
 
                 var methods = ReflectionHelper.GetAllMethodsIncludingBaseNonPublic(Target.GetType())
                     .Where(x => x.Name == methodName);
