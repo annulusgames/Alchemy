@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine.UIElements;
@@ -28,14 +29,22 @@ namespace Alchemy.Editor.Elements
             var box = new HelpBox();
             Add(box);
 
+            string parameterSignature = string.Join("_", parameters.Select(p => p.ParameterType.Name));
+            string configKey = $"{target.GetType().FullName}_{methodInfo.Name}_{parameterSignature}_MethodButton";
+            bool.TryParse(EditorUserSettings.GetConfigValue(configKey), out bool savedFoldoutValue);
+
             foldout = new Foldout()
             {
                 text = methodInfo.Name,
-                value = false,
+                value = savedFoldoutValue,
                 style = {
                     flexGrow = 1f
                 }
             };
+            foldout.RegisterValueChangedCallback(x =>
+            {
+                EditorUserSettings.SetConfigValue(configKey, x.newValue.ToString());
+            });
             InternalAPIHelper.SetAcceptClicksIfDisabled(
                 InternalAPIHelper.GetClickable(foldout.Q<Toggle>()), true
             );
