@@ -15,7 +15,7 @@ namespace Alchemy.Editor
 
             foreach (var drawer in drawers)
             {
-#if UNITY_6000_5_OR_NEWER
+#if UNITY_6000_4_OR_NEWER
                 EditorApplication.hierarchyWindowItemByEntityIdOnGUI += drawer.OnGUI;
 #else
                 EditorApplication.hierarchyWindowItemOnGUI += drawer.OnGUI;
