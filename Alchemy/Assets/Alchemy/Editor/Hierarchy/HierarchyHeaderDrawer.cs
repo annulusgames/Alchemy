@@ -9,7 +9,11 @@ namespace Alchemy.Editor
         static Color HeaderColor => EditorGUIUtility.isProSkin ? new(0.45f, 0.45f, 0.45f, 0.5f) : new(0.55f, 0.55f, 0.55f, 0.5f);
         static GUIStyle labelStyle;
 
+#if UNITY_6000_5_OR_NEWER
+        public override void OnGUI(EntityId instanceID, Rect selectionRect)
+#else
         public override void OnGUI(int instanceID, Rect selectionRect)
+#endif
         {
             if (labelStyle == null)
             {
@@ -20,7 +24,11 @@ namespace Alchemy.Editor
                 };
             }
 
+#if UNITY_6000_5_OR_NEWER
+            var gameObject = EditorUtility.EntityIdToObject(instanceID) as GameObject;
+#else
             var gameObject = EditorUtility.InstanceIDToObject(instanceID) as GameObject;
+#endif
             if (gameObject == null) return;
             if (!gameObject.TryGetComponent<HierarchyHeader>(out _)) return;
 
