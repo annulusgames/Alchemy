@@ -5,7 +5,11 @@ namespace Alchemy.Editor
 {
     public class HierarchyRowSeparatorDrawer : HierarchyDrawer
     {
+#if UNITY_6000_4_OR_NEWER
+        public override void OnGUI(EntityId instanceID, Rect selectionRect)
+#else
         public override void OnGUI(int instanceID, Rect selectionRect)
+#endif
         {
             var settings = AlchemySettings.GetOrCreateSettings();
             if (!settings.ShowSeparator) return;
