@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- TUnit runs on Microsoft.Testing.Platform, so the test project is an executable
+         and must NOT reference Microsoft.NET.Test.Sdk. -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Alchemy.SourceGenerator.Tests</RootNamespace>
+    <!-- The generator project pins Microsoft.CodeAnalysis 3.9.0; this project deliberately
+         resolves the newer 4.14.0 to host the generator. The assemblies unify at runtime. -->
+    <NoWarn>$(NoWarn);NU1608;NU1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TUnit" Version="1.61.38" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The generator targets netstandard2.0 against Microsoft.CodeAnalysis 3.9.0.
+         It is referenced here as a plain library; the newer Roslyn above supplies the
+         runtime implementation of ISourceGenerator. -->
+    <ProjectReference Include="..\Alchemy.SourceGenerator\Alchemy.SourceGenerator.csproj" />
+  </ItemGroup>
+
+</Project>
