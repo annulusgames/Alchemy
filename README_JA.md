@@ -72,7 +72,7 @@ public class AttributesExample : MonoBehaviour
 
     [HideLabel]
     public Vector3 bar;
-    
+
     [AssetsOnly]
     public GameObject baz;
 
@@ -118,6 +118,7 @@ public class GroupAttributesExample : MonoBehaviour
 メソッドに`[Button]`属性を付加することで、メソッドをInspectorから実行することが可能になります。
 
 ```cs
+using System;
 using System.Text;
 using UnityEngine;
 using Alchemy.Inspector;
@@ -166,6 +167,7 @@ Alchemyでは他にも数多くの属性が提供されています。利用可�
 AlchemyはUnityのSerializeReferenceに対応しています。`[SerializeReference]`属性を付加することでインターフェースや抽象クラスをInspector上で編集できるようになります。
 
 ```cs
+using System;
 using UnityEngine;
 
 public interface IExample { }
@@ -245,7 +247,7 @@ public class EditorWindowExample : AlchemyEditorWindow
         var window = GetWindow<EditorWindowExample>("Example");
         window.Show();
     }
-    
+
     [Serializable]
     [HorizontalGroup]
     public class DatabaseItem
@@ -255,7 +257,7 @@ public class EditorWindowExample : AlchemyEditorWindow
 
         [LabelWidth(30f)]
         public Vector3 bar;
-        
+
         [LabelWidth(30f)]
         public GameObject baz;
     }

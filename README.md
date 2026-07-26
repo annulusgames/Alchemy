@@ -118,6 +118,7 @@ public class GroupAttributesExample : MonoBehaviour
 By adding the `[Button]` attribute to a method, you can execute the method from the Inspector.
 
 ```cs
+using System;
 using System.Text;
 using UnityEngine;
 using Alchemy.Inspector;
@@ -166,6 +167,7 @@ Alchemy provides many other attributes. The list of available attributes can be 
 Alchemy supports Unity's SerializeReference. By adding the `[SerializeReference]` attribute, interfaces and abstract classes can be edited in the Inspector.
 
 ```cs
+using System;
 using UnityEngine;
 
 public interface IExample { }
