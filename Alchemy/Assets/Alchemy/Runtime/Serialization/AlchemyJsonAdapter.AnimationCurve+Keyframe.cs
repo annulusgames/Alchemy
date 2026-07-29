@@ -32,6 +32,12 @@ namespace Alchemy.Serialization.Internal
             if (view.TryGetMember("value", out var value)) keyframe.value = value.Value().AsFloat();
             if (view.TryGetMember("inTangent", out var inTangent)) keyframe.inTangent = inTangent.Value().AsFloat();
             if (view.TryGetMember("outTangent", out var outTangent)) keyframe.outTangent = outTangent.Value().AsFloat();
+            if (view.TryGetMember("inWeight", out var inWeight)) keyframe.inWeight = inWeight.Value().AsFloat();
+            if (view.TryGetMember("outWeight", out var outWeight)) keyframe.outWeight = outWeight.Value().AsFloat();
+            if (view.TryGetMember("weightedMode", out var weightedMode)) keyframe.weightedMode = context.DeserializeValue<WeightedMode>(weightedMode.Value());
+#pragma warning disable 618
+            if (view.TryGetMember("tangentMode", out var tangentMode)) keyframe.tangentMode = context.DeserializeValue<int>(tangentMode.Value());
+#pragma warning restore 618
 
             return keyframe;
         }
@@ -58,6 +64,12 @@ namespace Alchemy.Serialization.Internal
             context.SerializeValue("value", value.value);
             context.SerializeValue("inTangent", value.inTangent);
             context.SerializeValue("outTangent", value.outTangent);
+            context.SerializeValue("inWeight", value.inWeight);
+            context.SerializeValue("outWeight", value.outWeight);
+            context.SerializeValue("weightedMode", value.weightedMode);
+#pragma warning disable 618
+            context.SerializeValue("tangentMode", value.tangentMode);
+#pragma warning restore 618
             context.Writer.WriteEndObject();
         }
     }
