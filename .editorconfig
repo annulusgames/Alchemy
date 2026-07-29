@@ -1,0 +1,66 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.cs]
+indent_size = 4
+max_line_length = 160
+
+#### Project C# Conventions ####
+
+# Keep using directives in one group.
+dotnet_separate_import_directive_groups = false
+
+# Unity code commonly omits explicit private modifiers.
+dotnet_style_require_accessibility_modifiers = never:silent
+
+# Prefer var consistently.
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+
+# Use expression bodies only when the member remains on one line.
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_constructors = when_on_single_line:suggestion
+csharp_style_expression_bodied_operators = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties = when_on_single_line:suggestion
+csharp_style_expression_bodied_indexers = when_on_single_line:suggestion
+csharp_style_expression_bodied_accessors = false:suggestion
+csharp_style_expression_bodied_local_functions = when_on_single_line:suggestion
+
+# Preserve compact control flow and Unity-compatible namespace syntax.
+csharp_prefer_braces = when_multiline:suggestion
+csharp_style_namespace_declarations = block_scoped:suggestion
+
+#### Project Naming Conventions ####
+
+# Private static fields: PascalCase (no prefix).
+dotnet_naming_rule.private_static_fields_pascal_case.symbols = private_static_fields
+dotnet_naming_rule.private_static_fields_pascal_case.style = pascal_case_style
+dotnet_naming_rule.private_static_fields_pascal_case.severity = suggestion
+
+dotnet_naming_symbols.private_static_fields.applicable_kinds = field
+dotnet_naming_symbols.private_static_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_static_fields.required_modifiers = static
+
+# Private instance fields: camelCase (no prefix).
+dotnet_naming_rule.private_fields_camel_case.symbols = private_instance_fields
+dotnet_naming_rule.private_fields_camel_case.style = camel_case_style
+dotnet_naming_rule.private_fields_camel_case.severity = warning
+
+dotnet_naming_symbols.private_instance_fields.applicable_kinds = field
+dotnet_naming_symbols.private_instance_fields.applicable_accessibilities = private
+
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+dotnet_naming_style.camel_case_style.capitalization = camel_case
+
+[Alchemy.SourceGenerator.Tests/*.cs]
+csharp_style_namespace_declarations = file_scoped:suggestion
+
+[*.{json,yml,yaml}]
+indent_size = 2
