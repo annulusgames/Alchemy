@@ -1,7 +1,7 @@
 #if ALCHEMY_SUPPORT_SERIALIZATION
 using System.Collections.Generic;
-using Unity.Serialization.Json;
 using Unity.Mathematics;
+using Unity.Serialization.Json;
 
 namespace Alchemy.Serialization.Internal
 {

@@ -137,12 +137,14 @@ namespace Alchemy.Inspector
     }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
-    public sealed class PreviewAttribute : Attribute { 
+    public sealed class PreviewAttribute : Attribute
+    {
         public PreviewAttribute() : this(40, Align.FlexEnd) { }
 
-        public PreviewAttribute(float size) : this (size, Align.FlexEnd) { }
+        public PreviewAttribute(float size) : this(size, Align.FlexEnd) { }
 
-        public PreviewAttribute(float size, Align align) {
+        public PreviewAttribute(float size, Align align)
+        {
             Size = size;
             AlignStyle = align;
         }
@@ -244,6 +246,6 @@ namespace Alchemy.Inspector
         public string OnItemsSourceChanged { get; set; }
         public string OnSelectionChanged { get; set; }
         public string OnSelectedIndicesChanged { get; set; }
-        
+
     }
 }

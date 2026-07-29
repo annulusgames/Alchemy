@@ -1,9 +1,9 @@
+using Alchemy.Inspector;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.UIElements;
-using Alchemy.Inspector;
 
 namespace Alchemy.Editor.Elements
 {

@@ -1,11 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 
 namespace Alchemy.Editor
 {
@@ -90,7 +90,7 @@ namespace Alchemy.Editor
                     var index = int.Parse(IndexerRegex.Replace(splits[i], string.Empty));
                     var targetType = target.GetType();
 
-                    if (targetType.IsArray)target = (target as Array).GetValue(index);
+                    if (targetType.IsArray) target = (target as Array).GetValue(index);
                     else target = (target as IList)[index];
 
                     i++;
@@ -136,7 +136,7 @@ namespace Alchemy.Editor
             return typeName[(splitIndex + 1)..];
         }
 
-       public static Type GetManagedReferenceFieldType(this SerializedProperty property)
+        public static Type GetManagedReferenceFieldType(this SerializedProperty property)
         {
             var typeName = property.managedReferenceFieldTypename;
             var splitIndex = typeName.IndexOf(' ');

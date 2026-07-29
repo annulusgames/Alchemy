@@ -11,7 +11,7 @@ namespace Alchemy.Editor
         {
             this.targetAttributeType = targetAttributeType;
         }
-        
+
         public readonly Type targetAttributeType;
     }
 }

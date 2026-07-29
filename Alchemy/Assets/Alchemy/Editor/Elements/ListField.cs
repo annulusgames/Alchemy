@@ -1,8 +1,8 @@
 using System;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UIElements;
 using UnityEngine.Assertions;
+using UnityEngine.UIElements;
 
 namespace Alchemy.Editor.Elements
 {

@@ -12,7 +12,7 @@ namespace Alchemy.Serialization.Internal
             {
                 return null;
             }
-            
+
             var view = context.SerializedValue.AsObjectView();
             var animationCurve = new AnimationCurve();
 

@@ -1,6 +1,6 @@
+using Alchemy.Hierarchy;
 using UnityEditor;
 using UnityEngine;
-using Alchemy.Hierarchy;
 
 namespace Alchemy.Editor
 {

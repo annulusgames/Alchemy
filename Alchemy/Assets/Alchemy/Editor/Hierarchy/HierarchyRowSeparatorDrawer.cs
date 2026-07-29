@@ -13,7 +13,7 @@ namespace Alchemy.Editor
         {
             var settings = AlchemySettings.GetOrCreateSettings();
             if (!settings.ShowSeparator) return;
-            var rect = new Rect {y = selectionRect.y, width = selectionRect.width + selectionRect.x, height = 1, x = 0};
+            var rect = new Rect { y = selectionRect.y, width = selectionRect.width + selectionRect.x, height = 1, x = 0 };
 
             EditorGUI.DrawRect(rect, settings.SeparatorColor);
 

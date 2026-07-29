@@ -103,7 +103,7 @@ namespace Alchemy.Editor
                     // Exclude if member has HideInInspector attribute
                     // but not "m_SerializedDataModeController" on EditorWindow
                     // (Unity added HideInInspector here in 2022.3.23f1)
-                    if (member.HasCustomAttribute<HideInInspector>() && member.Name != "m_SerializedDataModeController") 
+                    if (member.HasCustomAttribute<HideInInspector>() && member.Name != "m_SerializedDataModeController")
                         continue;
 
                     // Add default PropertyField if member has DisableAlchemyEditorAttribute
@@ -245,8 +245,8 @@ namespace Alchemy.Editor
                             {
                                 declaredType = declaredType.GetGenericTypeDefinition();
                             }
-                            var dataName ="__alchemySerializationData_"+ declaredType.FullName.Replace("`","").Replace(".", "_") ;
-                            
+                            var dataName = "__alchemySerializationData_" + declaredType.FullName.Replace("`", "").Replace(".", "_");
+
                             SerializedProperty GetProperty() => findPropertyFunc?.Invoke(dataName)
                                 .FindPropertyRelative(memberInfo.Name);
 

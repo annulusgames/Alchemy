@@ -1,11 +1,11 @@
 using System;
 using System.Reflection;
+using Alchemy.Inspector;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
-using UnityEngine.UIElements;
 using UnityEngine.Assertions;
-using Alchemy.Inspector;
+using UnityEngine.UIElements;
 
 namespace Alchemy.Editor
 {
@@ -88,14 +88,14 @@ namespace Alchemy.Editor
                     if (events.OnItemsChosen == null) return;
                     ReflectionHelper.Invoke(target, events.OnItemsChosen, new object[] { items });
                 };
-#else 
+#else
                  listView.onItemsChosen += items =>
                 {
                     if (events.OnItemsChosen == null) return;
                     ReflectionHelper.Invoke(target, events.OnItemsChosen, new object[] { items });
                 };
 #endif
-                
+
                 listView.itemIndexChanged += (before, after) =>
                 {
                     if (events.OnItemIndexChanged == null) return;
@@ -110,7 +110,7 @@ namespace Alchemy.Editor
 
                 listView.selectedIndicesChanged += indices =>
                 {
-                    if (events.OnSelectedIndicesChanged== null) return;
+                    if (events.OnSelectedIndicesChanged == null) return;
                     ReflectionHelper.Invoke(target, events.OnSelectedIndicesChanged, new object[] { indices });
                 };
 #else

@@ -1,10 +1,10 @@
 using System.Linq;
+using Alchemy.Hierarchy;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Alchemy.Hierarchy;
 
 namespace Alchemy.Editor
 {

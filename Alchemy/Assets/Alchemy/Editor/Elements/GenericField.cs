@@ -15,7 +15,7 @@ namespace Alchemy.Editor.Elements
     {
         const string CreateButtonText = "Create...";
 
-        public GenericField(object obj, Type type, string label,bool isDelayed = false)
+        public GenericField(object obj, Type type, string label, bool isDelayed = false)
         {
             Build(obj, type, label, isDelayed);
             GUIHelper.ScheduleAdjustLabelWidth(this);
@@ -99,7 +99,7 @@ namespace Alchemy.Editor.Elements
             {
                 AddField(new IntegerField(label), (int)obj);
             }
-            
+
             else if (type == typeof(uint))
             {
 #if UNITY_2022_1_OR_NEWER
@@ -117,7 +117,7 @@ namespace Alchemy.Editor.Elements
                 
                 Add(control);
 #endif
-                
+
             }
             else if (type == typeof(long))
             {

@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using UnityEditor;
 using Alchemy.Inspector;
+using UnityEditor;
 
 namespace Alchemy.Editor
 {
@@ -19,7 +19,7 @@ namespace Alchemy.Editor
             return TypeCache.GetTypesWithAttribute<CustomGroupDrawerAttribute>()
                 .FirstOrDefault(x => x.GetCustomAttribute<CustomGroupDrawerAttribute>().targetAttributeType == attribute.GetType());
         }
-        
+
         internal static AlchemyGroupDrawer CreateGroupDrawer(PropertyGroupAttribute attribute, Type targetType)
         {
             var drawerType = FindGroupDrawerType(attribute);

@@ -1,9 +1,9 @@
 using System;
 using System.Reflection;
+using Alchemy.Inspector;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Alchemy.Inspector;
 
 namespace Alchemy.Editor.Elements
 {
@@ -23,7 +23,8 @@ namespace Alchemy.Editor.Elements
                 if (methodInfo.HasCustomAttribute<ButtonAttribute>())
                 {
                     var button = new MethodButton(target, methodInfo);
-                    if (methodInfo.TryGetCustomAttribute(out LabelTextAttribute labelText)) {
+                    if (methodInfo.TryGetCustomAttribute(out LabelTextAttribute labelText))
+                    {
                         button.SetLableText(labelText.Text);
                     }
                     Add(button);

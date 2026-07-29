@@ -1,9 +1,9 @@
 using System;
-using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Alchemy.Editor
 {
@@ -296,7 +296,7 @@ namespace Alchemy.Editor
 
                 type = type.BaseType;
             }
-            
+
             result = default;
             return false;
         }

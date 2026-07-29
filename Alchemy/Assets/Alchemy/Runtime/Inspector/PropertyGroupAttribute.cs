@@ -11,7 +11,7 @@ namespace Alchemy.Inspector
         {
             GroupPath = string.Empty;
         }
-        
+
         public PropertyGroupAttribute(string groupPath)
         {
             GroupPath = groupPath;
