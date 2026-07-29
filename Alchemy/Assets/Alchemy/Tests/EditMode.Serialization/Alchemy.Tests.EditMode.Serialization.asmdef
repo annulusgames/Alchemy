@@ -1,13 +1,15 @@
 {
-    "name": "Alchemy.Tests.Runtime",
-    "rootNamespace": "Alchemy.Tests.Runtime",
+    "name": "Alchemy.Tests.EditMode.Serialization",
+    "rootNamespace": "Alchemy.Tests.EditMode.Serialization",
     "references": [
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
-        "Unity.Serialization",
-        "Alchemy"
+        "GUID:27619889b8ba8c24980f49ee34dbb44a",
+        "GUID:0acc523941302664db1f4e527237feb3",
+        "GUID:2765e68924a08a94ea0ea66b31c0168f",
+        "GUID:88be65f96b86746888c927a5c8ff3534"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
     "overrideReferences": true,

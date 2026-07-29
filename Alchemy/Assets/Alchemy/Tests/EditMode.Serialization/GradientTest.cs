@@ -4,21 +4,14 @@ using Alchemy.Serialization.Internal;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Alchemy.Tests.Runtime
+namespace Alchemy.Tests.EditMode.Serialization
 {
-    public class GradientSerializationTest
+    public class GradientTest
     {
-        readonly List<Object> objects = new();
-
-        [TearDown]
-        public void TearDown()
-        {
-            objects.Clear();
-        }
-
         [Test]
         public void Test_RoundTrip_Gradient()
         {
+            var objects = new List<Object>();
             var before = new Gradient
             {
                 colorKeys = new GradientColorKey[] { new(Color.white, 0f) },
@@ -34,6 +27,7 @@ namespace Alchemy.Tests.Runtime
         [Test]
         public void Test_RoundTrip_GradientColorKey()
         {
+            var objects = new List<Object>();
             var before = new GradientColorKey { color = Color.black, time = 1f };
             var beforeJson = SerializationHelper.ToJson(before, objects);
             var after = SerializationHelper.FromJson<GradientColorKey>(beforeJson, objects);
@@ -44,6 +38,7 @@ namespace Alchemy.Tests.Runtime
         [Test]
         public void Test_RoundTrip_GradientAlphaKey()
         {
+            var objects = new List<Object>();
             var before = new GradientAlphaKey { alpha = 0.5f, time = 1f };
             var beforeJson = SerializationHelper.ToJson(before, objects);
             var after = SerializationHelper.FromJson<GradientAlphaKey>(beforeJson, objects);
@@ -55,6 +50,7 @@ namespace Alchemy.Tests.Runtime
         [Test]
         public void Test_RoundTrip_PreservesColorSpace()
         {
+            var objects = new List<Object>();
             var beforeJson = SerializationHelper.ToJson(ColorSpace.Linear, objects);
             var after = SerializationHelper.FromJson<ColorSpace>(beforeJson, objects);
 

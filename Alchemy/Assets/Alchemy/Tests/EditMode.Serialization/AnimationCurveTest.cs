@@ -4,24 +4,16 @@ using Alchemy.Serialization.Internal;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Alchemy.Tests.Runtime
+namespace Alchemy.Tests.EditMode.Serialization
 {
-    public class AnimationCurveSerializationTest
+    public class AnimationCurveTest
     {
-        readonly List<Object> objects = new();
-
-        [TearDown]
-        public void TearDown()
-        {
-            objects.Clear();
-        }
-
         [Test]
         public void Test_RoundTrip_AnimationCurve()
         {
+            var objects = new List<Object>();
             var before = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
             var beforeJson = SerializationHelper.ToJson(before, objects);
-            Debug.Log(beforeJson);
             var after = SerializationHelper.FromJson<AnimationCurve>(beforeJson, objects);
 
             Assert.AreEqual(before, after);
@@ -30,6 +22,7 @@ namespace Alchemy.Tests.Runtime
         [Test]
         public void Test_RoundTrip_Keyframe()
         {
+            var objects = new List<Object>();
             var before = new Keyframe(0.25f, 0.75f, -1.5f, 2.5f, 0.2f, 0.8f)
             {
                 weightedMode = WeightedMode.Both,
