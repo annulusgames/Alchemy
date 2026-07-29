@@ -15,6 +15,9 @@ namespace Alchemy.Serialization.Internal
             if (view.TryGetMember("colorKeys", out var colorKeys)) gradient.colorKeys = context.DeserializeValue<GradientColorKey[]>(colorKeys.Value());
             if (view.TryGetMember("alphaKeys", out var alphaKeys)) gradient.alphaKeys = context.DeserializeValue<GradientAlphaKey[]>(alphaKeys.Value());
             if (view.TryGetMember("mode", out var mode)) gradient.mode = context.DeserializeValue<GradientMode>(mode.Value());
+#if UNITY_2022_2_OR_NEWER
+            if (view.TryGetMember("colorSpace", out var colorSpace)) gradient.colorSpace = context.DeserializeValue<ColorSpace>(colorSpace.Value());
+#endif
 
             return gradient;
         }
@@ -51,6 +54,9 @@ namespace Alchemy.Serialization.Internal
             context.SerializeValue("colorKeys", value.colorKeys);
             context.SerializeValue("alphaKeys", value.alphaKeys);
             context.SerializeValue("mode", value.mode);
+#if UNITY_2022_2_OR_NEWER
+            context.SerializeValue("colorSpace", value.colorSpace);
+#endif
             context.Writer.WriteEndObject();
         }
 
