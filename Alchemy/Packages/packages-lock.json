@@ -1,5 +1,11 @@
 {
   "dependencies": {
+    "com.annulusgames.alchemy.test": {
+      "version": "file:../../tests/Alchemy.Tests/Assets/Alchemy.Tests",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.unity.burst": {
       "version": "1.8.29",
       "depth": 1,

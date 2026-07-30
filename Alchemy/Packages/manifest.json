@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.annulusgames.alchemy.test": "file:../../tests/Alchemy.Tests/Assets/Alchemy.Tests",
     "com.unity.collab-proxy": "2.12.4",
     "com.unity.feature.development": "1.0.2",
     "com.unity.ide.visualstudio": "2.0.27",
@@ -43,5 +44,8 @@
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0",
     "com.unity.pipeline": "0.4.0-exp.1"
-  }
+  },
+  "testables": [
+    "com.annulusgames.alchemy.test"
+  ]
 }

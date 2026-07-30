@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "com.annulusgames.alchemy": "file:../../../Alchemy/Assets/Alchemy",
+    "com.unity.test-framework": "1.1.31",
+    "com.unity.modules.uielements": "1.0.0",
+    "com.unity.modules.jsonserialize": "1.0.0"
+  }
+}
