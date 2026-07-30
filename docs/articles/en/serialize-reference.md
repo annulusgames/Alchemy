@@ -35,6 +35,6 @@ public class SerializeReferenceExample : MonoBehaviour
 
 ![img](../../images/img-serialize-reference.png)
 
-Interfaces and abstract classes are displayed as shown above, and you can select and create subclasses from the dropdown.
+Interfaces and abstract classes are displayed as shown above. You can select and instantiate a concrete implementation from the dropdown.
 
 For more information about SerializeReference serialization, please refer to [Unity's official documentation](https://docs.unity3d.com/6000.1/Documentation/ScriptReference/SerializeReference.html).

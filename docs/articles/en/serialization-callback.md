@@ -1,8 +1,8 @@
 # Serialization Callbacks
 
-When using the `[AlchemySerialize]` attribute, the Source Generator automatically implements `ISerializationCallbackReceiver`. Therefore, you cannot use `ISerializationCallbackReceiver` to add callbacks.
+When you add `[AlchemySerialize]`, Alchemy's source generator automatically implements `ISerializationCallbackReceiver`. Therefore, you cannot implement that interface yourself to add callbacks.
 
-Instead, Alchemy provides an alternative interface called `IAlchemySerializationCallbackReceiver`. Please use this interface instead of `ISerializationCallbackReceiver` when using `[AlchemySerialize]`.
+Instead, implement Alchemy's `IAlchemySerializationCallbackReceiver` interface when using `[AlchemySerialize]`.
 
 ```cs
 [AlchemySerialize]

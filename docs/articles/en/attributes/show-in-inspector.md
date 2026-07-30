@@ -1,6 +1,6 @@
 # Show In Inspector Attribute
 
-Allows non-serialized fields or properties to be edited in the Inspector. Note that these values are not serialized, and changes are not saved.
+Displays nonserialized fields and properties in the Inspector. Writable members can be edited, but their values are not serialized or persisted.
 
 ![img](../../../images/img-attribute-show-in-inspector.png)
 

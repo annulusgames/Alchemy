@@ -1,6 +1,6 @@
 # Creating Custom Attributes
 
-By using `AlchemyAttributeDrawer`, it is possible to create custom attributes that work within Alchemy. Here is an example demonstrating the implementation of `HelpBoxAttribute` and its corresponding drawer.
+You can create custom attributes for Alchemy by deriving a drawer from `AlchemyAttributeDrawer`. The following example implements `HelpBoxAttribute` and its drawer.
 
 First, define the attribute to be added to fields or properties.
 
@@ -21,7 +21,7 @@ public sealed class HelpBoxAttribute : Attribute
 }
 ```
 
-Next, create the drawer corresponding to the defined attribute. Drawer scripts should be placed within the Editor folder.
+Next, create a drawer for the attribute. Place drawer scripts in an `Editor` folder.
 
 ```cs
 using UnityEngine.UIElements;
@@ -43,6 +43,6 @@ public sealed class HelpBoxDrawer : AlchemyAttributeDrawer
 }
 ```
 
-Implement the `OnCreateElement()` method to add processing when creating the corresponding VisualElement for the member. Unlike regular `PropertyDrawer`s that override the drawing process, here we're adding post-processing after the creation of the Visual Element. This mechanism allows Alchemy to combine multiple drawers.
+Implement `OnCreateElement()` to modify the member's `VisualElement` after it is created. Unlike regular `PropertyDrawer` implementations, which replace the drawing process, an `AlchemyAttributeDrawer` applies post-processing to an existing element. This mechanism allows Alchemy to combine multiple drawers.
 
-Additionally, make sure to add the `CustomAttributeDrawer` attribute to the defined drawer, with the type of the defined attribute as an argument. Alchemy uses this attribute to search for the necessary drawers for element rendering.
+Add `[CustomAttributeDrawer]` to the drawer and pass it the custom attribute's type. Alchemy uses this metadata to find the drawers required to render each element.

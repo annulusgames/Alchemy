@@ -1,6 +1,6 @@
 # Debugging Serialized Data
 
-By adding the `[ShowAlchemySerializationData]` attribute along with `[AlchemySerialize]`, you can inspect serialized data from the Inspector.
+By adding `[ShowAlchemySerializationData]` alongside `[AlchemySerialize]`, you can inspect the serialized data in the Inspector.
 
 ```cs
 using System;

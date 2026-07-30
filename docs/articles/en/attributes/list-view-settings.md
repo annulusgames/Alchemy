@@ -1,6 +1,6 @@
 # List View Settings Attribute
 
-Changes the display settings for collections. This attribute allows you to enhance the readability of rows, and create arrays where the element count/order cannot be changed from the Inspector.
+Changes how collections are displayed. This attribute can improve row readability and prevent users from changing the collection size or element order in the Inspector.
 
 ![img](../../../images/img-attribute-list-view-settings.png)
 
@@ -18,11 +18,11 @@ public Vector3[] array2 = new Vector3[]
 
 | Parameter | Description |
 | - | - |
-| ShowAddRemoveFooter | Whether to display the footer for adding/removing elements |
+| ShowAddRemoveFooter | Whether to display the footer used to add or remove elements |
 | ShowAlternatingRowBackgrounds | Whether to change the background color for every other row |
-| ShowBorder | Whether to display borders |
-| ShowBoundCollectionSize | Whether to display the field for changing the number of elements |
+| ShowBorder | Whether to display a border |
+| ShowBoundCollectionSize | Whether to display the field used to change the collection size |
 | ShowFoldoutHeader | Whether to display the foldout header |
-| SelectionType | Selection settings for elements |
+| SelectionType | How elements can be selected |
 | Reorderable | Whether elements can be reordered |
-| ReorderMode  | Settings for displaying reordering |
+| ReorderMode | How reordering is displayed |

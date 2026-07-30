@@ -3,7 +3,7 @@
 Detects changes in collections and invokes methods accordingly. Refer to Unity's [ListView documentation](https://docs.unity3d.com/ScriptReference/UIElements.ListView.html) for details on each event.
 
 > [!WARNING]
-> Ensure that the types of arguments for each event exactly match the arguments listed below (or the ListView event arguments). Failure to match will result in errors and the method won't execute.
+> Ensure that each callback method's parameter types exactly match the corresponding `ListView` event signature shown below. Otherwise, Alchemy reports an error and does not invoke the method.
 
 ```cs 
 [OnListViewChanged(
@@ -48,6 +48,6 @@ void OnItemIndexChanged(int before, int after)
 | OnItemsAdded | Name of the method called when items are added `(IEnumerable<int> indices)` |
 | OnItemsRemoved | Name of the method called when items are removed `(IEnumerable<int> indices)` |
 | OnItemsChosen | Name of the method called when items are chosen by pressing Enter or double-clicking `(IEnumerable<object> items)` |
-| OnItemsSourceChanged | Name of the method called when the original collection changes, such as its count `(no arguments)` |
+| OnItemsSourceChanged | Name of the method called when the source collection changes, such as when its count changes `(no arguments)` |
 | OnSelectionChanged  | Name of the method called when the selected items change `(IEnumerable<object> items)` |
 | OnSelectedIndicesChanged  | Name of the method called when the selected indices change `(IEnumerable<int> indices)` |

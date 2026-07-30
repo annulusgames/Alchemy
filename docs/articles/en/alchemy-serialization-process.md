@@ -1,6 +1,6 @@
 # Alchemy Serialization Process
 
-In Alchemy, by adding the `[AlchemySerialize]` attribute to the target type, a dedicated Source Generator automatically implements `ISerializationCallbackReceiver`. Within this process, all fields annotated with `[AlchemySerializeField]` are gathered, and using the Unity.Serialization package, they are converted to JSON format. However, fields of type `UnityEngine.Object` cannot be handled in JSON format, so their instances are saved in a single list, and only their indices are written to JSON.
+Adding `[AlchemySerialize]` to a target type causes Alchemy's source generator to implement `ISerializationCallbackReceiver`. It collects all fields marked with `[AlchemySerializeField]` and uses the Unity.Serialization package to serialize their data to JSON. Because references to `UnityEngine.Object` instances cannot be represented directly in JSON, Alchemy stores them in a separate list and writes their indices to the JSON data.
 
 For example, consider the following class:
 
@@ -77,4 +77,4 @@ partial class AlchemySerializationExample : global::UnityEngine.ISerializationCa
 }
 ```
 
-Using `[AlchemySerializeField]` increases the processing load for serialization and deserialization. Therefore, it is recommended to avoid using `[AlchemySerializeField]` whenever possible.
+Using `[AlchemySerializeField]` adds serialization and deserialization overhead. Use it only for fields that Unity cannot serialize normally.

@@ -1,4 +1,4 @@
-# Horizontal Attribute
+# Horizontal Group Attribute
 
 Creates a group that displays multiple members horizontally.
 

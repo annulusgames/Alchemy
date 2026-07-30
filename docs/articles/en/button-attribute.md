@@ -4,6 +4,7 @@ By adding the `[Button]` attribute to a method, you can display a button in the 
 
 ```cs
 using System;
+using System.Text;
 using UnityEngine;
 using Alchemy.Inspector;
 

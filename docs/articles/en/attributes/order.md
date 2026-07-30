@@ -1,6 +1,6 @@
 # Order Attribute
 
-Changes the display order of the field. The default value of order is 0, and members are displayed in ascending order.
+Changes the display order of the field. The default order is 0, and members are displayed in ascending order.
 
 ![img](../../../images/img-attribute-order.png)
 

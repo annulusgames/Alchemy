@@ -1,6 +1,6 @@
 # Validate Input Attribute
 
-Displays a warning if the value of the specified member is false.
+Displays a warning when the specified validation condition evaluates to false.
 
 ![img](../../../images/img-attribute-validate-input.png)
 
