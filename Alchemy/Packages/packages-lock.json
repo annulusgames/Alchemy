@@ -1,10 +1,20 @@
 {
   "dependencies": {
+    "com.annulusgames.alchemy.inspector-test": {
+      "version": "file:../../tests/Alchemy.Tests/Assets/Alchemy.Tests.Inspector",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.test-framework": "1.1.31"
+      }
+    },
     "com.annulusgames.alchemy.test": {
       "version": "file:../../tests/Alchemy.Tests/Assets/Alchemy.Tests",
       "depth": 0,
       "source": "local",
-      "dependencies": {}
+      "dependencies": {
+        "com.unity.test-framework": "1.1.31"
+      }
     },
     "com.unity.burst": {
       "version": "1.8.29",
