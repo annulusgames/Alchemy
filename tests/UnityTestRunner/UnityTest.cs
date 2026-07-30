@@ -9,6 +9,8 @@ internal static class UnityTest
 {
     private static readonly IProcessRunner ProcessRunner = new ProcessRunner();
     private static readonly UnityCli UnityCli = new(ProcessRunner);
+    private static readonly UnityEditorLifecycle EditorLifecycle =
+        new(UnityCli);
     private static readonly TextWriter LiveOutput = TextWriter.Synchronized(
         new StreamWriter(Console.OpenStandardOutput())
         {
@@ -25,12 +27,18 @@ internal static class UnityTest
         var editorPath = await UnityCli.ResolveEditorPathAsync(
             project,
             cancellationToken);
-        var executable = GetEditorExecutable(editorPath);
+        var executable = UnityEditorLifecycle.GetEditorExecutable(editorPath);
         if (!File.Exists(executable))
         {
             throw new UnityUnavailableException(
                 $"The installed Unity editor executable does not exist: {executable}");
         }
+
+        await EditorLifecycle.CloseRunningAsync(
+            project,
+            editorPath,
+            message => WriteProgress(project, message),
+            cancellationToken);
 
         var logDirectory = CreateLogDirectory(project);
         var refreshLogPath = Path.Combine(logDirectory, "Refresh.log");
@@ -163,7 +171,7 @@ internal static class UnityTest
         var useCli = project.MajorVersion >= 6000;
         var fileName = useCli
             ? "unity"
-            : GetEditorExecutable(editorPath);
+            : UnityEditorLifecycle.GetEditorExecutable(editorPath);
         if (!useCli && !File.Exists(fileName))
         {
             throw new UnityUnavailableException(
@@ -181,6 +189,7 @@ internal static class UnityTest
                 mode,
                 reportPath,
                 editorLogPath);
+        var workingDirectory = project.ProjectPath;
 
         try
         {
@@ -188,7 +197,7 @@ internal static class UnityTest
                 new ProcessSpec(
                     fileName,
                     arguments,
-                    project.ProjectPath,
+                    workingDirectory,
                     TerminateDescendantsOnExit: true),
                 cancellationToken);
             if (useCli)
@@ -245,7 +254,7 @@ internal static class UnityTest
             "-batchmode",
             "-nographics",
             "-projectPath",
-            project.ProjectPath,
+            ".",
             "-executeMethod",
             "Alchemy.Tests.TestCommands.Refresh",
             "--auto-quit",
@@ -268,7 +277,7 @@ internal static class UnityTest
             "-batchmode",
             "-nographics",
             "-projectPath",
-            project.ProjectPath,
+            ".",
             "-executeMethod",
             command,
             "-testResults",
@@ -277,26 +286,6 @@ internal static class UnityTest
             "-logFile",
             logPath,
         ];
-    }
-
-    private static string GetEditorExecutable(string editorPath)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            return Path.Combine(editorPath, "Editor", "Unity.exe");
-        }
-
-        if (OperatingSystem.IsMacOS())
-        {
-            return Path.Combine(
-                editorPath,
-                "Unity.app",
-                "Contents",
-                "MacOS",
-                "Unity");
-        }
-
-        return Path.Combine(editorPath, "Editor", "Unity");
     }
 
     private static string CreateLogDirectory(UnityProject project)
@@ -359,7 +348,13 @@ internal static class UnityTest
                      .OrderBy(value => value, StringComparer.Ordinal))
         {
             var lineNumber = 0;
-            foreach (var line in File.ReadLines(path))
+            using var stream = File.Open(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(stream);
+            while (reader.ReadLine() is { } line)
             {
                 lineNumber++;
                 if (IsWarningOrHigher(line))
@@ -376,7 +371,7 @@ internal static class UnityTest
         }
 
         LiveOutput.WriteLine(
-            $"[{project.EditorVersion}] Warning-or-higher log entries " +
+            $"[{project.EditorVersion}] Captured log entries " +
             $"({diagnostics.Count}):");
         foreach (var diagnostic in diagnostics)
         {

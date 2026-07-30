@@ -22,6 +22,11 @@ public sealed class ReportException(
     Exception? innerException = null)
     : UnityTestException(message, innerException);
 
-public sealed class ProcessExecutionException(
+public class ProcessExecutionException(
     string message,
     Exception? innerException = null) : Exception(message, innerException);
+
+public sealed class ProcessStartException(
+    string message,
+    Exception? innerException = null)
+    : ProcessExecutionException(message, innerException);

@@ -6,6 +6,8 @@ namespace Alchemy.UnityTestRunner;
 public interface IProcessRunner
 {
     Task<ProcessResult> RunAsync(ProcessSpec specification, CancellationToken cancellationToken);
+
+    Process Start(ProcessSpec specification);
 }
 
 public sealed class ProcessRunner : IProcessRunner
@@ -23,23 +25,11 @@ public sealed class ProcessRunner : IProcessRunner
 
         using var process = new Process
         {
-            StartInfo = CreateStartInfo(specification),
+            StartInfo = CreateStartInfo(specification, redirectOutput: true),
             EnableRaisingEvents = true,
         };
 
-        try
-        {
-            if (!process.Start())
-            {
-                throw new ProcessExecutionException($"Unable to start process '{specification.FileName}'.");
-            }
-        }
-        catch (Win32Exception exception)
-        {
-            throw new ProcessExecutionException(
-                $"Unable to start process '{specification.FileName}'.",
-                exception);
-        }
+        Start(process, specification.FileName);
 
         WindowsProcessJob? processJob;
         try
@@ -61,6 +51,26 @@ public sealed class ProcessRunner : IProcessRunner
                 specification,
                 timeout,
                 cancellationToken);
+        }
+    }
+
+    public Process Start(ProcessSpec specification)
+    {
+        var process = new Process
+        {
+            StartInfo = CreateStartInfo(specification, redirectOutput: false),
+            EnableRaisingEvents = true,
+        };
+
+        try
+        {
+            Start(process, specification.FileName);
+            return process;
+        }
+        catch
+        {
+            process.Dispose();
+            throw;
         }
     }
 
@@ -102,7 +112,9 @@ public sealed class ProcessRunner : IProcessRunner
             await standardError);
     }
 
-    private static ProcessStartInfo CreateStartInfo(ProcessSpec specification)
+    private static ProcessStartInfo CreateStartInfo(
+        ProcessSpec specification,
+        bool redirectOutput)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -110,8 +122,8 @@ public sealed class ProcessRunner : IProcessRunner
             WorkingDirectory = specification.WorkingDirectory ?? Environment.CurrentDirectory,
             UseShellExecute = false,
             CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
+            RedirectStandardOutput = redirectOutput,
+            RedirectStandardError = redirectOutput,
         };
 
         // ArgumentList preserves argument boundaries across Windows, macOS, and Unix shells.
@@ -121,6 +133,24 @@ public sealed class ProcessRunner : IProcessRunner
         }
 
         return startInfo;
+    }
+
+    private static void Start(Process process, string fileName)
+    {
+        try
+        {
+            if (!process.Start())
+            {
+                throw new ProcessStartException(
+                    $"Unable to start process '{fileName}'.");
+            }
+        }
+        catch (Win32Exception exception)
+        {
+            throw new ProcessStartException(
+                $"Unable to start process '{fileName}'.",
+                exception);
+        }
     }
 
     private static void TryKill(Process process)
