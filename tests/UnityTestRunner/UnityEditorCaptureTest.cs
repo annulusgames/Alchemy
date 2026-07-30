@@ -23,6 +23,8 @@ internal static class UnityEditorCaptureTest
         TimeSpan.FromMinutes(1);
     private static readonly IProcessRunner ProcessRunner = new ProcessRunner();
     private static readonly UnityCli UnityCli = new(ProcessRunner);
+    private static readonly UnityEditorForeground EditorForeground =
+        new(ProcessRunner);
     private static readonly UnityEditorLifecycle EditorLifecycle =
         new(UnityCli);
     private static readonly ConcurrentDictionary<string, InspectorRunContext>
@@ -82,7 +84,9 @@ internal static class UnityEditorCaptureTest
                 int.MaxValue,
                 1,
                 cancellationToken);
-            await UnityCli.FocusEditorAsync(project, cancellationToken);
+            await EditorForeground.ActivateAsync(
+                editor.ProcessId,
+                cancellationToken);
             var open = UnityCli.Deserialize<EditorCaptureStatus>(
                 await UnityCli.RunCommandAsync(
                     project,
@@ -104,6 +108,10 @@ internal static class UnityEditorCaptureTest
                     $"Unity {project.EditorVersion} could not open the " +
                     $"Inspector capture session: {open.Message}");
             }
+
+            await EditorForeground.ActivateAsync(
+                editor.ProcessId,
+                cancellationToken);
         }
         catch (Exception startupException)
         {
@@ -166,7 +174,9 @@ internal static class UnityEditorCaptureTest
 
         try
         {
-            await UnityCli.FocusEditorAsync(project, cancellationToken);
+            await EditorForeground.ActivateAsync(
+                context.ProcessId,
+                cancellationToken);
             var start = UnityCli.Deserialize<EditorCaptureStatus>(
                 await UnityCli.RunCommandAsync(
                     project,

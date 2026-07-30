@@ -276,26 +276,6 @@ public sealed class UnityCli
             $"'{command}' within {timeout}.");
     }
 
-    internal async Task FocusEditorAsync(
-        UnityProject project,
-        CancellationToken cancellationToken)
-    {
-        var result = await RunCommandAsync(
-            project,
-            "editor_focus",
-            [],
-            cancellationToken);
-        if (result.ValueKind == JsonValueKind.String &&
-            result.GetString()?.StartsWith(
-                "Error:",
-                StringComparison.Ordinal) == true)
-        {
-            throw new UnityExecutionException(
-                $"Unity {project.EditorVersion} could not be focused: " +
-                result.GetString());
-        }
-    }
-
     internal async Task<JsonElement> RunCommandAsync(
         UnityProject project,
         string command,
