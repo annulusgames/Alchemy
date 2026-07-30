@@ -4,7 +4,7 @@ namespace Alchemy.UnityTestRunner;
 
 internal sealed class UnityEditorLifecycle(UnityCli unityCli)
 {
-    private const string CloseCommand = "alchemy_inspector_capture_close";
+    private const string CloseCommand = "alchemy_editor_capture_close";
     private static readonly TimeSpan ShutdownTimeout =
         TimeSpan.FromSeconds(30);
 
@@ -94,6 +94,24 @@ internal sealed class UnityEditorLifecycle(UnityCli unityCli)
         }
 
         return Path.Combine(editorPath, "Editor", "Unity");
+    }
+
+    internal static int? FindRunningEditorProcessId(string executable)
+    {
+        var processName = Path.GetFileNameWithoutExtension(executable);
+        foreach (var process in Process.GetProcessesByName(processName))
+        {
+            using (process)
+            {
+                if (process.MainModule?.FileName is { } processPath &&
+                    PathsEqual(executable, processPath))
+                {
+                    return process.Id;
+                }
+            }
+        }
+
+        return null;
     }
 
     internal static async Task CloseProcessAsync(

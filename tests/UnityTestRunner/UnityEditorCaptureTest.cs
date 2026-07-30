@@ -4,10 +4,12 @@ using TUnit.Core;
 
 namespace Alchemy.UnityTestRunner;
 
-internal static class UnityInspectorTest
+internal static class UnityEditorCaptureTest
 {
-    private const string StartCommand = "alchemy_inspector_capture_start";
-    private const string StatusCommand = "alchemy_inspector_capture_status";
+    private const string Surface = "Inspector";
+    private const string StartCommand =
+        "alchemy_editor_capture_inspector_start";
+    private const string StatusCommand = "alchemy_editor_capture_status";
     private const int CaptureWidth = 640;
     private const int CaptureHeight = 900;
 
@@ -21,9 +23,6 @@ internal static class UnityInspectorTest
         new(UnityCli);
     private static readonly ConcurrentDictionary<string, InspectorRunContext>
         Runs = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly string RunId =
-        $"{DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture)}-" +
-        Guid.NewGuid().ToString("N")[..8];
 
     public static async Task StartAsync(
         UnityProject project,
@@ -41,18 +40,13 @@ internal static class UnityInspectorTest
             project,
             cancellationToken);
 
-        var captureDirectory = Path.GetFullPath(
-            Path.Combine(
-                project.ProjectPath,
-                "..",
-                "..",
-                "captures",
-                RunId,
-                project.VersionLine));
-        Directory.CreateDirectory(captureDirectory);
+        var captureDirectory = EditorCaptureReport.RegisterSurface(
+            project,
+            Surface,
+            DiscoverInspectorTestNames(project));
         var editorLogPath = Path.Combine(
             captureDirectory,
-            "InspectorCapture.Editor.log");
+            "EditorCapture.Editor.log");
 
         await EditorLifecycle.CloseRunningAsync(
             project,
@@ -141,13 +135,13 @@ internal static class UnityInspectorTest
             context.CaptureDirectory,
             $"{testName}.png");
         var prefabPath =
-            $"Packages/com.annulusgames.alchemy.inspector-test/{testName}.prefab";
+            $"Packages/com.annulusgames.alchemy.editor-ui-test/{testName}.prefab";
         WriteProgress(project, $"Inspector {testName}: capturing...");
 
         try
         {
             await UnityCli.FocusEditorAsync(project, cancellationToken);
-            var start = UnityCli.Deserialize<InspectorCaptureStatus>(
+            var start = UnityCli.Deserialize<EditorCaptureStatus>(
                 await UnityCli.RunCommandAsync(
                     project,
                     StartCommand,
@@ -189,6 +183,11 @@ internal static class UnityInspectorTest
             }
 
             EnsureCaptureExists(outputPath);
+            EditorCaptureReport.RecordCapture(
+                project,
+                Surface,
+                testName,
+                outputPath);
             WriteProgress(
                 project,
                 $"Inspector {testName}: captured {CaptureWidth}x{CaptureHeight}");
@@ -208,6 +207,32 @@ internal static class UnityInspectorTest
                         $"{CaptureWidth}x{CaptureHeight} Inspector capture");
             }
         }
+    }
+
+    public static string[] DiscoverInspectorTestNames(UnityProject project)
+    {
+        var packageDirectory = Path.GetFullPath(
+            Path.Combine(
+                project.ProjectPath,
+                "..",
+                "..",
+                "Alchemy.Tests",
+                "Assets",
+                "Alchemy.Tests.EditorUI"));
+        if (!Directory.Exists(packageDirectory))
+        {
+            return [];
+        }
+
+        return Directory
+            .EnumerateFiles(
+                packageDirectory,
+                "*.prefab",
+                SearchOption.TopDirectoryOnly)
+            .Select(Path.GetFileNameWithoutExtension)
+            .OfType<string>()
+            .Order(StringComparer.Ordinal)
+            .ToArray();
     }
 
     public static async Task StopAsync(
@@ -238,7 +263,7 @@ internal static class UnityInspectorTest
             cancellationToken);
     }
 
-    private static async Task<InspectorCaptureStatus> WaitForCaptureAsync(
+    private static async Task<EditorCaptureStatus> WaitForCaptureAsync(
         UnityProject project,
         string jobId,
         CancellationToken cancellationToken)
@@ -247,7 +272,7 @@ internal static class UnityInspectorTest
         while (DateTimeOffset.UtcNow < deadline)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var status = UnityCli.Deserialize<InspectorCaptureStatus>(
+            var status = UnityCli.Deserialize<EditorCaptureStatus>(
                 await UnityCli.RunCommandAsync(
                     project,
                     StatusCommand,
@@ -310,7 +335,7 @@ internal static class UnityInspectorTest
         int ProcessId,
         long ConsoleCursor);
 
-    private sealed class InspectorCaptureStatus
+    private sealed class EditorCaptureStatus
     {
         public string JobId { get; init; } = "";
         public string Status { get; init; } = "";

@@ -1,7 +1,7 @@
 ﻿using Alchemy.Inspector;
 using UnityEngine;
 
-namespace Alchemy.Tests.Inspector
+namespace Alchemy.Tests.EditorUI
 {
     public class UnsignedTest : MonoBehaviour
     {

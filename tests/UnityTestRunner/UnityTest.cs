@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Globalization;
-using System.Text;
 using TUnit.Core;
 
 namespace Alchemy.UnityTestRunner;
@@ -18,6 +17,10 @@ internal static class UnityTest
         });
     private static readonly ConcurrentDictionary<string, UnityRunContext> Runs =
         new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> ModeGates =
+        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan RunTimeout =
+        TimeSpan.FromMinutes(15);
 
     public static async Task RefreshAsync(
         UnityProject project,
@@ -99,44 +102,35 @@ internal static class UnityTest
 
         var reportPath = Path.Combine(context.LogDirectory, $"{mode}.xml");
         var editorLogPath = Path.Combine(context.LogDirectory, $"{mode}.log");
-        var cliLogPath = Path.Combine(context.LogDirectory, $"{mode}.cli.log");
+        var cliLogPath = project.MajorVersion >= 6000
+            ? string.Empty
+            : Path.Combine(context.LogDirectory, $"{mode}.cli.log");
+
         WriteProgress(project, $"{mode}: running...");
 
         try
         {
+            if (project.MajorVersion >= 6000)
+            {
+                await RunUnityCliModeAsync(
+                    project,
+                    context,
+                    mode,
+                    reportPath,
+                    editorLogPath,
+                    cancellationToken);
+                ValidateReport(project, mode, reportPath);
+                return;
+            }
+
             var result = await RunUnityAsync(
                 project,
                 context.EditorPath,
                 mode,
                 reportPath,
                 editorLogPath,
-                cliLogPath,
                 cancellationToken);
-            if (!File.Exists(reportPath))
-            {
-                throw new UnityExecutionException(
-                    $"Unity exited with code {result.ExitCode} without producing an " +
-                    $"NUnit report. See {editorLogPath} and {cliLogPath} for details." +
-                    FormatProcessDiagnostic(result));
-            }
-
-            var report = NUnitReport.Load(reportPath);
-            WriteModeSummary(project, mode, report.Summary);
-            if (report.Summary.Total == 0)
-            {
-                throw new UnityExecutionException(
-                    $"Unity {project.EditorVersion} discovered no {mode} tests. " +
-                    $"See {reportPath}.");
-            }
-
-            if (report.Summary.HasFailures)
-            {
-                throw new UnityExecutionException(
-                    $"Unity {project.EditorVersion} {mode} tests failed: " +
-                    FormatSummary(report.Summary) +
-                    $". See {reportPath}.");
-            }
-
+            ValidateReport(project, mode, reportPath);
             if (result.ExitCode != 0)
             {
                 throw new UnityExecutionException(
@@ -159,36 +153,146 @@ internal static class UnityTest
         }
     }
 
+    private static async Task RunUnityCliModeAsync(
+        UnityProject project,
+        UnityRunContext context,
+        TestMode mode,
+        string reportPath,
+        string editorLogPath,
+        CancellationToken cancellationToken)
+    {
+        var gate = ModeGates.GetOrAdd(
+            project.ProjectPath,
+            _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken);
+        ConnectedUnityEditor? editor = null;
+        try
+        {
+            var editorArguments = BuildEditorTestArguments(
+                mode,
+                reportPath,
+                editorLogPath);
+            WriteProgress(
+                project,
+                $"{mode}: opening one Unity Editor...");
+            editor = await UnityCli.OpenEditorWithArgumentsAsync(
+                project,
+                editorArguments,
+                cancellationToken,
+                waitForPipeline: false,
+                editorExecutable: UnityEditorLifecycle.GetEditorExecutable(
+                    context.EditorPath));
+            WriteProgress(
+                project,
+                $"{mode}: Editor {editor.ProcessId} is running");
+
+            var deadline = DateTimeOffset.UtcNow + RunTimeout;
+            while (DateTimeOffset.UtcNow < deadline)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var connectedEditor = await UnityCli.FindConnectedEditorAsync(
+                    project,
+                    cancellationToken);
+                if (connectedEditor is null && File.Exists(reportPath))
+                {
+                    WriteProgress(
+                        project,
+                        $"{mode}: Editor completed the selected mode");
+                    return;
+                }
+
+                await Task.Delay(
+                    TimeSpan.FromMilliseconds(500),
+                    cancellationToken);
+            }
+
+            throw new UnityExecutionException(
+                $"Unity {project.EditorVersion} {mode} did not complete " +
+                $"within {RunTimeout}. See {editorLogPath}.");
+        }
+        finally
+        {
+            var processId = editor?.ProcessId > 0
+                ? editor.ProcessId
+                : UnityEditorLifecycle.FindRunningEditorProcessId(
+                    UnityEditorLifecycle.GetEditorExecutable(
+                        context.EditorPath));
+            if (processId is not null)
+            {
+                await UnityEditorLifecycle.CloseProcessAsync(
+                    processId.Value,
+                    message => WriteProgress(project, message),
+                    CancellationToken.None);
+            }
+
+            gate.Release();
+        }
+    }
+
+    private static string BuildEditorTestArguments(
+        TestMode mode,
+        string reportPath,
+        string editorLogPath)
+    {
+        var command = mode == TestMode.EditMode
+            ? "Alchemy.Tests.TestCommands.RunAllEditModeTests"
+            : "Alchemy.Tests.TestCommands.RunAllPlayModeTests";
+        return
+            $"-batchmode -nographics -automated -projectPath . " +
+            $"-executeMethod {command} " +
+            $"-testResults \"{reportPath}\" --auto-quit " +
+            $"-logFile \"{editorLogPath}\"";
+    }
+
+    private static void ValidateReport(
+        UnityProject project,
+        TestMode mode,
+        string reportPath)
+    {
+        if (!File.Exists(reportPath))
+        {
+            throw new UnityExecutionException(
+                $"Unity did not produce the {mode} NUnit report: {reportPath}.");
+        }
+
+        var report = NUnitReport.Load(reportPath);
+        WriteModeSummary(project, mode, report.Summary);
+        if (report.Summary.Total == 0)
+        {
+            throw new UnityExecutionException(
+                $"Unity {project.EditorVersion} discovered no {mode} tests. " +
+                $"See {reportPath}.");
+        }
+
+        if (report.Summary.HasFailures)
+        {
+            throw new UnityExecutionException(
+                $"Unity {project.EditorVersion} {mode} tests failed: " +
+                FormatSummary(report.Summary) +
+                $". See {reportPath}.");
+        }
+    }
+
     private static async Task<ProcessResult> RunUnityAsync(
         UnityProject project,
         string editorPath,
         TestMode mode,
         string reportPath,
         string editorLogPath,
-        string cliLogPath,
         CancellationToken cancellationToken)
     {
-        var useCli = project.MajorVersion >= 6000;
-        var fileName = useCli
-            ? "unity"
-            : UnityEditorLifecycle.GetEditorExecutable(editorPath);
-        if (!useCli && !File.Exists(fileName))
+        var fileName = UnityEditorLifecycle.GetEditorExecutable(editorPath);
+        if (!File.Exists(fileName))
         {
             throw new UnityUnavailableException(
                 $"The installed Unity editor executable does not exist: {fileName}");
         }
 
-        var arguments = useCli
-            ? BuildUnityCliArguments(
-                project,
-                mode,
-                reportPath,
-                editorLogPath)
-            : BuildBatchModeArguments(
-                project,
-                mode,
-                reportPath,
-                editorLogPath);
+        var arguments = BuildBatchModeArguments(
+            project,
+            mode,
+            reportPath,
+            editorLogPath);
         var workingDirectory = project.ProjectPath;
 
         try
@@ -200,17 +304,6 @@ internal static class UnityTest
                     workingDirectory,
                     TerminateDescendantsOnExit: true),
                 cancellationToken);
-            if (useCli)
-            {
-                await File.WriteAllTextAsync(
-                    cliLogPath,
-                    $"STDOUT{Environment.NewLine}{result.StandardOutput}" +
-                    $"{Environment.NewLine}STDERR{Environment.NewLine}" +
-                    result.StandardError,
-                    Encoding.UTF8,
-                    cancellationToken);
-            }
-
             return result;
         }
         catch (ProcessExecutionException exception)
@@ -219,30 +312,6 @@ internal static class UnityTest
                 $"Could not start Unity {project.EditorVersion} for {mode}.",
                 exception);
         }
-    }
-
-    private static IReadOnlyList<string> BuildUnityCliArguments(
-        UnityProject project,
-        TestMode mode,
-        string reportPath,
-        string logPath)
-    {
-        return
-        [
-            "--no-banner",
-            "--non-interactive",
-            "test",
-            project.ProjectPath,
-            "--editor-version",
-            project.EditorVersion,
-            "--mode",
-            mode.ToString(),
-            "--output",
-            reportPath,
-            "--",
-            "-logFile",
-            logPath,
-        ];
     }
 
     private static IReadOnlyList<string> BuildLibraryWarmupArguments(

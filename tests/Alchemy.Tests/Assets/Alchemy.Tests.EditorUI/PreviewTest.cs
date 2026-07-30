@@ -2,7 +2,7 @@ using Alchemy.Inspector;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Alchemy.Tests.Inspector
+namespace Alchemy.Tests.EditorUI
 {
     public class PreviewTest : MonoBehaviour
     {

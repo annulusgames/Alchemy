@@ -12,10 +12,10 @@ using Object = UnityEngine.Object;
 namespace Alchemy.Tests.Pipeline
 {
     [InitializeOnLoad]
-    internal static class InspectorCaptureCommands
+    internal static class EditorCaptureCommands
     {
-        const string InspectorTestPackage =
-            "Packages/com.annulusgames.alchemy.inspector-test";
+        const string EditorUiTestPackage =
+            "Packages/com.annulusgames.alchemy.editor-ui-test";
         const double SettleSeconds = 1d;
         const double PostRepaintSeconds = 0.25d;
         const int MaximumDimension = 4096;
@@ -28,13 +28,13 @@ namespace Alchemy.Tests.Pipeline
         static InspectorCaptureResult lastResult =
             InspectorCaptureResult.CreateIdle();
 
-        static InspectorCaptureCommands()
+        static EditorCaptureCommands()
         {
             AssemblyReloadEvents.beforeAssemblyReload += CleanupBeforeReload;
         }
 
         [CliCommand(
-            "alchemy_inspector_capture_start",
+            "alchemy_editor_capture_inspector_start",
             "Open an Inspector for a prefab, expand its contents, and capture it to a PNG.",
             MainThreadRequired = true)]
         static InspectorCaptureResult Start(
@@ -123,8 +123,8 @@ namespace Alchemy.Tests.Pipeline
         }
 
         [CliCommand(
-            "alchemy_inspector_capture_status",
-            "Return the current or most recent Inspector capture status.",
+            "alchemy_editor_capture_status",
+            "Return the current or most recent Editor UI capture status.",
             MainThreadRequired = false)]
         static InspectorCaptureResult Status(
             [CliArg("job_id", "Capture job identifier returned by start.")]
@@ -146,8 +146,8 @@ namespace Alchemy.Tests.Pipeline
         }
 
         [CliCommand(
-            "alchemy_inspector_capture_cancel",
-            "Cancel the active Inspector capture and restore the Editor state.",
+            "alchemy_editor_capture_cancel",
+            "Cancel the active Editor UI capture and restore the Editor state.",
             MainThreadRequired = true)]
         static InspectorCaptureResult Cancel(
             [CliArg(
@@ -190,7 +190,7 @@ namespace Alchemy.Tests.Pipeline
         }
 
         [CliCommand(
-            "alchemy_inspector_capture_close",
+            "alchemy_editor_capture_close",
             "Close an automated Editor session.",
             MainThreadRequired = true)]
         static InspectorCaptureResult Close(
@@ -496,7 +496,7 @@ namespace Alchemy.Tests.Pipeline
 
             return value.Contains("/")
                 ? value
-                : $"{InspectorTestPackage}/{value}";
+                : $"{EditorUiTestPackage}/{value}";
         }
 
         static string ResolveOutputPath(string output)

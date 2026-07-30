@@ -12,4 +12,10 @@
     <PackageReference Include="TUnit" Version="1.61.38" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource
+      Include="EditorCaptureReport.template.html"
+      LogicalName="Alchemy.UnityTestRunner.EditorCaptureReport.template.html" />
+  </ItemGroup>
+
 </Project>

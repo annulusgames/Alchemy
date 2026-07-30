@@ -213,8 +213,7 @@ namespace Alchemy.Tests
             }
         }
 
-        private static bool ShouldAutoQuit =>
-            Application.isBatchMode && HasArgument(AutoQuitArgument);
+        private static bool ShouldAutoQuit => HasArgument(AutoQuitArgument);
 
         private static void WriteResult(ITestResultAdaptor result, RunState runState)
         {

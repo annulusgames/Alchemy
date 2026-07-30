@@ -3,7 +3,7 @@ using System;
 using Alchemy.Serialization;
 #endif
 
-namespace Alchemy.Tests.Inspector
+namespace Alchemy.Tests.EditorUI
 {
 #if ALCHEMY_SUPPORT_SERIALIZATION
     [ShowAlchemySerializationData]

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Alchemy.Inspector;
 
-namespace Alchemy.Tests.Inspector
+namespace Alchemy.Tests.EditorUI
 {
     public class OnListViewChangedTest : MonoBehaviour
     {

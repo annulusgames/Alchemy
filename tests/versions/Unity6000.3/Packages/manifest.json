@@ -1,14 +1,14 @@
 {
   "dependencies": {
     "com.annulusgames.alchemy": "file:../../../../Alchemy/Assets/Alchemy",
-    "com.annulusgames.alchemy.inspector-test": "file:../../../Alchemy.Tests/Assets/Alchemy.Tests.Inspector",
+    "com.annulusgames.alchemy.editor-ui-test": "file:../../../Alchemy.Tests/Assets/Alchemy.Tests.EditorUI",
     "com.annulusgames.alchemy.test": "file:../../../Alchemy.Tests/Assets/Alchemy.Tests",
     "com.unity.serialization": "3.1.5",
     "com.unity.modules.uielements": "1.0.0",
     "com.unity.pipeline": "0.4.0-exp.1"
   },
   "testables": [
-    "com.annulusgames.alchemy.inspector-test",
+    "com.annulusgames.alchemy.editor-ui-test",
     "com.annulusgames.alchemy.test"
   ]
 }

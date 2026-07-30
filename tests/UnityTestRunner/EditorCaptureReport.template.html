@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alchemy Editor UI capture matrix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #0e1116;
+      --ink-elevated: #151a22;
+      --ink-soft: #232b38;
+      --line: rgb(232 214 180 / 12%);
+      --line-strong: rgb(232 214 180 / 22%);
+      --fg: #efe7d8;
+      --fg-dim: #9a917f;
+      --fg-faint: #6d6556;
+      --amber: #e0a54b;
+      --amber-soft: rgb(224 165 75 / 16%);
+      --amber-glow: rgb(224 165 75 / 28%);
+      --preview-chrome: #0a0c10;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 24px 60px rgb(0 0 0 / 45%);
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--ink);
+      color: var(--fg);
+      font-family: Sora, "Segoe UI", sans-serif;
+      line-height: 1.45;
+      margin: 0;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    body::before {
+      background:
+        radial-gradient(1100px 520px at 8% -10%, rgb(224 165 75 / 14%), transparent 55%),
+        radial-gradient(900px 480px at 92% 0%, rgb(90 140 180 / 10%), transparent 50%),
+        radial-gradient(700px 400px at 70% 100%, rgb(224 165 75 / 6%), transparent 55%),
+        linear-gradient(180deg, #12161e 0%, var(--ink) 38%, #0c0f14 100%);
+      content: "";
+      inset: 0;
+      pointer-events: none;
+      position: fixed;
+      z-index: -2;
+    }
+
+    body::after {
+      background-image:
+        linear-gradient(rgb(232 214 180 / 3.5%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(232 214 180 / 3.5%) 1px, transparent 1px);
+      background-size: 48px 48px;
+      content: "";
+      inset: 0;
+      mask-image: radial-gradient(ellipse 80% 70% at 50% 20%, #000 20%, transparent 75%);
+      opacity: 0.55;
+      pointer-events: none;
+      position: fixed;
+      z-index: -1;
+    }
+
+    main {
+      display: grid;
+      gap: 28px;
+      margin: 0 auto;
+      max-width: 1560px;
+      padding: 36px 32px 48px;
+    }
+
+    header {
+      align-items: end;
+      animation: rise 560ms var(--ease) both;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px 28px;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: grid;
+      gap: 14px;
+      max-width: 720px;
+    }
+
+    .eyebrow {
+      align-items: center;
+      color: var(--amber);
+      display: inline-flex;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.72rem;
+      font-weight: 500;
+      gap: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      background: var(--amber);
+      border-radius: 1px;
+      content: "";
+      height: 1px;
+      width: 28px;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(1.85rem, 3.6vw, 2.75rem);
+      font-weight: 600;
+      letter-spacing: -0.045em;
+      line-height: 1.05;
+    }
+
+    h1 span {
+      color: var(--amber);
+    }
+
+    .lede {
+      color: var(--fg-dim);
+      font-size: 0.95rem;
+      max-width: 46ch;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .stat {
+      background: rgb(26 33 44 / 72%);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      display: grid;
+      gap: 4px;
+      min-width: 118px;
+      padding: 12px 14px;
+      backdrop-filter: blur(10px);
+    }
+
+    .stat strong {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 1.15rem;
+      font-weight: 500;
+      letter-spacing: -0.03em;
+    }
+
+    .stat span {
+      color: var(--fg-faint);
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .stat.primary {
+      background:
+        linear-gradient(160deg, rgb(224 165 75 / 18%), rgb(26 33 44 / 80%) 55%);
+      border-color: rgb(224 165 75 / 35%);
+    }
+
+    .stat.primary strong {
+      color: var(--amber);
+    }
+
+    .badge {
+      background: var(--amber-soft);
+      border: 1px solid rgb(224 165 75 / 32%);
+      border-radius: 999px;
+      color: var(--amber);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      padding: 5px 10px;
+      white-space: nowrap;
+    }
+
+    .badge.muted {
+      background: rgb(232 214 180 / 6%);
+      border-color: var(--line);
+      color: var(--fg-dim);
+    }
+
+    .workspace {
+      align-items: start;
+      animation: rise 700ms var(--ease) 80ms both;
+      display: grid;
+      gap: 22px;
+      grid-template-columns: minmax(0, 1fr) minmax(340px, 0.46fr);
+    }
+
+    .matrices {
+      display: grid;
+      gap: 28px;
+      min-width: 0;
+    }
+
+    .surface {
+      display: grid;
+      gap: 12px;
+    }
+
+    .surface h2 {
+      align-items: center;
+      display: flex;
+      font-size: 0.78rem;
+      font-weight: 500;
+      gap: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .surface h2::before {
+      background: var(--amber);
+      border-radius: 50%;
+      box-shadow: 0 0 0 4px var(--amber-soft);
+      content: "";
+      height: 7px;
+      width: 7px;
+    }
+
+    .matrix {
+      background: rgb(26 33 44 / 78%);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: auto;
+      backdrop-filter: blur(12px);
+    }
+
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 800px;
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      padding: 10px;
+    }
+
+    tr:last-child th,
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    th:last-child,
+    td:last-child {
+      border-right: 0;
+    }
+
+    thead th {
+      background: rgb(18 22 30 / 92%);
+      color: var(--fg-dim);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      position: sticky;
+      text-align: center;
+      top: 0;
+      z-index: 2;
+    }
+
+    thead th:first-child,
+    tbody th {
+      left: 0;
+      position: sticky;
+      text-align: left;
+      width: 180px;
+      z-index: 3;
+    }
+
+    tbody th {
+      background: rgb(22 28 38 / 96%);
+      color: var(--fg-dim);
+      font-size: 0.8rem;
+      font-weight: 500;
+      overflow-wrap: anywhere;
+    }
+
+    tbody tr:hover th,
+    tbody tr:hover td {
+      background: rgb(36 44 58 / 55%);
+    }
+
+    tbody tr:hover th {
+      background: rgb(30 38 50 / 98%);
+      color: var(--fg);
+    }
+
+    td {
+      width: 132px;
+    }
+
+    .capture {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: block;
+      padding: 3px;
+      position: relative;
+      transition:
+        transform 180ms var(--ease),
+        box-shadow 180ms var(--ease);
+      width: 100%;
+    }
+
+    .capture::after {
+      border: 1px solid transparent;
+      border-radius: 6px;
+      content: "";
+      inset: 3px;
+      pointer-events: none;
+      position: absolute;
+      transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease);
+    }
+
+    .capture:hover {
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    .capture:hover::after {
+      border-color: rgb(224 165 75 / 45%);
+      box-shadow: 0 10px 24px rgb(0 0 0 / 35%);
+    }
+
+    .capture:focus-visible,
+    .capture[aria-pressed="true"] {
+      outline: 0;
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    .capture:focus-visible::after,
+    .capture[aria-pressed="true"]::after {
+      border-color: var(--amber);
+      box-shadow:
+        0 0 0 3px var(--amber-glow),
+        0 12px 28px rgb(0 0 0 / 40%);
+    }
+
+    .capture img,
+    .missing {
+      aspect-ratio: 640 / 900;
+      border-radius: 5px;
+      width: 100%;
+    }
+
+    .capture img {
+      background: var(--preview-chrome);
+      display: block;
+      object-fit: cover;
+      object-position: top;
+    }
+
+    .missing {
+      align-items: center;
+      background:
+        repeating-linear-gradient(
+          -45deg,
+          rgb(232 214 180 / 3%),
+          rgb(232 214 180 / 3%) 6px,
+          transparent 6px,
+          transparent 12px
+        ),
+        var(--ink-soft);
+      border: 1px dashed var(--line-strong);
+      color: var(--fg-faint);
+      display: flex;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.68rem;
+      justify-content: center;
+      letter-spacing: 0.04em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .selection {
+      background: rgb(26 33 44 / 82%);
+      border: 1px solid var(--line-strong);
+      border-radius: calc(var(--radius) + 2px);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 18px;
+      padding: 18px;
+      position: sticky;
+      top: 18px;
+      backdrop-filter: blur(16px);
+    }
+
+    .selection::before {
+      background: linear-gradient(90deg, var(--amber), transparent 70%);
+      border-radius: calc(var(--radius) + 2px) calc(var(--radius) + 2px) 0 0;
+      content: "";
+      height: 2px;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+    }
+
+    .selection-copy {
+      align-content: start;
+      display: grid;
+      gap: 10px;
+    }
+
+    .selection-heading {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .selection-heading h2 {
+      flex: 1 1 100%;
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    .selection-copy p {
+      color: var(--fg-dim);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.78rem;
+    }
+
+    .preview {
+      background:
+        radial-gradient(circle at 50% 0%, rgb(224 165 75 / 8%), transparent 45%),
+        linear-gradient(180deg, var(--ink-elevated), var(--preview-chrome));
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      display: grid;
+      min-height: 280px;
+      overflow: hidden;
+      padding: 14px;
+      place-items: center;
+      position: relative;
+    }
+
+    .preview::before {
+      border: 1px solid rgb(232 214 180 / 6%);
+      border-radius: 10px;
+      content: "";
+      inset: 8px;
+      pointer-events: none;
+      position: absolute;
+    }
+
+    .preview img {
+      background: #1c1f24;
+      border-radius: 6px;
+      box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
+      display: block;
+      max-height: calc(100vh - 220px);
+      max-width: 100%;
+      object-fit: contain;
+      transition: opacity 220ms var(--ease), transform 280ms var(--ease);
+    }
+
+    .preview img.is-swapping {
+      opacity: 0.35;
+      transform: scale(0.985);
+    }
+
+    .legend {
+      align-items: center;
+      animation: rise 760ms var(--ease) 120ms both;
+      color: var(--fg-faint);
+      display: flex;
+      flex-wrap: wrap;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.72rem;
+      gap: 18px;
+      letter-spacing: 0.04em;
+    }
+
+    .legend span {
+      align-items: center;
+      display: inline-flex;
+      gap: 8px;
+    }
+
+    .mark {
+      border-radius: 50%;
+      display: inline-block;
+      height: 8px;
+      width: 8px;
+    }
+
+    .mark.captured {
+      background: var(--amber);
+      box-shadow: 0 0 0 3px var(--amber-soft);
+    }
+
+    .mark.missing {
+      border: 1px solid var(--line-strong);
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 960px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .selection {
+        position: static;
+      }
+
+      .preview img {
+        max-height: 70vh;
+      }
+    }
+
+    @media (max-width: 680px) {
+      main {
+        padding: 20px 16px 32px;
+      }
+
+      .stat {
+        min-width: calc(50% - 5px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="capture-matrix">
+    <header>
+      <div class="brand">
+        <div class="eyebrow">Alchemy · Editor UI</div>
+        <h1>Capture <span>matrix</span></h1>
+        <p class="lede">
+          Cross-version Inspector snapshots. Pick a cell to inspect the full capture.
+        </p>
+      </div>
+      <div class="stats" aria-label="Capture summary">
+        <div class="stat primary">
+          <strong>{{CAPTURED_COUNT}} / {{TOTAL_COUNT}}</strong>
+          <span>Captured</span>
+        </div>
+        <div class="stat">
+          <strong>{{VERSION_COUNT}}</strong>
+          <span>Versions</span>
+        </div>
+        <div class="stat">
+          <strong>{{TEST_CASE_COUNT}}</strong>
+          <span>Cases</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <div class="matrices">
+        {{MATRICES}}
+      </div>
+
+      <section class="selection" aria-live="polite">
+        <div class="selection-copy">
+          <div class="selection-heading">
+            <h2 id="selected-test">No capture selected</h2>
+            <span class="badge" id="selected-surface">Editor UI</span>
+            <span class="badge muted" id="selected-version">Unity</span>
+          </div>
+          <p id="selected-meta">Select a captured cell from the matrix.</p>
+        </div>
+        <div class="preview">
+          <img id="selected-image" alt="" hidden>
+        </div>
+      </section>
+    </div>
+
+    <div class="legend">
+      <span><i class="mark captured"></i>Captured</span>
+      <span><i class="mark missing"></i>Missing</span>
+      <span>Click a thumbnail to inspect</span>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.getElementById("capture-matrix");
+      const buttons = [...root.querySelectorAll(".capture")];
+      const selectedTest = root.querySelector("#selected-test");
+      const selectedSurface = root.querySelector("#selected-surface");
+      const selectedVersion = root.querySelector("#selected-version");
+      const selectedMeta = root.querySelector("#selected-meta");
+      const selectedImage = root.querySelector("#selected-image");
+
+      const select = button => {
+        buttons.forEach(candidate => {
+          candidate.setAttribute("aria-pressed", "false");
+        });
+        button.setAttribute("aria-pressed", "true");
+
+        const thumbnail = button.querySelector("img");
+        const surface = button.dataset.surface;
+        const testName = button.dataset.test;
+        const version = button.dataset.version;
+        selectedTest.textContent = testName;
+        selectedSurface.textContent = surface;
+        selectedVersion.textContent = `Unity ${version}`;
+        selectedMeta.textContent = "640 × 900 · captured";
+
+        const apply = () => {
+          selectedImage.src = thumbnail.src;
+          selectedImage.alt = `${surface} ${testName}, Unity ${version} capture`;
+          selectedImage.hidden = false;
+          selectedImage.classList.remove("is-swapping");
+        };
+
+        if (!selectedImage.hidden && selectedImage.src !== thumbnail.src) {
+          selectedImage.classList.add("is-swapping");
+          window.setTimeout(apply, 120);
+        } else {
+          apply();
+        }
+      };
+
+      buttons.forEach(button => {
+        button.addEventListener("click", () => select(button));
+      });
+
+      if (buttons.length > 0) {
+        select(buttons[0]);
+      }
+    })();
+  </script>
+</body>
+</html>

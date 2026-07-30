@@ -5,6 +5,8 @@ namespace Alchemy.UnityTestRunner;
 public sealed class UnityCli
 {
     private static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan PipelineStartupGracePeriod =
+        TimeSpan.FromSeconds(5);
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -136,8 +138,19 @@ public sealed class UnityCli
         string logPath,
         CancellationToken cancellationToken)
     {
-        var editorArguments =
-            $"-automated --auto-quit -logFile \"{logPath}\"";
+        return await OpenEditorWithArgumentsAsync(
+            project,
+            $"-automated --auto-quit -logFile \"{logPath}\"",
+            cancellationToken);
+    }
+
+    internal async Task<ConnectedUnityEditor> OpenEditorWithArgumentsAsync(
+        UnityProject project,
+        string editorArguments,
+        CancellationToken cancellationToken,
+        bool waitForPipeline = true,
+        string? editorExecutable = null)
+    {
         using var launcher = processRunner.Start(
             new ProcessSpec(
                 "unity",
@@ -157,6 +170,8 @@ public sealed class UnityCli
         try
         {
             var deadline = DateTimeOffset.UtcNow + CommandTimeout;
+            var pipelineGraceDeadline =
+                DateTimeOffset.UtcNow + PipelineStartupGracePeriod;
             while (DateTimeOffset.UtcNow < deadline)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -173,6 +188,18 @@ public sealed class UnityCli
                     throw new UnityExecutionException(
                         $"Could not open Unity {project.EditorVersion}; " +
                         $"the Unity CLI exited with code {launcher.ExitCode}.");
+                }
+
+                if (!waitForPipeline &&
+                    DateTimeOffset.UtcNow >= pipelineGraceDeadline)
+                {
+                    return new ConnectedUnityEditor(
+                        editorExecutable is null
+                            ? 0
+                            : UnityEditorLifecycle.FindRunningEditorProcessId(
+                                editorExecutable) ?? 0,
+                        "started",
+                        project.EditorVersion);
                 }
 
                 await Task.Delay(

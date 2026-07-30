@@ -6,8 +6,8 @@
       "source": "local",
       "dependencies": {}
     },
-    "com.annulusgames.alchemy.inspector-test": {
-      "version": "file:../../../Alchemy.Tests/Assets/Alchemy.Tests.Inspector",
+    "com.annulusgames.alchemy.editor-ui-test": {
+      "version": "file:../../../Alchemy.Tests/Assets/Alchemy.Tests.EditorUI",
       "depth": 0,
       "source": "local",
       "dependencies": {

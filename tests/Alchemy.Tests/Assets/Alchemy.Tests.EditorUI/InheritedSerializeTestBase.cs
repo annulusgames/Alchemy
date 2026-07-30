@@ -5,7 +5,7 @@ using Alchemy.Serialization;
 #endif
 using UnityEngine;
 
-namespace Alchemy.Tests.Inspector
+namespace Alchemy.Tests.EditorUI
 {
 #if ALCHEMY_SUPPORT_SERIALIZATION
     [ShowAlchemySerializationData]
