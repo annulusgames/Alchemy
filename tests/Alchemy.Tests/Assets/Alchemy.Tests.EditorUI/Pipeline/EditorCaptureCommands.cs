@@ -16,7 +16,8 @@ namespace Alchemy.Tests.Pipeline
     {
         const string EditorUiTestPackage =
             "Packages/com.annulusgames.alchemy.editor-ui-test";
-        const double SettleSeconds = 1d;
+        const double InitialSettleSeconds = 1d;
+        const double ReusedInspectorSettleSeconds = 0.25d;
         const double PostRepaintSeconds = 0.25d;
         const int MaximumDimension = 4096;
         const float WindowX = 80f;
@@ -24,6 +25,7 @@ namespace Alchemy.Tests.Pipeline
 
         static readonly object Gate = new object();
 
+        static InspectorSession inspectorSession;
         static CaptureOperation operation;
         static InspectorCaptureResult lastResult =
             InspectorCaptureResult.CreateIdle();
@@ -34,8 +36,66 @@ namespace Alchemy.Tests.Pipeline
         }
 
         [CliCommand(
+            "alchemy_editor_capture_inspector_open",
+            "Open the Inspector window used by the capture session.",
+            MainThreadRequired = true)]
+        static InspectorCaptureResult OpenInspector(
+            [CliArg("width", "Capture width in pixels.")]
+            int width = 640,
+            [CliArg("height", "Capture height in pixels.")]
+            int height = 900)
+        {
+            if (operation != null)
+            {
+                return InspectorCaptureResult.CreateFailure(
+                    operation.JobId,
+                    "The Inspector cannot open while a capture is running.");
+            }
+
+            if (inspectorSession != null)
+            {
+                return InspectorCaptureResult.CreateFailure(
+                    "",
+                    "An Inspector capture session is already open.");
+            }
+
+            ValidateDimensions(width, height);
+            var previousSelection = Selection.objects;
+            var previousActiveObject = Selection.activeObject;
+            EditorWindow window = null;
+            try
+            {
+                window = CreateInspectorWindow(width, height);
+                inspectorSession = new InspectorSession(
+                    window,
+                    width,
+                    height,
+                    previousSelection,
+                    previousActiveObject);
+                var result = InspectorCaptureResult.CreateReady(
+                    width,
+                    height);
+                SetLastResult(result);
+                return result;
+            }
+            catch
+            {
+                if (window != null)
+                {
+                    window.Close();
+                }
+
+                RestoreSelection(
+                    previousSelection,
+                    previousActiveObject);
+                inspectorSession = null;
+                throw;
+            }
+        }
+
+        [CliCommand(
             "alchemy_editor_capture_inspector_start",
-            "Open an Inspector for a prefab, expand its contents, and capture it to a PNG.",
+            "Display a prefab in the open Inspector and capture it to a PNG.",
             MainThreadRequired = true)]
         static InspectorCaptureResult Start(
             [CliArg(
@@ -47,11 +107,7 @@ namespace Alchemy.Tests.Pipeline
                 "output",
                 "Output PNG path, absolute or relative to the Unity project.",
                 Required = true)]
-            string output = "",
-            [CliArg("width", "Capture width in pixels.")]
-            int width = 640,
-            [CliArg("height", "Capture height in pixels.")]
-            int height = 900)
+            string output = "")
         {
             if (operation != null)
             {
@@ -60,7 +116,14 @@ namespace Alchemy.Tests.Pipeline
                     "An Inspector capture is already running.");
             }
 
-            ValidateDimensions(width, height);
+            var currentSession = inspectorSession;
+            if (currentSession == null)
+            {
+                return InspectorCaptureResult.CreateFailure(
+                    "",
+                    "The Inspector capture session is not open.");
+            }
+
             var prefabPath = ResolvePrefabPath(prefab);
             var outputPath = ResolveOutputPath(output);
             var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
@@ -73,27 +136,24 @@ namespace Alchemy.Tests.Pipeline
 
             CaptureOperation pending = null;
             GameObject root = null;
-            EditorWindow window = null;
-            var previousSelection = Selection.objects;
-            var previousActiveObject = Selection.activeObject;
             try
             {
                 root = PrefabUtility.LoadPrefabContents(prefabPath);
-                Selection.activeGameObject = root;
-                ExpandInspector(root, null);
-
-                window = CreateInspectorWindow(width, height);
+                SetInspectorTarget(currentSession.Window, root);
+                ExpandInspector(root, currentSession.Window);
                 pending = new CaptureOperation(
                     Guid.NewGuid().ToString("N"),
                     prefabPath,
                     outputPath,
-                    width,
-                    height,
+                    currentSession.Width,
+                    currentSession.Height,
                     root,
-                    window,
-                    previousSelection,
-                    previousActiveObject,
-                    EditorApplication.timeSinceStartup + SettleSeconds);
+                    currentSession.Window,
+                    currentSession,
+                    EditorApplication.timeSinceStartup +
+                    (currentSession.CaptureCount == 0
+                        ? InitialSettleSeconds
+                        : ReusedInspectorSettleSeconds));
                 operation = pending;
                 SetLastResult(InspectorCaptureResult.CreateRunning(pending));
                 EditorApplication.update += UpdateCapture;
@@ -101,22 +161,13 @@ namespace Alchemy.Tests.Pipeline
             }
             catch
             {
-                if (window != null)
-                {
-                    window.Close();
-                }
-
-                Selection.activeObject = null;
                 if (root != null)
                 {
+                    SetInspectorLocked(currentSession.Window, false);
+                    Selection.activeObject = null;
                     PrefabUtility.UnloadPrefabContents(root);
                 }
 
-                Selection.objects = previousSelection;
-                if (previousActiveObject != null)
-                {
-                    Selection.activeObject = previousActiveObject;
-                }
                 operation = null;
                 throw;
             }
@@ -190,6 +241,34 @@ namespace Alchemy.Tests.Pipeline
         }
 
         [CliCommand(
+            "alchemy_editor_capture_inspector_close",
+            "Close the Inspector window used by the capture session.",
+            MainThreadRequired = true)]
+        static InspectorCaptureResult CloseInspector()
+        {
+            if (operation != null)
+            {
+                return InspectorCaptureResult.CreateFailure(
+                    operation.JobId,
+                    "The Inspector cannot close while a capture is running.");
+            }
+
+            var currentSession = inspectorSession;
+            if (currentSession == null)
+            {
+                return InspectorCaptureResult.CreateFailure(
+                    "",
+                    "The Inspector capture session is not open.");
+            }
+
+            inspectorSession = null;
+            CloseInspectorSession(currentSession);
+            var result = InspectorCaptureResult.CreateClosed();
+            SetLastResult(result);
+            return result;
+        }
+
+        [CliCommand(
             "alchemy_editor_capture_close",
             "Close an automated Editor session.",
             MainThreadRequired = true)]
@@ -204,6 +283,13 @@ namespace Alchemy.Tests.Pipeline
                 return InspectorCaptureResult.CreateFailure(
                     operation.JobId,
                     "The Editor cannot close while an Inspector capture is running.");
+            }
+
+            if (inspectorSession != null)
+            {
+                return InspectorCaptureResult.CreateFailure(
+                    "",
+                    "Close the Inspector capture session before closing the Editor.");
             }
 
             if (!force &&
@@ -238,41 +324,22 @@ namespace Alchemy.Tests.Pipeline
                     EditorApplication.isUpdating)
                 {
                     current.CaptureAfter =
-                        EditorApplication.timeSinceStartup + SettleSeconds;
+                        EditorApplication.timeSinceStartup +
+                        InitialSettleSeconds;
                     current.CaptureReadyAfter = 0d;
                     return;
                 }
 
                 if (EditorApplication.timeSinceStartup < current.CaptureAfter)
                 {
-                    current.Window.position = new Rect(
-                        WindowX,
-                        WindowY,
-                        current.Width,
-                        current.Height);
-                    ExpandInspector(current.Root, current.Window);
-                    current.Window.titleContent =
-                        new GUIContent("Inspector");
-                    current.Window.Focus();
-                    current.Window.Repaint();
-                    EditorApplication.QueuePlayerLoopUpdate();
+                    PrepareInspectorWindow(current);
                     current.CaptureReadyAfter = 0d;
                     return;
                 }
 
                 if (current.CaptureReadyAfter <= 0d)
                 {
-                    current.Window.position = new Rect(
-                        WindowX,
-                        WindowY,
-                        current.Width,
-                        current.Height);
-                    ExpandInspector(current.Root, current.Window);
-                    current.Window.titleContent =
-                        new GUIContent("Inspector");
-                    current.Window.Focus();
-                    current.Window.Repaint();
-                    EditorApplication.QueuePlayerLoopUpdate();
+                    PrepareInspectorWindow(current);
                     current.CaptureReadyAfter =
                         EditorApplication.timeSinceStartup +
                         PostRepaintSeconds;
@@ -292,6 +359,19 @@ namespace Alchemy.Tests.Pipeline
             {
                 Fail(current, exception);
             }
+        }
+
+        static void PrepareInspectorWindow(CaptureOperation current)
+        {
+            PositionInspectorWindow(
+                current.Window,
+                current.Width,
+                current.Height);
+            ExpandInspector(current.Root, current.Window);
+            current.Window.titleContent = new GUIContent("Inspector");
+            current.Window.Focus();
+            current.Window.Repaint();
+            EditorApplication.QueuePlayerLoopUpdate();
         }
 
         static InspectorCaptureResult Capture(CaptureOperation current)
@@ -359,6 +439,7 @@ namespace Alchemy.Tests.Pipeline
             try
             {
                 Cleanup(current);
+                current.Session.CaptureCount++;
                 SetLastResult(result);
             }
             catch (Exception exception)
@@ -411,23 +492,54 @@ namespace Alchemy.Tests.Pipeline
             var size = new Vector2(width, height);
             window.minSize = size;
             window.maxSize = size;
-            window.Show();
+            window.ShowUtility();
+            PositionInspectorWindow(window, width, height);
+            SetInspectorLocked(window, false);
+            window.Focus();
+            window.Repaint();
+            return window;
+        }
+
+        static void SetInspectorTarget(
+            EditorWindow window,
+            GameObject root)
+        {
+            SetInspectorLocked(window, false);
+            Selection.activeGameObject = root;
+            SetInspectorLocked(window, true);
+            window.Focus();
+            window.Repaint();
+        }
+
+        static void SetInspectorLocked(
+            EditorWindow window,
+            bool value)
+        {
+            var lockProperty = window.GetType().GetProperty(
+                "isLocked",
+                BindingFlags.Instance |
+                BindingFlags.Public |
+                BindingFlags.NonPublic);
+            if (lockProperty == null)
+            {
+                throw new MissingMemberException(
+                    window.GetType().FullName,
+                    "isLocked");
+            }
+
+            lockProperty.SetValue(window, value);
+        }
+
+        static void PositionInspectorWindow(
+            EditorWindow window,
+            int width,
+            int height)
+        {
             window.position = new Rect(
                 WindowX,
                 WindowY,
                 width,
                 height);
-
-            var lockProperty = inspectorType.GetProperty(
-                "isLocked",
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.NonPublic);
-            lockProperty?.SetValue(window, true);
-            window.titleContent = new GUIContent("Inspector");
-            window.Focus();
-            window.Repaint();
-            return window;
         }
 
         static void ExpandInspector(
@@ -545,7 +657,7 @@ namespace Alchemy.Tests.Pipeline
         {
             if (current.Window != null)
             {
-                current.Window.Close();
+                SetInspectorLocked(current.Window, false);
             }
 
             Selection.activeObject = null;
@@ -553,28 +665,51 @@ namespace Alchemy.Tests.Pipeline
             {
                 PrefabUtility.UnloadPrefabContents(current.Root);
             }
+        }
 
-            Selection.objects = current.PreviousSelection;
-            if (current.PreviousActiveObject != null)
+        static void CloseInspectorSession(InspectorSession current)
+        {
+            if (current.Window != null)
             {
-                Selection.activeObject = current.PreviousActiveObject;
+                SetInspectorLocked(current.Window, false);
+                current.Window.Close();
+            }
+
+            RestoreSelection(
+                current.PreviousSelection,
+                current.PreviousActiveObject);
+        }
+
+        static void RestoreSelection(
+            Object[] previousSelection,
+            Object previousActiveObject)
+        {
+            Selection.objects = previousSelection;
+            if (previousActiveObject != null)
+            {
+                Selection.activeObject = previousActiveObject;
             }
         }
 
         static void CleanupBeforeReload()
         {
             var current = operation;
-            if (current == null)
+            if (current != null)
             {
-                return;
+                EditorApplication.update -= UpdateCapture;
+                operation = null;
+                Cleanup(current);
+                SetLastResult(InspectorCaptureResult.CreateFailure(
+                    current.JobId,
+                    "Inspector capture was interrupted by an assembly reload."));
             }
 
-            EditorApplication.update -= UpdateCapture;
-            operation = null;
-            Cleanup(current);
-            SetLastResult(InspectorCaptureResult.CreateFailure(
-                current.JobId,
-                "Inspector capture was interrupted by an assembly reload."));
+            var currentSession = inspectorSession;
+            if (currentSession != null)
+            {
+                inspectorSession = null;
+                CloseInspectorSession(currentSession);
+            }
         }
 
         static void SetLastResult(InspectorCaptureResult result)
@@ -603,8 +738,7 @@ namespace Alchemy.Tests.Pipeline
                 int height,
                 GameObject root,
                 EditorWindow window,
-                Object[] previousSelection,
-                Object previousActiveObject,
+                InspectorSession session,
                 double captureAfter)
             {
                 JobId = jobId;
@@ -614,8 +748,7 @@ namespace Alchemy.Tests.Pipeline
                 Height = height;
                 Root = root;
                 Window = window;
-                PreviousSelection = previousSelection;
-                PreviousActiveObject = previousActiveObject;
+                Session = session;
                 CaptureAfter = captureAfter;
             }
 
@@ -626,10 +759,33 @@ namespace Alchemy.Tests.Pipeline
             public int Height { get; }
             public GameObject Root { get; }
             public EditorWindow Window { get; }
-            public Object[] PreviousSelection { get; }
-            public Object PreviousActiveObject { get; }
+            public InspectorSession Session { get; }
             public double CaptureAfter { get; set; }
             public double CaptureReadyAfter { get; set; }
+        }
+
+        sealed class InspectorSession
+        {
+            public InspectorSession(
+                EditorWindow window,
+                int width,
+                int height,
+                Object[] previousSelection,
+                Object previousActiveObject)
+            {
+                Window = window;
+                Width = width;
+                Height = height;
+                PreviousSelection = previousSelection;
+                PreviousActiveObject = previousActiveObject;
+            }
+
+            public EditorWindow Window { get; }
+            public int Width { get; }
+            public int Height { get; }
+            public Object[] PreviousSelection { get; }
+            public Object PreviousActiveObject { get; }
+            public int CaptureCount { get; set; }
         }
 
         sealed class InspectorCaptureResult
@@ -667,6 +823,30 @@ namespace Alchemy.Tests.Pipeline
                     Status = "idle",
                     Success = true,
                     Message = "No Inspector capture has run.",
+                };
+            }
+
+            public static InspectorCaptureResult CreateReady(
+                int width,
+                int height)
+            {
+                return new InspectorCaptureResult
+                {
+                    Status = "ready",
+                    Success = true,
+                    Message = "The Inspector capture session is ready.",
+                    Width = width,
+                    Height = height,
+                };
+            }
+
+            public static InspectorCaptureResult CreateClosed()
+            {
+                return new InspectorCaptureResult
+                {
+                    Status = "closed",
+                    Success = true,
+                    Message = "The Inspector capture session is closed.",
                 };
             }
 

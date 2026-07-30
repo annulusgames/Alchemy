@@ -7,9 +7,13 @@ namespace Alchemy.UnityTestRunner;
 internal static class UnityEditorCaptureTest
 {
     private const string Surface = "Inspector";
+    private const string OpenCommand =
+        "alchemy_editor_capture_inspector_open";
     private const string StartCommand =
         "alchemy_editor_capture_inspector_start";
     private const string StatusCommand = "alchemy_editor_capture_status";
+    private const string CloseCommand =
+        "alchemy_editor_capture_inspector_close";
     private const int CaptureWidth = 640;
     private const int CaptureHeight = 900;
 
@@ -69,7 +73,7 @@ internal static class UnityEditorCaptureTest
                 cancellationToken);
             await UnityCli.WaitForCommandAsync(
                 project,
-                StartCommand,
+                OpenCommand,
                 EditorStartupTimeout,
                 cancellationToken);
             console = await UnityCli.ReadConsoleAsync(
@@ -78,6 +82,28 @@ internal static class UnityEditorCaptureTest
                 int.MaxValue,
                 1,
                 cancellationToken);
+            await UnityCli.FocusEditorAsync(project, cancellationToken);
+            var open = UnityCli.Deserialize<EditorCaptureStatus>(
+                await UnityCli.RunCommandAsync(
+                    project,
+                    OpenCommand,
+                    [
+                        "--width",
+                        CaptureWidth.ToString(CultureInfo.InvariantCulture),
+                        "--height",
+                        CaptureHeight.ToString(CultureInfo.InvariantCulture),
+                    ],
+                    cancellationToken));
+            if (!open.Success ||
+                !string.Equals(
+                    open.Status,
+                    "ready",
+                    StringComparison.Ordinal))
+            {
+                throw new UnityExecutionException(
+                    $"Unity {project.EditorVersion} could not open the " +
+                    $"Inspector capture session: {open.Message}");
+            }
         }
         catch (Exception startupException)
         {
@@ -150,10 +176,6 @@ internal static class UnityEditorCaptureTest
                         prefabPath,
                         "--output",
                         outputPath,
-                        "--width",
-                        CaptureWidth.ToString(CultureInfo.InvariantCulture),
-                        "--height",
-                        CaptureHeight.ToString(CultureInfo.InvariantCulture),
                     ],
                     cancellationToken));
             if (!start.Success ||
@@ -242,6 +264,23 @@ internal static class UnityEditorCaptureTest
         if (!Runs.TryRemove(project.ProjectPath, out var context))
         {
             return;
+        }
+
+        var close = UnityCli.Deserialize<EditorCaptureStatus>(
+            await UnityCli.RunCommandAsync(
+                project,
+                CloseCommand,
+                [],
+                cancellationToken));
+        if (!close.Success ||
+            !string.Equals(
+                close.Status,
+                "closed",
+                StringComparison.Ordinal))
+        {
+            throw new UnityExecutionException(
+                $"Unity {project.EditorVersion} could not close the " +
+                $"Inspector capture session: {close.Message}");
         }
 
         var console = await UnityCli.ReadConsoleAsync(
