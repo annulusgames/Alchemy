@@ -1,13 +1,13 @@
 # Installation
 
-Let's install Alchemy into your project to start using it.
+Install Alchemy in your project using one of the following methods.
 
-### Requirements
+## Requirements
 
 * Unity 2021.2 or later (Unity 2022.1 or later recommended for serialization extensions)
-* Serialization 2.0 or later (if using serialization extensions)
+* Unity.Serialization 2.0 or later (if using serialization extensions)
 
-### Install via Package Manager (Recommended)
+## Install via Package Manager (Recommended)
 
 You can install Alchemy via the Package Manager.
 
@@ -31,10 +31,10 @@ Alternatively, you can add the following line to the dependencies block in your 
 }
 ```
 
-### Install from unitypackage
+## Install from a `.unitypackage` File
 
-You can also install Alchemy from a unitypackage file.
+You can also install Alchemy from a `.unitypackage` file.
 
-1. Go to Releases and navigate to the latest release.
-2. Download the unitypackage file.
+1. Open the latest release on the Releases page.
+2. Download the `.unitypackage` file.
 3. Open the file and import it into your project.

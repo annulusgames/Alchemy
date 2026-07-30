@@ -1,6 +1,6 @@
 # Hide If Attribute
 
-Hides the member in the Inspector if the boolean value is true.
+Hides the member in the Inspector when the specified condition evaluates to true.
 
 ![img](../../../images/img-attribute-hide-if-false.png)
 
@@ -24,4 +24,4 @@ public int hideIfMethod;
 
 | Parameter | Description |
 | - | - |
-| Condition | The name of the field, property, or method used for the condition evaluation. |
+| Condition | The name of the field, property, or method used to evaluate the condition. |

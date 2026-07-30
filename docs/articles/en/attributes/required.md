@@ -1,6 +1,6 @@
 # Required Attribute
 
-Displays a warning if the field does not have an object reference assigned.
+Displays a warning when no object reference is assigned to the field.
 
 ![img](../../../images/img-attribute-required.png)
 

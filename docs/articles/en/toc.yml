@@ -1,11 +1,11 @@
-- name: Get Started
+- name: Getting Started
 - name: Alchemy Overview
   href: about.md
 - name: Installation
   href: installation.md
 
 - name: Inspector
-- name: Inspector Extension with Attributes
+- name: Inspector Extensions with Attributes
   href: inspector-extension-with-attributes.md
 - name: Group Attributes
   href: group-attributes.md
@@ -102,7 +102,7 @@
 - name: Hierarchy
 - name: Toggles and Icons
   href: hierarchy-toggles-and-icons.md
-- name: Decorating Hierarchy
+- name: Decorating the Hierarchy
   href: decorating-hierarchy.md
 
 - name: Editor Window
@@ -118,19 +118,19 @@
   href: alchemy-serialization-process.md
 - name: Debugging Serialized Data
   href: debugging-serialized-data.md
-- name: Serialization Callback
+- name: Serialization Callbacks
   href: serialization-callback.md
 
 - name: Extensions
-- name: Extending Alchemy Editor
+- name: Extending AlchemyEditor
   href: extending-alchemy-editor.md
-- name: Creating Custom Attribute
+- name: Creating Custom Attributes
   href: creating-custom-attribute.md
-- name: Creating Custom Group Attribute
+- name: Creating Custom Group Attributes
   href: creating-custom-group-attribute.md
 
-- name: Others
-- name: Disable Default Editor
+- name: Other Topics
+- name: Disabling the Default Editor
   href: disable-default-editor.md
 - name: Comparison with Other Libraries
   href: comparison-with-other-libraries.md

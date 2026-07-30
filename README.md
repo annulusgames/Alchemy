@@ -8,9 +8,9 @@
 
 ## Overview
 
-Alchemy is a library that provides Inspector extensions using attributes.
+Alchemy is a library that provides attribute-based Inspector extensions.
 
-In addition to providing easy and powerful attribute-based editor extensions, it allows serialization of any types (Dictionary, HashSet, Nullable, Tuple, etc.) via its own serialization system, so those types can be edited in the Inspector. Alchemy works simply by adding attributes to the target type — just mark it as `partial`, and a Source Generator creates the necessary code. Unlike Odin, there is no need to inherit from dedicated base classes.
+In addition to providing easy and powerful attribute-based editor extensions, Alchemy can serialize types that Unity does not normally support, such as dictionaries, hash sets, nullable value types, and tuples, so they can be edited in the Inspector. Add the appropriate attributes to a target type and mark it as `partial`; a source generator creates the necessary code. Unlike Odin, there is no need to inherit from dedicated base classes.
 
 <img src="https://github.com/annulusgames/Alchemy/blob/main/docs/images/img-v2.0.png" width="800">
 
@@ -20,7 +20,7 @@ v2.0 also adds EditorWindow and Hierarchy extensions. These make it easy to buil
 
 * Add over 30 attributes to extend the Inspector
 * Support SerializeReference, allowing selection of types from a dropdown
-* Serialize any type (Dictionary, HashSet, Nullable, Tuple, etc.) and edit them in the Inspector
+* Serialize additional types, including dictionaries, hash sets, nullable value types, and tuples, and edit them in the Inspector
 * Create EditorWindows using attributes
 * Improve Hierarchy usability
 * Create custom attributes that work with Alchemy
@@ -29,12 +29,12 @@ v2.0 also adds EditorWindow and Hierarchy extensions. These make it easy to buil
 
 ### Requirements
 
-* Unity 2021.2 or higher (Recommended: 2022.1 or higher for serialization extensions)
-* Unity Serialization 2.0 or higher (for serialization extensions)
+* Unity 2021.2 or later (Unity 2022.1 or later is recommended for serialization extensions)
+* Unity.Serialization 2.0 or later (for serialization extensions)
 
 ### Installation
 
-1. Open Package Manager from Window > Package Manager
+1. Open the Package Manager from Window > Package Manager
 2. Click the "+" button > Add package from git URL
 3. Enter the following URL:
 
@@ -42,7 +42,7 @@ v2.0 also adds EditorWindow and Hierarchy extensions. These make it easy to buil
 https://github.com/annulusgames/Alchemy.git?path=/Alchemy/Assets/Alchemy
 ```
 
-Or open Packages/manifest.json and add the following to the dependencies block:
+Alternatively, open `Packages/manifest.json` and add the following entry to the `dependencies` block:
 
 ```json
 {
@@ -124,7 +124,7 @@ using UnityEngine;
 using Alchemy.Inspector;
 
 [Serializable]
-public sealed class Example : IExample
+public sealed class Example
 {
     public float foo;
     public Vector3 bar;
@@ -213,7 +213,7 @@ Alchemy provides several features that extend the Hierarchy.
 
 <img src="https://github.com/annulusgames/Alchemy/blob/main/docs/images/gif-hierarchy-toggle.gif" width="600">
 
-You can add toggles for each object's active/inactive state and icons that show its components to the Hierarchy. These can be configured from Project Settings.
+You can display active-state toggles and component icons for each object in the Hierarchy. These features can be configured in Project Settings.
 
 <img src="https://github.com/annulusgames/Alchemy/blob/main/docs/images/img-project-settings.png" width="600">
 
@@ -223,8 +223,8 @@ From the Create menu, you can create objects that decorate the Hierarchy.
 
 <img src="https://github.com/annulusgames/Alchemy/blob/main/docs/images/img-create-hierarchy-object.png" width="600">
 
-These objects are automatically excluded from builds. (If they have child objects, any child objects are unparented before deletion.)
-For more details, refer to [Decorating Hierarchy](https://annulusgames.github.io/Alchemy/articles/en/decorating-hierarchy.html).
+These objects are automatically excluded from builds. If they have children, the children are unparented before the decorative objects are deleted.
+For more details, refer to [Decorating the Hierarchy](https://annulusgames.github.io/Alchemy/articles/en/decorating-hierarchy.html).
 
 ## AlchemyEditorWindow
 
@@ -278,11 +278,11 @@ public class EditorWindowExample : AlchemyEditorWindow
 
 <img src="https://github.com/annulusgames/Alchemy/blob/main/docs/images/img-editor-window.png" width="600">
 
-Data for windows that inherit from `AlchemyEditorWindow` is saved as JSON in the project's ProjectSettings folder. For more details, refer to [Saving Editor Window Data](https://annulusgames.github.io/Alchemy/articles/en/saving-editor-window-data.html).
+Data for windows that inherit from `AlchemyEditorWindow` is saved as JSON in the project's `ProjectSettings` folder. For more details, refer to [Saving Editor Window Data](https://annulusgames.github.io/Alchemy/articles/en/saving-editor-window-data.html).
 
 ## Using Serialization Extensions
 
-If you want to edit types that Unity cannot serialize, such as Dictionary, you can use the `[AlchemySerialize]` attribute to serialize these types.
+To edit types that Unity does not normally serialize, such as dictionaries, use the `[AlchemySerialize]` attribute.
 
 Serialization extensions require the [Unity.Serialization](https://docs.unity3d.com/Packages/com.unity.serialization@3.1/manual/index.html) package. Additionally, reflection-based serialization using Unity.Serialization may not work in AOT environments prior to Unity 2022.1. Check the package manual for details.
 
@@ -295,7 +295,7 @@ using UnityEngine;
 using Alchemy.Serialization;
 
 // By adding the [AlchemySerialize] attribute, Alchemy's serialization extension is enabled.
-// It can be used with any type, regardless of its base class, but the target type must be partial for the Source Generator to generate code.
+// It can be used regardless of the target type's base class, but the target type must be partial for the source generator to generate code.
 [AlchemySerialize]
 public partial class AlchemySerializationExample : MonoBehaviour
 {

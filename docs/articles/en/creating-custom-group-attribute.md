@@ -1,8 +1,8 @@
 # Creating Custom Group Attributes
 
-By using `AlchemyGroupDrawer`, it is possible to create custom attributes for grouping fields. Here is an example demonstrating the implementation of `FoldoutGroupAttribute` and its corresponding drawer. (Some parts of the actual implementation have been omitted for the sake of explanation.)
+You can create custom field-grouping attributes by deriving a drawer from `AlchemyGroupDrawer`. The following example implements `FoldoutGroupAttribute` and its drawer. Some implementation details are omitted for clarity.
 
-First, define the attribute to be used for defining groups. This attribute must inherit from `PropertyGroupAttribute`.
+First, define the attribute that identifies the groups. It must inherit from `PropertyGroupAttribute`.
 
 ```cs
 using Alchemy.Inspector;
@@ -14,7 +14,7 @@ public sealed class FoldoutGroupAttribute : PropertyGroupAttribute
 }
 ```
 
-Next, create the drawer corresponding to the defined attribute. Drawer scripts should be placed within the Editor folder.
+Next, create a drawer for the attribute. Place drawer scripts in an `Editor` folder.
 
 ```cs
 using UnityEngine.UIElements;
@@ -38,4 +38,4 @@ public sealed class FoldoutGroupDrawer : AlchemyGroupDrawer
 }
 ```
 
-Implement the `CreateRootElement(string label)` method to create the root VisualElement for each group. Additionally, make sure to add the `CustomGroupDrawer` attribute to the defined drawer, with the type of the defined attribute as an argument. Alchemy uses this attribute to search for the necessary drawers for group rendering.
+Implement `CreateRootElement(string label)` to create the root `VisualElement` for each group. Add `[CustomGroupDrawer]` to the drawer and pass it the custom attribute's type. Alchemy uses this metadata to find the drawers required to render each group.

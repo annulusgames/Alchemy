@@ -1,16 +1,16 @@
 # Serialization Extension
 
-If you want to edit types that Unity cannot serialize normally, such as Dictionary, you can serialize them using the `[AlchemySerialize]` attribute.
+To edit types that Unity does not normally serialize, such as dictionaries, use the `[AlchemySerialize]` attribute.
 
-To use serialization extension, you need the [Unity.Serialization](https://docs.unity3d.com/Packages/com.unity.serialization@3.1/manual/index.html) package. Also, please note that reflection-based Unity.Serialization serialization may not work in AOT environments prior to Unity 2022.1. Please refer to the package manual for details.
+To use the serialization extension, install the [Unity.Serialization](https://docs.unity3d.com/Packages/com.unity.serialization@3.1/manual/index.html) package. Reflection-based serialization with Unity.Serialization may not work in AOT environments before Unity 2022.1. Refer to the package manual for details.
 
-Here is a sample using Alchemy's serialization extension to serialize various types and make them editable in the Inspector:
+The following example uses Alchemy's serialization extension to serialize several types and make them editable in the Inspector:
 
 ```cs
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Alchemy.Serialization; // Add Alchemy.Serialization namespace
+using Alchemy.Serialization; // Import the Alchemy.Serialization namespace
 
 [AlchemySerialize]
 public partial class AlchemySerializationExample : MonoBehaviour
@@ -44,6 +44,6 @@ Currently, the following types can be edited in the Inspector:
 - Dictionary<,>
 - ValueTuple<>
 - Nullable<>
-- class/struct consisting of the above types
+- Classes and structs composed of the types above
 
 For technical details on serialization, please refer to [Alchemy's Serialization Process](alchemy-serialization-process.md).

@@ -1,6 +1,6 @@
 # Enable If Attribute
 
-The field becomes editable only if the boolean value of the target member is true.
+Enables the field when the specified condition evaluates to true.
 
 ![img](../../../images/img-attribute-enable-if-false.png)
 
@@ -24,4 +24,4 @@ public int enableIfMethod;
 
 | Parameter | Description |
 | - | - |
-| Condition | The name of the field, property, or method used for condition evaluation |
+| Condition | The name of the field, property, or method used to evaluate the condition. |

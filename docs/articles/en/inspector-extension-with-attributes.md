@@ -1,11 +1,11 @@
-# Inspector Extension with Attributes
+# Inspector Extensions with Attributes
 
 Alchemy allows you to extend the Inspector using attributes. To customize the display in the Inspector, you can add attributes to the fields of your class.
 
 ```cs
 using UnityEngine;
 using UnityEngine.UIElements;
-using Alchemy.Inspector;  // Add Alchemy.Inspector namespace
+using Alchemy.Inspector;  // Import the Alchemy.Inspector namespace
 
 public class AttributesExample : MonoBehaviour
 {

@@ -1,5 +1,5 @@
 # Disabling the Default Editor
 
-By default, Alchemy uses its own editor class to handle the drawing of all types. However, to avoid conflicts with other libraries or assets, you can disable this behavior.
+By default, Alchemy uses its own editor class to render supported types. You can disable this behavior to avoid conflicts with other libraries or assets.
 
-To disable the default editor, add `ALCHEMY_DISABLE_DEFAULT_EDITOR` to the `Scripting Define Symbols` field in `Project Settings > Player`. If you want to use Alchemy's features while this option is enabled, you'll need to define your own editor class that inherits from `AlchemyEditor`.
+To disable Alchemy's default editor, add `ALCHEMY_DISABLE_DEFAULT_EDITOR` to the `Scripting Define Symbols` field under `Project Settings > Player`. To continue using Alchemy features while this symbol is defined, create a custom editor class that inherits from `AlchemyEditor`.

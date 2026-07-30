@@ -1,6 +1,6 @@
 # Disable If Attribute
 
-If the boolean value of the target member is true, the field becomes disabled.
+Disables the field when the specified condition evaluates to true.
 
 ![img](../../../images/img-attribute-disable-if-false.png)
 
@@ -24,4 +24,4 @@ public int disableIfMethod;
 
 | Parameter | Description |
 | - | - |
-| Condition | The name of the field, property, or method used for condition evaluation. |
+| Condition | The name of the field, property, or method used to evaluate the condition. |

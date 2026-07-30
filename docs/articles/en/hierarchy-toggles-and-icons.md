@@ -1,6 +1,6 @@
 # Toggles and Icons
 
-By integrating Alchemy, you can add toggles to the Hierarchy to switch objects between active and inactive states, as well as icons for each component.
+Alchemy can display active-state toggles and component icons for each object in the Hierarchy.
 
 ![gif](../../images/gif-hierarchy-toggle.gif)
 

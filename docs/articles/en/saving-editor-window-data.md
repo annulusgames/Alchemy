@@ -1,8 +1,8 @@
 # Saving EditorWindow Data
 
-The data of an editor window created by inheriting from `AlchemyEditorWindow` is automatically saved in JSON format within the ProjectSettings folder of your project.
+Data for an editor window derived from `AlchemyEditorWindow` is automatically saved as JSON in the project's `ProjectSettings` folder.
 
-You can customize the saving/loading process and the destination path by overriding the `SaveWindowData()`, `LoadWindowData()`, and `GetWindowDataPath()` methods.
+You can customize the save/load behavior and destination path by overriding the `SaveWindowData()`, `LoadWindowData()`, and `GetWindowDataPath()` methods.
 
 ```cs
 using UnityEditor;
@@ -26,13 +26,13 @@ public class EditorWindowExample : AlchemyEditorWindow
 
     protected override void LoadWindowData(string dataPath)
     {
-        // Write the loading process here
+        // Implement the loading process here
         ...
     }
 
     protected override void SaveWindowData(string dataPath)
     {
-        // Write the saving process here
+        // Implement the saving process here
         ...
     }
 }

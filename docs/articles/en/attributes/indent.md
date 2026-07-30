@@ -17,4 +17,4 @@ public GameObject baz;
 
 | Parameter | Description |
 | - | - |
-| Indent | Number of indents |
+| Indent | Number of indent levels |

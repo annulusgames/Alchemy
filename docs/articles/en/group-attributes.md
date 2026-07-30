@@ -30,7 +30,7 @@ public class GroupAttributesExample : MonoBehaviour
 
 ![img](../../images/img-group-1.png)
 
-Each group can be nested by using slashes.
+Groups can be nested by separating group names with slashes.
 
 ```cs
 using UnityEngine;
@@ -60,7 +60,7 @@ public class GroupAttributesExample : MonoBehaviour
 
 ![img](../../images/img-group-2.png)
 
-Additionally, you can add group attributes to a defined Serializable class to change how its members are displayed within corresponding groups.
+You can also apply a group attribute to a class marked with `[Serializable]` to control how its members are displayed within the group.
 
 ```cs
 using System;

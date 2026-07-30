@@ -1,6 +1,6 @@
 # Show If Attribute
 
-Displays in the Inspector only if the boolean value of the target member is true.
+Displays the field in the Inspector when the specified condition evaluates to true.
 
 ![img](../../../images/img-attribute-show-if-false.png)
 
@@ -24,4 +24,4 @@ public int showIfMethod;
 
 | Parameter | Description |
 | - | - |
-| Condition | The name of the field, property, or method used for condition checking |
+| Condition | The name of the field, property, or method used to evaluate the condition. |

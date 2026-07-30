@@ -1,6 +1,6 @@
 # Disable Alchemy Editor Attribute
 
-Disables the AlchemyEditor for the target class and uses the default Inspector for rendering. When this attribute is added to a field, only that field will be rendered using the default PropertyField.
+Disables `AlchemyEditor` for the target class and uses the default Inspector instead. When this attribute is added to a field, only that field is rendered using the default `PropertyField`.
 
 ![img](../../../images/img-attribute-disable-alchemy-editor.png)
 

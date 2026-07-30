@@ -1,6 +1,6 @@
 # Assets Only Attribute
 
-Limits the reference that can be entered into an object field to assets only.
+Restricts an object field to asset references.
 
 ![img](../../../images/img-attribute-assets-only.png)
 

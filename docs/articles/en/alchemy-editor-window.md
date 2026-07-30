@@ -50,4 +50,4 @@ public class EditorWindowExample : AlchemyEditorWindow
 
 ![img](../../images/img-editor-window.png)
 
-Data from windows created by inheriting `AlchemyEditorWindow` is saved in JSON format in the ProjectSettings folder of the project. For more details, refer to the [Saving Editor Window Data](saving-editor-window-data.md) page.
+Data for windows derived from `AlchemyEditorWindow` is saved as JSON in the project's `ProjectSettings` folder. For more details, refer to [Saving Editor Window Data](saving-editor-window-data.md).
