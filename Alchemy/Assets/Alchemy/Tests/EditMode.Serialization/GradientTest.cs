@@ -1,6 +1,4 @@
 #if ALCHEMY_SUPPORT_SERIALIZATION
-using System.Collections.Generic;
-using Alchemy.Serialization.Internal;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -11,15 +9,14 @@ namespace Alchemy.Tests.EditMode.Serialization
         [Test]
         public void Test_RoundTrip_Gradient()
         {
-            var objects = new List<Object>();
             var before = new Gradient
             {
-                colorKeys = new GradientColorKey[] { new(Color.white, 0f) },
-                alphaKeys = new GradientAlphaKey[] { new(0f, 1f), new(1f, 1f) },
-                mode = GradientMode.Blend,
+                colorKeys = new[] { new GradientColorKey(Color.red, 0f), new GradientColorKey(Color.blue, 1f) },
+                alphaKeys = new[] { new GradientAlphaKey(0.25f, 0f), new GradientAlphaKey(0.75f, 1f) },
+                mode = GradientMode.Fixed,
             };
-            var beforeJson = SerializationHelper.ToJson(before, objects);
-            var after = SerializationHelper.FromJson<Gradient>(beforeJson, objects);
+
+            var after = TestUtility.RoundTrip(before);
 
             Assert.AreEqual(before, after);
         }
@@ -27,10 +24,8 @@ namespace Alchemy.Tests.EditMode.Serialization
         [Test]
         public void Test_RoundTrip_GradientColorKey()
         {
-            var objects = new List<Object>();
             var before = new GradientColorKey { color = Color.black, time = 1f };
-            var beforeJson = SerializationHelper.ToJson(before, objects);
-            var after = SerializationHelper.FromJson<GradientColorKey>(beforeJson, objects);
+            var after = TestUtility.RoundTrip(before);
 
             Assert.AreEqual(before, after);
         }
@@ -38,10 +33,8 @@ namespace Alchemy.Tests.EditMode.Serialization
         [Test]
         public void Test_RoundTrip_GradientAlphaKey()
         {
-            var objects = new List<Object>();
             var before = new GradientAlphaKey { alpha = 0.5f, time = 1f };
-            var beforeJson = SerializationHelper.ToJson(before, objects);
-            var after = SerializationHelper.FromJson<GradientAlphaKey>(beforeJson, objects);
+            var after = TestUtility.RoundTrip(before);
 
             Assert.AreEqual(before, after);
         }
@@ -50,13 +43,24 @@ namespace Alchemy.Tests.EditMode.Serialization
         [Test]
         public void Test_RoundTrip_PreservesColorSpace()
         {
-            var objects = new List<Object>();
-            var beforeJson = SerializationHelper.ToJson(ColorSpace.Linear, objects);
-            var after = SerializationHelper.FromJson<ColorSpace>(beforeJson, objects);
+            var before = new Gradient
+            {
+                colorKeys = new[] { new GradientColorKey(Color.white, 0f) },
+                alphaKeys = new[] { new GradientAlphaKey(1f, 0f) },
+                colorSpace = ColorSpace.Linear,
+            };
 
-            Assert.AreEqual(ColorSpace.Linear, after);
+            var after = TestUtility.RoundTrip(before);
+
+            Assert.That(after.colorSpace, Is.EqualTo(ColorSpace.Linear));
         }
 #endif
+
+        [Test]
+        public void Test_RoundTrip_NullGradient()
+        {
+            Assert.That(TestUtility.RoundTrip<Gradient>(null), Is.Null);
+        }
     }
 }
 #endif

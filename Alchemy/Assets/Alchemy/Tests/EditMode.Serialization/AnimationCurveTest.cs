@@ -1,6 +1,4 @@
 #if ALCHEMY_SUPPORT_SERIALIZATION
-using System.Collections.Generic;
-using Alchemy.Serialization.Internal;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -11,18 +9,29 @@ namespace Alchemy.Tests.EditMode.Serialization
         [Test]
         public void Test_RoundTrip_AnimationCurve()
         {
-            var objects = new List<Object>();
-            var before = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-            var beforeJson = SerializationHelper.ToJson(before, objects);
-            var after = SerializationHelper.FromJson<AnimationCurve>(beforeJson, objects);
+            var before = new AnimationCurve(
+                new Keyframe(0.25f, 0.75f, -1.5f, 2.5f, 0.2f, 0.8f) { weightedMode = WeightedMode.Both },
+                new Keyframe(1.5f, -0.25f, 3.5f, -4.5f, 0.1f, 0.9f) { weightedMode = WeightedMode.Out })
+            {
+                preWrapMode = WrapMode.PingPong,
+                postWrapMode = WrapMode.Loop,
+            };
 
-            Assert.AreEqual(before, after);
+            var after = TestUtility.RoundTrip(before);
+
+            Assert.That(after, Is.Not.Null);
+            Assert.That(after.preWrapMode, Is.EqualTo(before.preWrapMode));
+            Assert.That(after.postWrapMode, Is.EqualTo(before.postWrapMode));
+            Assert.That(after.keys, Has.Length.EqualTo(before.keys.Length));
+            for (var i = 0; i < before.keys.Length; i++)
+            {
+                AssertKeyframe(after.keys[i], before.keys[i]);
+            }
         }
 
         [Test]
         public void Test_RoundTrip_Keyframe()
         {
-            var objects = new List<Object>();
             var before = new Keyframe(0.25f, 0.75f, -1.5f, 2.5f, 0.2f, 0.8f)
             {
                 weightedMode = WeightedMode.Both,
@@ -31,14 +40,28 @@ namespace Alchemy.Tests.EditMode.Serialization
 #pragma warning restore 618
             };
 
-            var json = SerializationHelper.ToJson(before, objects);
-            var after = SerializationHelper.FromJson<Keyframe>(json, objects);
+            var after = TestUtility.RoundTrip(before);
 
-            Assert.AreEqual(before.inWeight, after.inWeight);
-            Assert.AreEqual(before.outWeight, after.outWeight);
-            Assert.AreEqual(before.weightedMode, after.weightedMode);
+            AssertKeyframe(after, before);
+        }
+
+        [Test]
+        public void Test_RoundTrip_NullAnimationCurve()
+        {
+            Assert.That(TestUtility.RoundTrip<AnimationCurve>(null), Is.Null);
+        }
+
+        static void AssertKeyframe(Keyframe actual, Keyframe expected)
+        {
+            Assert.That(actual.time, Is.EqualTo(expected.time));
+            Assert.That(actual.value, Is.EqualTo(expected.value));
+            Assert.That(actual.inTangent, Is.EqualTo(expected.inTangent));
+            Assert.That(actual.outTangent, Is.EqualTo(expected.outTangent));
+            Assert.That(actual.inWeight, Is.EqualTo(expected.inWeight));
+            Assert.That(actual.outWeight, Is.EqualTo(expected.outWeight));
+            Assert.That(actual.weightedMode, Is.EqualTo(expected.weightedMode));
 #pragma warning disable 618
-            Assert.AreEqual(before.tangentMode, after.tangentMode);
+            Assert.That(actual.tangentMode, Is.EqualTo(expected.tangentMode));
 #pragma warning restore 618
         }
     }
