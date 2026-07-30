@@ -1,0 +1,14 @@
+using Alchemy.Inspector;
+using UnityEngine;
+
+namespace Alchemy.Tests.EditorUI
+{
+    [DocumentationSample]
+    [HideScriptField]
+    public class HideScriptFieldTest : MonoBehaviour
+    {
+        public float foo;
+        public Vector3 bar;
+        public GameObject baz;
+    }
+}

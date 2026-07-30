@@ -4,6 +4,7 @@ using Alchemy.Inspector;
 
 namespace Alchemy.Tests.EditorUI
 {
+    [DocumentationSample]
     public class OnListViewChangedTest : MonoBehaviour
     {
         [OnListViewChanged(
@@ -11,6 +12,7 @@ namespace Alchemy.Tests.EditorUI
             OnItemsAdded = nameof(OnItemsAdded),
             OnItemsRemoved = nameof(OnItemsRemoved),
             OnItemsChosen = nameof(OnItemChosen),
+            OnItemsSourceChanged = nameof(OnItemsSourceChanged),
             OnSelectionChanged = nameof(OnSelectionChanged),
             OnSelectedIndicesChanged = nameof(OnSelectedIndicesChanged),
             OnItemIndexChanged = nameof(OnItemIndexChanged))
@@ -30,6 +32,11 @@ namespace Alchemy.Tests.EditorUI
         void OnItemsRemoved(IEnumerable<int> indices)
         {
             Debug.Log($"Removed: [{string.Join(',', indices)}]");
+        }
+
+        void OnItemsSourceChanged()
+        {
+            Debug.Log("Items Source Changed");
         }
 
         void OnItemChosen(IEnumerable<object> items)
