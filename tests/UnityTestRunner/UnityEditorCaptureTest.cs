@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Text;
 using TUnit.Core;
 
 namespace Alchemy.UnityTestRunner;
@@ -168,10 +169,12 @@ internal static class UnityEditorCaptureTest
         var outputPath = Path.Combine(
             context.CaptureDirectory,
             $"{testName}.png");
+        var logPath = Path.ChangeExtension(outputPath, ".log");
         var prefabPath =
             $"Packages/com.annulusgames.alchemy.editor-ui-test/{testName}.prefab";
         WriteProgress(project, $"Inspector {testName}: capturing...");
 
+        EditorCaptureStatus? completed = null;
         try
         {
             await EditorForeground.ActivateAsync(
@@ -199,10 +202,24 @@ internal static class UnityEditorCaptureTest
                     $"{testName}: {start.Message}");
             }
 
-            var completed = await WaitForCaptureAsync(
+            completed = await WaitForCaptureAsync(
                 project,
                 start.JobId,
                 cancellationToken);
+            WriteCaptureLogs(project, testName, logPath, completed);
+            if (File.Exists(outputPath))
+            {
+                EditorCaptureReport.RecordCapture(
+                    project,
+                    Surface,
+                    testName,
+                    outputPath,
+                    completed.Logs,
+                    completed.WarningCount,
+                    completed.ErrorCount,
+                    completed.DroppedLogCount);
+            }
+
             if (!completed.Success ||
                 !string.Equals(
                     completed.Status,
@@ -215,29 +232,26 @@ internal static class UnityEditorCaptureTest
             }
 
             EnsureCaptureExists(outputPath);
-            EditorCaptureReport.RecordCapture(
-                project,
-                Surface,
-                testName,
-                outputPath);
             WriteProgress(
                 project,
                 $"Inspector {testName}: captured {CaptureWidth}x{CaptureHeight}");
+            if (completed.WarningCount > 0 ||
+                completed.ErrorCount > 0)
+            {
+                throw new UnityExecutionException(
+                    $"Unity {project.EditorVersion} Inspector {testName} " +
+                    $"emitted {completed.WarningCount} warnings and " +
+                    $"{completed.ErrorCount} errors. See {logPath}.");
+            }
         }
         finally
         {
-            if (File.Exists(outputPath))
-            {
-                var testContext = TestContext.Current
-                    ?? throw new InvalidOperationException(
-                        "TUnit did not provide a test context.");
-                testContext.Output.AttachArtifact(
-                    outputPath,
-                    displayName:
-                        $"{project.EditorVersion} {testName} Inspector",
-                    description:
-                        $"{CaptureWidth}x{CaptureHeight} Inspector capture");
-            }
+            AttachCaptureArtifacts(
+                project,
+                testName,
+                outputPath,
+                logPath,
+                completed);
         }
     }
 
@@ -352,6 +366,111 @@ internal static class UnityEditorCaptureTest
         }
     }
 
+    private static void WriteCaptureLogs(
+        UnityProject project,
+        string testName,
+        string path,
+        EditorCaptureStatus result)
+    {
+        if (result.Logs.Count == 0 &&
+            result.DroppedLogCount == 0)
+        {
+            return;
+        }
+
+        var text = new StringBuilder();
+        text.Append("Inspector ")
+            .Append(testName)
+            .Append(": ")
+            .Append(result.Logs.Count)
+            .Append(" captured logs, ")
+            .Append(result.WarningCount)
+            .Append(" warnings, ")
+            .Append(result.ErrorCount)
+            .AppendLine(" errors.");
+        foreach (var entry in result.Logs)
+        {
+            text.Append('[')
+                .Append(GetLogKindLabel(entry.Kind))
+                .Append("] ")
+                .AppendLine(entry.Message);
+            if (!string.IsNullOrWhiteSpace(entry.StackTrace))
+            {
+                text.AppendLine(entry.StackTrace);
+            }
+        }
+
+        if (result.DroppedLogCount > 0)
+        {
+            text.Append(result.DroppedLogCount)
+                .AppendLine(" additional logs were omitted.");
+        }
+
+        File.WriteAllText(
+            path,
+            text.ToString(),
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        Console.Out.WriteLine(
+            $"[{project.VersionLine}] Inspector {testName}: " +
+            $"Captured log entries ({result.Logs.Count})");
+        foreach (var entry in result.Logs)
+        {
+            Console.Out.WriteLine(
+                $"[{project.VersionLine}]   " +
+                $"[{GetLogKindLabel(entry.Kind)}] " +
+                entry.Message.Trim());
+        }
+    }
+
+    private static void AttachCaptureArtifacts(
+        UnityProject project,
+        string testName,
+        string imagePath,
+        string logPath,
+        EditorCaptureStatus? result)
+    {
+        if (!File.Exists(imagePath) &&
+            !File.Exists(logPath))
+        {
+            return;
+        }
+
+        var testContext = TestContext.Current
+            ?? throw new InvalidOperationException(
+                "TUnit did not provide a test context.");
+        if (File.Exists(imagePath))
+        {
+            testContext.Output.AttachArtifact(
+                imagePath,
+                displayName:
+                    $"{project.EditorVersion} {testName} Inspector",
+                description:
+                    $"{CaptureWidth}x{CaptureHeight} Inspector capture");
+        }
+
+        if (File.Exists(logPath))
+        {
+            testContext.Output.AttachArtifact(
+                logPath,
+                displayName:
+                    $"{project.EditorVersion} {testName} Inspector logs",
+                description:
+                    $"{result?.WarningCount ?? 0} warnings, " +
+                    $"{result?.ErrorCount ?? 0} errors");
+        }
+    }
+
+    private static string GetLogKindLabel(string kind)
+    {
+        return kind.ToLowerInvariant() switch
+        {
+            "warning" => "Warning",
+            "error" => "Error",
+            _ => "Info",
+        };
+    }
+
     private static void WriteProgress(
         UnityProject project,
         string message)
@@ -394,5 +513,9 @@ internal static class UnityEditorCaptureTest
         public int Width { get; init; }
         public int Height { get; init; }
         public int Bytes { get; init; }
+        public IReadOnlyList<EditorCaptureLogEntry> Logs { get; init; } = [];
+        public int WarningCount { get; init; }
+        public int ErrorCount { get; init; }
+        public int DroppedLogCount { get; init; }
     }
 }

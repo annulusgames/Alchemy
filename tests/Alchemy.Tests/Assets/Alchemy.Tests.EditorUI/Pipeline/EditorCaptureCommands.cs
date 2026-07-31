@@ -19,6 +19,7 @@ namespace Alchemy.Tests.Pipeline
         const double InitialSettleSeconds = 1d;
         const double ReusedInspectorSettleSeconds = 0.25d;
         const double PostRepaintSeconds = 0.25d;
+        const int MaximumCapturedLogEntries = 1000;
         const int MaximumDimension = 4096;
         const float WindowX = 80f;
         const float WindowY = 80f;
@@ -134,40 +135,39 @@ namespace Alchemy.Tests.Pipeline
                     prefabPath);
             }
 
-            CaptureOperation pending = null;
-            GameObject root = null;
+            var pending = new CaptureOperation(
+                Guid.NewGuid().ToString("N"),
+                prefabPath,
+                outputPath,
+                currentSession.Width,
+                currentSession.Height,
+                currentSession.Window,
+                currentSession,
+                EditorApplication.timeSinceStartup +
+                (currentSession.CaptureCount == 0
+                    ? InitialSettleSeconds
+                    : ReusedInspectorSettleSeconds));
+            operation = pending;
+            Application.logMessageReceived += CaptureLog;
             try
             {
-                root = PrefabUtility.LoadPrefabContents(prefabPath);
-                SetInspectorTarget(currentSession.Window, root);
-                ExpandInspector(root, currentSession.Window);
-                pending = new CaptureOperation(
-                    Guid.NewGuid().ToString("N"),
-                    prefabPath,
-                    outputPath,
-                    currentSession.Width,
-                    currentSession.Height,
-                    root,
-                    currentSession.Window,
-                    currentSession,
-                    EditorApplication.timeSinceStartup +
-                    (currentSession.CaptureCount == 0
-                        ? InitialSettleSeconds
-                        : ReusedInspectorSettleSeconds));
-                operation = pending;
+                pending.Root = PrefabUtility.LoadPrefabContents(prefabPath);
+                SetInspectorTarget(currentSession.Window, pending.Root);
+                ExpandInspector(pending.Root, currentSession.Window);
                 SetLastResult(InspectorCaptureResult.CreateRunning(pending));
                 EditorApplication.update += UpdateCapture;
                 return SnapshotLastResult();
             }
             catch
             {
-                if (root != null)
+                if (pending.Root != null)
                 {
                     SetInspectorLocked(currentSession.Window, false);
                     Selection.activeObject = null;
-                    PrefabUtility.UnloadPrefabContents(root);
+                    PrefabUtility.UnloadPrefabContents(pending.Root);
                 }
 
+                Application.logMessageReceived -= CaptureLog;
                 operation = null;
                 throw;
             }
@@ -220,7 +220,6 @@ namespace Alchemy.Tests.Pipeline
             }
 
             EditorApplication.update -= UpdateCapture;
-            operation = null;
             try
             {
                 Cleanup(current);
@@ -229,13 +228,18 @@ namespace Alchemy.Tests.Pipeline
             {
                 Debug.LogException(exception);
                 var failed = InspectorCaptureResult.CreateFailure(
-                    current.JobId,
+                    current,
                     $"Inspector capture cancellation cleanup failed: {exception.Message}");
                 SetLastResult(failed);
                 throw;
             }
+            finally
+            {
+                Application.logMessageReceived -= CaptureLog;
+                operation = null;
+            }
 
-            var canceled = InspectorCaptureResult.CreateCanceled(current.JobId);
+            var canceled = InspectorCaptureResult.CreateCanceled(current);
             SetLastResult(canceled);
             return canceled;
         }
@@ -352,8 +356,8 @@ namespace Alchemy.Tests.Pipeline
                     return;
                 }
 
-                var result = Capture(current);
-                Complete(current, result);
+                var bytes = Capture(current);
+                Complete(current, bytes);
             }
             catch (Exception exception)
             {
@@ -374,7 +378,7 @@ namespace Alchemy.Tests.Pipeline
             EditorApplication.QueuePlayerLoopUpdate();
         }
 
-        static InspectorCaptureResult Capture(CaptureOperation current)
+        static int Capture(CaptureOperation current)
         {
             var rect = current.Window.position;
             var width = Mathf.RoundToInt(rect.width);
@@ -420,9 +424,7 @@ namespace Alchemy.Tests.Pipeline
 
                 Directory.CreateDirectory(directory);
                 File.WriteAllBytes(current.OutputPath, png);
-                return InspectorCaptureResult.CreateCompleted(
-                    current,
-                    png.Length);
+                return png.Length;
             }
             finally
             {
@@ -432,22 +434,28 @@ namespace Alchemy.Tests.Pipeline
 
         static void Complete(
             CaptureOperation current,
-            InspectorCaptureResult result)
+            int bytes)
         {
             EditorApplication.update -= UpdateCapture;
-            operation = null;
             try
             {
                 Cleanup(current);
                 current.Session.CaptureCount++;
-                SetLastResult(result);
+                SetLastResult(InspectorCaptureResult.CreateCompleted(
+                    current,
+                    bytes));
             }
             catch (Exception exception)
             {
                 Debug.LogException(exception);
                 SetLastResult(InspectorCaptureResult.CreateFailure(
-                    current.JobId,
+                    current,
                     $"Inspector capture cleanup failed: {exception.Message}"));
+            }
+            finally
+            {
+                Application.logMessageReceived -= CaptureLog;
+                operation = null;
             }
         }
 
@@ -456,7 +464,6 @@ namespace Alchemy.Tests.Pipeline
             Exception captureException)
         {
             EditorApplication.update -= UpdateCapture;
-            operation = null;
             Debug.LogException(captureException);
 
             Exception cleanupException = null;
@@ -475,8 +482,42 @@ namespace Alchemy.Tests.Pipeline
                 : $"{captureException.Message} Cleanup also failed: " +
                   cleanupException.Message;
             SetLastResult(InspectorCaptureResult.CreateFailure(
-                current.JobId,
+                current,
                 message));
+            Application.logMessageReceived -= CaptureLog;
+            operation = null;
+        }
+
+        static void CaptureLog(
+            string message,
+            string stackTrace,
+            LogType type)
+        {
+            var current = operation;
+            if (current == null)
+            {
+                return;
+            }
+
+            current.AddLog(
+                message,
+                stackTrace,
+                GetLogKind(type));
+        }
+
+        static string GetLogKind(LogType type)
+        {
+            switch (type)
+            {
+                case LogType.Warning:
+                    return "warning";
+                case LogType.Error:
+                case LogType.Assert:
+                case LogType.Exception:
+                    return "error";
+                default:
+                    return "info";
+            }
         }
 
         static EditorWindow CreateInspectorWindow(
@@ -697,10 +738,11 @@ namespace Alchemy.Tests.Pipeline
             if (current != null)
             {
                 EditorApplication.update -= UpdateCapture;
-                operation = null;
                 Cleanup(current);
+                Application.logMessageReceived -= CaptureLog;
+                operation = null;
                 SetLastResult(InspectorCaptureResult.CreateFailure(
-                    current.JobId,
+                    current,
                     "Inspector capture was interrupted by an assembly reload."));
             }
 
@@ -736,7 +778,6 @@ namespace Alchemy.Tests.Pipeline
                 string outputPath,
                 int width,
                 int height,
-                GameObject root,
                 EditorWindow window,
                 InspectorSession session,
                 double captureAfter)
@@ -746,7 +787,6 @@ namespace Alchemy.Tests.Pipeline
                 OutputPath = outputPath;
                 Width = width;
                 Height = height;
-                Root = root;
                 Window = window;
                 Session = session;
                 CaptureAfter = captureAfter;
@@ -757,11 +797,44 @@ namespace Alchemy.Tests.Pipeline
             public string OutputPath { get; }
             public int Width { get; }
             public int Height { get; }
-            public GameObject Root { get; }
+            public GameObject Root { get; set; }
             public EditorWindow Window { get; }
             public InspectorSession Session { get; }
             public double CaptureAfter { get; set; }
             public double CaptureReadyAfter { get; set; }
+            public List<InspectorCaptureLogEntry> Logs { get; } =
+                new List<InspectorCaptureLogEntry>();
+            public int WarningCount { get; private set; }
+            public int ErrorCount { get; private set; }
+            public int DroppedLogCount { get; private set; }
+
+            public void AddLog(
+                string message,
+                string stackTrace,
+                string kind)
+            {
+                if (kind == "warning")
+                {
+                    WarningCount++;
+                }
+                else if (kind == "error")
+                {
+                    ErrorCount++;
+                }
+
+                if (Logs.Count >= MaximumCapturedLogEntries)
+                {
+                    DroppedLogCount++;
+                    return;
+                }
+
+                Logs.Add(new InspectorCaptureLogEntry
+                {
+                    Kind = kind,
+                    Message = message,
+                    StackTrace = stackTrace,
+                });
+            }
         }
 
         sealed class InspectorSession
@@ -799,6 +872,11 @@ namespace Alchemy.Tests.Pipeline
             public int Width { get; set; }
             public int Height { get; set; }
             public int Bytes { get; set; }
+            public InspectorCaptureLogEntry[] Logs { get; set; } =
+                new InspectorCaptureLogEntry[0];
+            public int WarningCount { get; set; }
+            public int ErrorCount { get; set; }
+            public int DroppedLogCount { get; set; }
 
             public InspectorCaptureResult Copy()
             {
@@ -813,6 +891,10 @@ namespace Alchemy.Tests.Pipeline
                     Width = Width,
                     Height = Height,
                     Bytes = Bytes,
+                    Logs = Logs.Select(entry => entry.Copy()).ToArray(),
+                    WarningCount = WarningCount,
+                    ErrorCount = ErrorCount,
+                    DroppedLogCount = DroppedLogCount,
                 };
             }
 
@@ -881,18 +963,49 @@ namespace Alchemy.Tests.Pipeline
                     Width = current.Width,
                     Height = current.Height,
                     Bytes = bytes,
+                    Logs = current.Logs
+                        .Select(entry => entry.Copy())
+                        .ToArray(),
+                    WarningCount = current.WarningCount,
+                    ErrorCount = current.ErrorCount,
+                    DroppedLogCount = current.DroppedLogCount,
                 };
             }
 
             public static InspectorCaptureResult CreateCanceled(
-                string jobId)
+                CaptureOperation current)
             {
                 return new InspectorCaptureResult
                 {
-                    JobId = jobId,
+                    JobId = current.JobId,
                     Status = "canceled",
                     Success = false,
                     Message = "Inspector capture was canceled.",
+                    Logs = current.Logs
+                        .Select(entry => entry.Copy())
+                        .ToArray(),
+                    WarningCount = current.WarningCount,
+                    ErrorCount = current.ErrorCount,
+                    DroppedLogCount = current.DroppedLogCount,
+                };
+            }
+
+            public static InspectorCaptureResult CreateFailure(
+                CaptureOperation current,
+                string message)
+            {
+                return new InspectorCaptureResult
+                {
+                    JobId = current.JobId,
+                    Status = "failed",
+                    Success = false,
+                    Message = message,
+                    Logs = current.Logs
+                        .Select(entry => entry.Copy())
+                        .ToArray(),
+                    WarningCount = current.WarningCount,
+                    ErrorCount = current.ErrorCount,
+                    DroppedLogCount = current.DroppedLogCount,
                 };
             }
 
@@ -906,6 +1019,23 @@ namespace Alchemy.Tests.Pipeline
                     Status = "failed",
                     Success = false,
                     Message = message,
+                };
+            }
+        }
+
+        sealed class InspectorCaptureLogEntry
+        {
+            public string Kind { get; set; }
+            public string Message { get; set; }
+            public string StackTrace { get; set; }
+
+            public InspectorCaptureLogEntry Copy()
+            {
+                return new InspectorCaptureLogEntry
+                {
+                    Kind = Kind,
+                    Message = Message,
+                    StackTrace = StackTrace,
                 };
             }
         }

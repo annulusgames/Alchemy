@@ -21,6 +21,12 @@
       --amber: #e0a54b;
       --amber-soft: rgb(224 165 75 / 16%);
       --amber-glow: rgb(224 165 75 / 28%);
+      --info: #7da7c7;
+      --info-soft: rgb(125 167 199 / 13%);
+      --warning: #f0b85b;
+      --warning-soft: rgb(240 184 91 / 15%);
+      --error: #ef7279;
+      --error-soft: rgb(239 114 121 / 15%);
       --preview-chrome: #0a0c10;
       --radius: 14px;
       --radius-sm: 8px;
@@ -181,6 +187,26 @@
       color: var(--amber);
     }
 
+    .stat.clean {
+      background:
+        linear-gradient(160deg, var(--error-soft), rgb(26 33 44 / 80%) 55%);
+      border-color: rgb(239 114 121 / 42%);
+    }
+
+    .stat.clean strong {
+      color: var(--error);
+    }
+
+    .stat.clean.complete {
+      background:
+        linear-gradient(160deg, rgb(102 187 132 / 14%), rgb(26 33 44 / 80%) 55%);
+      border-color: rgb(102 187 132 / 34%);
+    }
+
+    .stat.clean.complete strong {
+      color: #76c992;
+    }
+
     .badge {
       background: var(--amber-soft);
       border: 1px solid rgb(224 165 75 / 32%);
@@ -205,7 +231,9 @@
       animation: rise 700ms var(--ease) 80ms both;
       display: grid;
       gap: 22px;
-      grid-template-columns: minmax(0, 1fr) minmax(340px, 0.46fr);
+      grid-template-columns:
+        minmax(0, 1.25fr)
+        minmax(520px, 0.85fr);
     }
 
     .matrices {
@@ -247,12 +275,21 @@
       backdrop-filter: blur(12px);
     }
 
+    .matrix.single-version {
+      max-width: 352px;
+    }
+
     table {
       border-collapse: separate;
       border-spacing: 0;
       min-width: 800px;
       table-layout: fixed;
       width: 100%;
+    }
+
+    .matrix.single-version table {
+      min-width: 352px;
+      width: 352px;
     }
 
     th,
@@ -310,6 +347,40 @@
     tbody tr:hover th {
       background: rgb(30 38 50 / 98%);
       color: var(--fg);
+    }
+
+    tbody tr.has-warnings td {
+      background: rgb(96 69 23 / 28%);
+    }
+
+    tbody tr.has-warnings th {
+      background: rgb(54 43 25 / 98%);
+      color: var(--warning);
+    }
+
+    tbody tr.has-errors td {
+      background: rgb(91 32 39 / 32%);
+    }
+
+    tbody tr.has-errors th {
+      background: rgb(55 28 34 / 98%);
+      color: var(--error);
+    }
+
+    tbody tr.has-warnings:hover td {
+      background: rgb(112 79 25 / 40%);
+    }
+
+    tbody tr.has-warnings:hover th {
+      background: rgb(65 50 26 / 98%);
+    }
+
+    tbody tr.has-errors:hover td {
+      background: rgb(110 36 44 / 44%);
+    }
+
+    tbody tr.has-errors:hover th {
+      background: rgb(67 30 37 / 98%);
     }
 
     td {
@@ -378,6 +449,52 @@
       object-position: top;
     }
 
+    .capture.has-warnings::after {
+      border-color: rgb(240 184 91 / 64%);
+      box-shadow: inset 0 0 0 1px rgb(14 17 22 / 45%);
+    }
+
+    .capture.has-errors::after {
+      border-color: rgb(239 114 121 / 72%);
+      box-shadow: inset 0 0 0 1px rgb(14 17 22 / 45%);
+    }
+
+    .issue-counts {
+      display: grid;
+      gap: 4px;
+      pointer-events: none;
+      position: absolute;
+      right: 9px;
+      top: 9px;
+      z-index: 1;
+    }
+
+    .issue-count {
+      backdrop-filter: blur(8px);
+      border: 1px solid;
+      border-radius: 999px;
+      box-shadow: 0 4px 12px rgb(0 0 0 / 42%);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.62rem;
+      font-weight: 500;
+      line-height: 1;
+      min-width: 35px;
+      padding: 5px 7px;
+      text-align: center;
+    }
+
+    .issue-count.warning {
+      background: rgb(42 32 16 / 90%);
+      border-color: rgb(240 184 91 / 58%);
+      color: var(--warning);
+    }
+
+    .issue-count.error {
+      background: rgb(42 20 24 / 92%);
+      border-color: rgb(239 114 121 / 58%);
+      color: var(--error);
+    }
+
     .missing {
       align-items: center;
       background:
@@ -407,9 +524,10 @@
       box-shadow: var(--shadow);
       display: grid;
       gap: 18px;
-      padding: 18px;
-      position: sticky;
-      top: 18px;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: 100%;
+      padding: 18px 18px 78px;
+      position: relative;
       backdrop-filter: blur(16px);
     }
 
@@ -451,17 +569,21 @@
     }
 
     .preview {
+      appearance: none;
       background:
         radial-gradient(circle at 50% 0%, rgb(224 165 75 / 8%), transparent 45%),
         linear-gradient(180deg, var(--ink-elevated), var(--preview-chrome));
       border: 1px solid var(--line);
       border-radius: 12px;
+      color: inherit;
+      cursor: zoom-in;
       display: grid;
-      min-height: 280px;
+      min-height: 0;
       overflow: hidden;
       padding: 14px;
       place-items: center;
       position: relative;
+      width: 100%;
     }
 
     .preview::before {
@@ -473,12 +595,40 @@
       position: absolute;
     }
 
+    .preview:focus-visible {
+      outline: 2px solid var(--amber);
+      outline-offset: 3px;
+    }
+
+    .preview-hint {
+      background: rgb(10 12 16 / 78%);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      bottom: 24px;
+      color: var(--fg-dim);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.64rem;
+      opacity: 0;
+      padding: 6px 9px;
+      pointer-events: none;
+      position: absolute;
+      right: 24px;
+      transform: translateY(4px);
+      transition: opacity 160ms var(--ease), transform 160ms var(--ease);
+    }
+
+    .preview:hover .preview-hint,
+    .preview:focus-visible .preview-hint {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     .preview img {
       background: #1c1f24;
       border-radius: 6px;
       box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
       display: block;
-      max-height: calc(100vh - 220px);
+      max-height: 100%;
       max-width: 100%;
       object-fit: contain;
       transition: opacity 220ms var(--ease), transform 280ms var(--ease);
@@ -487,6 +637,295 @@
     .preview img.is-swapping {
       opacity: 0.35;
       transform: scale(0.985);
+    }
+
+    .detail-pane {
+      height: calc(100vh - 36px);
+      min-height: 560px;
+      min-width: 0;
+      position: sticky;
+      top: 18px;
+    }
+
+    .log-details {
+      background: rgb(10 12 16 / 96%);
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      bottom: 18px;
+      box-shadow: 0 18px 45px rgb(0 0 0 / 48%);
+      left: var(--log-drawer-left, auto);
+      max-height: min(62vh, 680px);
+      min-width: 0;
+      overflow: hidden;
+      position: fixed;
+      right: auto;
+      width: var(--log-drawer-width, min(520px, calc(100vw - 64px)));
+      z-index: 4;
+      backdrop-filter: blur(20px);
+    }
+
+    .log-details[open] {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: min(62vh, 680px);
+    }
+
+    .log-details[open] > .log-content {
+      height: calc(min(62vh, 680px) - 50px);
+    }
+
+    .log-details > summary {
+      align-items: center;
+      cursor: pointer;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      list-style: none;
+      min-height: 48px;
+      padding: 11px 14px;
+      user-select: none;
+    }
+
+    .log-details > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .log-details > summary::after {
+      color: var(--fg-faint);
+      content: "+";
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 1rem;
+    }
+
+    .log-details[open] > summary::after {
+      content: "−";
+    }
+
+    .log-drawer-title {
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .log-drawer-summary {
+      color: var(--fg-faint);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.68rem;
+      overflow: hidden;
+      text-align: right;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .log-details.has-warnings {
+      border-color: rgb(240 184 91 / 52%);
+    }
+
+    .log-details.has-errors {
+      border-color: rgb(239 114 121 / 58%);
+    }
+
+    .lightbox {
+      background: transparent;
+      border: 0;
+      height: 100vh;
+      max-height: none;
+      max-width: none;
+      padding: 28px;
+      width: 100vw;
+    }
+
+    .lightbox::backdrop {
+      background: rgb(3 5 8 / 88%);
+      backdrop-filter: blur(8px);
+    }
+
+    .lightbox-shell {
+      align-items: stretch;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: 100%;
+      margin: auto;
+      max-width: 1120px;
+      min-height: 0;
+    }
+
+    .lightbox-header {
+      align-items: center;
+      color: var(--fg);
+      display: flex;
+      gap: 18px;
+      justify-content: space-between;
+      padding-bottom: 12px;
+    }
+
+    .lightbox-title {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.78rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .lightbox-header form {
+      margin: 0;
+    }
+
+    .lightbox-close {
+      appearance: none;
+      background: rgb(26 33 44 / 92%);
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      color: var(--fg);
+      cursor: pointer;
+      font: inherit;
+      padding: 7px 12px;
+    }
+
+    .lightbox-close:hover,
+    .lightbox-close:focus-visible {
+      border-color: var(--amber);
+      outline: 0;
+    }
+
+    .lightbox-frame {
+      display: grid;
+      min-height: 0;
+      place-items: center;
+    }
+
+    .lightbox-frame img {
+      background: var(--preview-chrome);
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      box-shadow: 0 28px 80px rgb(0 0 0 / 62%);
+      display: block;
+      height: auto;
+      max-height: calc(100vh - 108px);
+      max-width: 100%;
+      object-fit: contain;
+      width: auto;
+    }
+
+    .log-content {
+      display: grid;
+      gap: 10px;
+      min-height: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+      padding: 0 14px 14px;
+      scrollbar-gutter: stable;
+    }
+
+    .log-summary {
+      color: var(--fg-dim);
+      display: flex;
+      flex-wrap: wrap;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.68rem;
+      gap: 6px 14px;
+    }
+
+    .log-summary .warning {
+      color: var(--warning);
+    }
+
+    .log-summary .error {
+      color: var(--error);
+    }
+
+    .log-summary .dropped {
+      color: var(--warning);
+    }
+
+    .log-list {
+      display: grid;
+      gap: 8px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .log-entry {
+      background: rgb(21 26 34 / 72%);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--info);
+      border-radius: 8px;
+      contain-intrinsic-size: auto 96px;
+      content-visibility: auto;
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+      padding: 10px;
+    }
+
+    .log-entry.warning {
+      background: var(--warning-soft);
+      border-left-color: var(--warning);
+    }
+
+    .log-entry.error {
+      background: var(--error-soft);
+      border-left-color: var(--error);
+    }
+
+    .log-kind {
+      color: var(--info);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.62rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .log-entry.warning .log-kind {
+      color: var(--warning);
+    }
+
+    .log-entry.error .log-kind {
+      color: var(--error);
+    }
+
+    .log-message,
+    .log-stack {
+      color: var(--fg);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.68rem;
+      line-height: 1.5;
+      margin: 0;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log-entry details {
+      border-top: 1px solid var(--line);
+      color: var(--fg-dim);
+      padding-top: 7px;
+    }
+
+    .log-entry summary {
+      cursor: pointer;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.64rem;
+    }
+
+    .log-stack {
+      color: var(--fg-dim);
+      margin-top: 7px;
+    }
+
+    .log-empty,
+    .log-dropped {
+      color: var(--fg-faint);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.68rem;
+      margin: 0;
+    }
+
+    .log-dropped {
+      color: var(--warning);
     }
 
     .legend {
@@ -523,6 +962,16 @@
       border: 1px solid var(--line-strong);
     }
 
+    .mark.warning {
+      background: var(--warning);
+      box-shadow: 0 0 0 3px var(--warning-soft);
+    }
+
+    .mark.error {
+      background: var(--error);
+      box-shadow: 0 0 0 3px var(--error-soft);
+    }
+
     @keyframes rise {
       from {
         opacity: 0;
@@ -539,8 +988,25 @@
         grid-template-columns: 1fr;
       }
 
-      .selection {
+      .detail-pane {
+        display: grid;
+        gap: 14px;
+        height: auto;
+        min-height: 0;
         position: static;
+      }
+
+      .selection {
+        height: auto;
+        padding-bottom: 18px;
+      }
+
+      .log-details {
+        bottom: 12px;
+        left: 16px;
+        max-height: 60vh;
+        right: 16px;
+        width: auto;
       }
 
       .preview img {
@@ -584,6 +1050,10 @@
           <strong>{{CAPTURED_COUNT}} / {{TOTAL_COUNT}}</strong>
           <span>Captured</span>
         </div>
+        <div class="stat clean {{CLEAN_STATUS}}">
+          <strong>{{CLEAN_COUNT}} / {{TOTAL_COUNT}}</strong>
+          <span>Clean</span>
+        </div>
         <div class="stat">
           <strong>{{VERSION_COUNT}}</strong>
           <span>Versions</span>
@@ -600,24 +1070,57 @@
         {{MATRICES}}
       </div>
 
-      <section class="selection" aria-live="polite">
-        <div class="selection-copy">
-          <div class="selection-heading">
-            <h2 id="selected-test">No capture selected</h2>
-            <span class="badge" id="selected-surface">Editor UI</span>
-            <span class="badge muted" id="selected-version">Unity</span>
+      <div class="detail-pane">
+        <section class="selection" aria-live="polite">
+          <div class="selection-copy">
+            <div class="selection-heading">
+              <h2 id="selected-test">No capture selected</h2>
+              <span class="badge" id="selected-surface">Editor UI</span>
+              <span class="badge muted" id="selected-version">Unity</span>
+            </div>
+            <p id="selected-meta">Select a captured cell from the matrix.</p>
           </div>
-          <p id="selected-meta">Select a captured cell from the matrix.</p>
-        </div>
-        <div class="preview">
-          <img id="selected-image" alt="" hidden>
-        </div>
-      </section>
+          <button type="button" class="preview" id="preview-button"
+                  aria-label="Open the selected capture full size" disabled>
+            <img id="selected-image" alt="" hidden>
+            <span class="preview-hint">Open full size</span>
+          </button>
+        </section>
+
+      </div>
     </div>
+
+    <details class="log-details" id="log-drawer">
+      <summary>
+        <span class="log-drawer-title">Inspector logs</span>
+        <span class="log-drawer-summary" id="selected-log-summary">
+          No capture selected
+        </span>
+      </summary>
+      <div class="log-content" id="selected-logs" aria-live="polite">
+        <p class="log-empty">Select a captured cell from the matrix.</p>
+      </div>
+    </details>
+
+    <dialog class="lightbox" id="capture-lightbox">
+      <div class="lightbox-shell">
+        <div class="lightbox-header">
+          <span class="lightbox-title" id="lightbox-title">Inspector capture</span>
+          <form method="dialog">
+            <button type="submit" class="lightbox-close">Close</button>
+          </form>
+        </div>
+        <div class="lightbox-frame">
+          <img id="lightbox-image" alt="">
+        </div>
+      </div>
+    </dialog>
 
     <div class="legend">
       <span><i class="mark captured"></i>Captured</span>
       <span><i class="mark missing"></i>Missing</span>
+      <span><i class="mark warning"></i>Warning</span>
+      <span><i class="mark error"></i>Error</span>
       <span>Click a thumbnail to inspect</span>
     </div>
   </main>
@@ -630,7 +1133,34 @@
       const selectedSurface = root.querySelector("#selected-surface");
       const selectedVersion = root.querySelector("#selected-version");
       const selectedMeta = root.querySelector("#selected-meta");
+      const previewButton = root.querySelector("#preview-button");
       const selectedImage = root.querySelector("#selected-image");
+      const selectedLogs = root.querySelector("#selected-logs");
+      const logDrawer = root.querySelector("#log-drawer");
+      const selectedLogSummary = root.querySelector("#selected-log-summary");
+      const detailPane = root.querySelector(".detail-pane");
+      const lightbox = root.querySelector("#capture-lightbox");
+      const lightboxImage = root.querySelector("#lightbox-image");
+      const lightboxTitle = root.querySelector("#lightbox-title");
+      const narrowLayout = window.matchMedia("(max-width: 960px)");
+
+      const positionLogDrawer = () => {
+        if (narrowLayout.matches) {
+          logDrawer.style.removeProperty("--log-drawer-left");
+          logDrawer.style.removeProperty("--log-drawer-width");
+          return;
+        }
+
+        const detailRect = detailPane.getBoundingClientRect();
+        logDrawer.style.setProperty(
+          "--log-drawer-left",
+          `${detailRect.left + 18}px`
+        );
+        logDrawer.style.setProperty(
+          "--log-drawer-width",
+          `${detailRect.width - 36}px`
+        );
+      };
 
       const select = button => {
         buttons.forEach(candidate => {
@@ -642,15 +1172,41 @@
         const surface = button.dataset.surface;
         const testName = button.dataset.test;
         const version = button.dataset.version;
+        const logCount = Number(button.dataset.logCount);
+        const warningCount = Number(button.dataset.warningCount);
+        const errorCount = Number(button.dataset.errorCount);
+        const droppedLogCount = Number(button.dataset.droppedLogCount);
+        const logTemplate = document.getElementById(button.dataset.logTemplate);
+        const diagnosticParts = [`${logCount} logs`];
+        if (warningCount > 0) {
+          diagnosticParts.push(`${warningCount} warnings`);
+        }
+        if (errorCount > 0) {
+          diagnosticParts.push(`${errorCount} errors`);
+        }
+        if (droppedLogCount > 0) {
+          diagnosticParts.push(`${droppedLogCount} omitted`);
+        }
         selectedTest.textContent = testName;
         selectedSurface.textContent = surface;
         selectedVersion.textContent = `Unity ${version}`;
-        selectedMeta.textContent = "640 × 900 · captured";
+        selectedMeta.textContent =
+          `640 × 900 · ${diagnosticParts.join(" · ")}`;
+        selectedLogSummary.textContent =
+          logCount === 0 ? "No logs" : diagnosticParts.join(" · ");
+        selectedLogs.replaceChildren(logTemplate.content.cloneNode(true));
+        logDrawer.classList.toggle(
+          "has-warnings",
+          warningCount > 0 && errorCount === 0
+        );
+        logDrawer.classList.toggle("has-errors", errorCount > 0);
+        logDrawer.open = logCount > 0;
 
         const apply = () => {
           selectedImage.src = thumbnail.src;
           selectedImage.alt = `${surface} ${testName}, Unity ${version} capture`;
           selectedImage.hidden = false;
+          previewButton.disabled = false;
           selectedImage.classList.remove("is-swapping");
         };
 
@@ -665,6 +1221,24 @@
       buttons.forEach(button => {
         button.addEventListener("click", () => select(button));
       });
+      previewButton.addEventListener("click", () => {
+        if (selectedImage.hidden) {
+          return;
+        }
+
+        lightboxImage.src = selectedImage.src;
+        lightboxImage.alt = selectedImage.alt;
+        lightboxTitle.textContent =
+          `${selectedTest.textContent} · ${selectedVersion.textContent}`;
+        lightbox.showModal();
+      });
+      lightbox.addEventListener("click", event => {
+        if (event.target === lightbox) {
+          lightbox.close();
+        }
+      });
+      window.addEventListener("resize", positionLogDrawer, { passive: true });
+      positionLogDrawer();
 
       if (buttons.length > 0) {
         select(buttons[0]);
