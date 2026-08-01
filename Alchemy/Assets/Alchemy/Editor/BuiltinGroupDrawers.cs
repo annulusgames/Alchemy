@@ -91,7 +91,7 @@ namespace Alchemy.Editor.Drawers
                     paddingLeft = 3f,
                 }
             };
-            rootElement.Remove(rootElement.Q<Label>());
+            rootElement.Q<Label>()?.RemoveFromHierarchy();
 
             var tabGUIElement = new IMGUIContainer(() =>
             {

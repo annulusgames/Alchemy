@@ -1,0 +1,22 @@
+{
+    "name": "Alchemy.Tests.EditorUI",
+    "rootNamespace": "Alchemy.Tests.EditorUI",
+    "references": [
+        "GUID:88be65f96b86746888c927a5c8ff3534"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.serialization",
+            "expression": "",
+            "define": "ALCHEMY_SUPPORT_SERIALIZATION"
+        }
+    ],
+    "noEngineReferences": false
+}

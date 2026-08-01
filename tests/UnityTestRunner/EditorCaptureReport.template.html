@@ -1,0 +1,1249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alchemy Editor UI capture matrix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #0e1116;
+      --ink-elevated: #151a22;
+      --ink-soft: #232b38;
+      --line: rgb(232 214 180 / 12%);
+      --line-strong: rgb(232 214 180 / 22%);
+      --fg: #efe7d8;
+      --fg-dim: #9a917f;
+      --fg-faint: #6d6556;
+      --amber: #e0a54b;
+      --amber-soft: rgb(224 165 75 / 16%);
+      --amber-glow: rgb(224 165 75 / 28%);
+      --info: #7da7c7;
+      --info-soft: rgb(125 167 199 / 13%);
+      --warning: #f0b85b;
+      --warning-soft: rgb(240 184 91 / 15%);
+      --error: #ef7279;
+      --error-soft: rgb(239 114 121 / 15%);
+      --preview-chrome: #0a0c10;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 24px 60px rgb(0 0 0 / 45%);
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--ink);
+      color: var(--fg);
+      font-family: Sora, "Segoe UI", sans-serif;
+      line-height: 1.45;
+      margin: 0;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    body::before {
+      background:
+        radial-gradient(1100px 520px at 8% -10%, rgb(224 165 75 / 14%), transparent 55%),
+        radial-gradient(900px 480px at 92% 0%, rgb(90 140 180 / 10%), transparent 50%),
+        radial-gradient(700px 400px at 70% 100%, rgb(224 165 75 / 6%), transparent 55%),
+        linear-gradient(180deg, #12161e 0%, var(--ink) 38%, #0c0f14 100%);
+      content: "";
+      inset: 0;
+      pointer-events: none;
+      position: fixed;
+      z-index: -2;
+    }
+
+    body::after {
+      background-image:
+        linear-gradient(rgb(232 214 180 / 3.5%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(232 214 180 / 3.5%) 1px, transparent 1px);
+      background-size: 48px 48px;
+      content: "";
+      inset: 0;
+      mask-image: radial-gradient(ellipse 80% 70% at 50% 20%, #000 20%, transparent 75%);
+      opacity: 0.55;
+      pointer-events: none;
+      position: fixed;
+      z-index: -1;
+    }
+
+    main {
+      display: grid;
+      gap: 28px;
+      margin: 0 auto;
+      max-width: 1560px;
+      padding: 36px 32px 48px;
+    }
+
+    header {
+      align-items: end;
+      animation: rise 560ms var(--ease) both;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px 28px;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: grid;
+      gap: 14px;
+      max-width: 720px;
+    }
+
+    .eyebrow {
+      align-items: center;
+      color: var(--amber);
+      display: inline-flex;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.72rem;
+      font-weight: 500;
+      gap: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      background: var(--amber);
+      border-radius: 1px;
+      content: "";
+      height: 1px;
+      width: 28px;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(1.85rem, 3.6vw, 2.75rem);
+      font-weight: 600;
+      letter-spacing: -0.045em;
+      line-height: 1.05;
+    }
+
+    h1 span {
+      color: var(--amber);
+    }
+
+    .lede {
+      color: var(--fg-dim);
+      font-size: 0.95rem;
+      max-width: 46ch;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .stat {
+      background: rgb(26 33 44 / 72%);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      display: grid;
+      gap: 4px;
+      min-width: 118px;
+      padding: 12px 14px;
+      backdrop-filter: blur(10px);
+    }
+
+    .stat strong {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 1.15rem;
+      font-weight: 500;
+      letter-spacing: -0.03em;
+    }
+
+    .stat span {
+      color: var(--fg-faint);
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .stat.primary {
+      background:
+        linear-gradient(160deg, rgb(224 165 75 / 18%), rgb(26 33 44 / 80%) 55%);
+      border-color: rgb(224 165 75 / 35%);
+    }
+
+    .stat.primary strong {
+      color: var(--amber);
+    }
+
+    .stat.clean {
+      background:
+        linear-gradient(160deg, var(--error-soft), rgb(26 33 44 / 80%) 55%);
+      border-color: rgb(239 114 121 / 42%);
+    }
+
+    .stat.clean strong {
+      color: var(--error);
+    }
+
+    .stat.clean.complete {
+      background:
+        linear-gradient(160deg, rgb(102 187 132 / 14%), rgb(26 33 44 / 80%) 55%);
+      border-color: rgb(102 187 132 / 34%);
+    }
+
+    .stat.clean.complete strong {
+      color: #76c992;
+    }
+
+    .badge {
+      background: var(--amber-soft);
+      border: 1px solid rgb(224 165 75 / 32%);
+      border-radius: 999px;
+      color: var(--amber);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      padding: 5px 10px;
+      white-space: nowrap;
+    }
+
+    .badge.muted {
+      background: rgb(232 214 180 / 6%);
+      border-color: var(--line);
+      color: var(--fg-dim);
+    }
+
+    .workspace {
+      align-items: start;
+      animation: rise 700ms var(--ease) 80ms both;
+      display: grid;
+      gap: 22px;
+      grid-template-columns:
+        minmax(0, 1.25fr)
+        minmax(520px, 0.85fr);
+    }
+
+    .matrices {
+      display: grid;
+      gap: 28px;
+      min-width: 0;
+    }
+
+    .surface {
+      display: grid;
+      gap: 12px;
+    }
+
+    .surface h2 {
+      align-items: center;
+      display: flex;
+      font-size: 0.78rem;
+      font-weight: 500;
+      gap: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .surface h2::before {
+      background: var(--amber);
+      border-radius: 50%;
+      box-shadow: 0 0 0 4px var(--amber-soft);
+      content: "";
+      height: 7px;
+      width: 7px;
+    }
+
+    .matrix {
+      background: rgb(26 33 44 / 78%);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: auto;
+      backdrop-filter: blur(12px);
+    }
+
+    .matrix.single-version {
+      max-width: 352px;
+    }
+
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 800px;
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    .matrix.single-version table {
+      min-width: 352px;
+      width: 352px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      padding: 10px;
+    }
+
+    tr:last-child th,
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    th:last-child,
+    td:last-child {
+      border-right: 0;
+    }
+
+    thead th {
+      background: rgb(18 22 30 / 92%);
+      color: var(--fg-dim);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      position: sticky;
+      text-align: center;
+      top: 0;
+      z-index: 2;
+    }
+
+    thead th:first-child,
+    tbody th {
+      left: 0;
+      position: sticky;
+      text-align: left;
+      width: 180px;
+      z-index: 3;
+    }
+
+    tbody th {
+      background: rgb(22 28 38 / 96%);
+      color: var(--fg-dim);
+      font-size: 0.8rem;
+      font-weight: 500;
+      overflow-wrap: anywhere;
+    }
+
+    tbody tr:hover th,
+    tbody tr:hover td {
+      background: rgb(36 44 58 / 55%);
+    }
+
+    tbody tr:hover th {
+      background: rgb(30 38 50 / 98%);
+      color: var(--fg);
+    }
+
+    tbody tr.has-warnings td {
+      background: rgb(96 69 23 / 28%);
+    }
+
+    tbody tr.has-warnings th {
+      background: rgb(54 43 25 / 98%);
+      color: var(--warning);
+    }
+
+    tbody tr.has-errors td {
+      background: rgb(91 32 39 / 32%);
+    }
+
+    tbody tr.has-errors th {
+      background: rgb(55 28 34 / 98%);
+      color: var(--error);
+    }
+
+    tbody tr.has-warnings:hover td {
+      background: rgb(112 79 25 / 40%);
+    }
+
+    tbody tr.has-warnings:hover th {
+      background: rgb(65 50 26 / 98%);
+    }
+
+    tbody tr.has-errors:hover td {
+      background: rgb(110 36 44 / 44%);
+    }
+
+    tbody tr.has-errors:hover th {
+      background: rgb(67 30 37 / 98%);
+    }
+
+    td {
+      width: 132px;
+    }
+
+    .capture {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: block;
+      padding: 3px;
+      position: relative;
+      transition:
+        transform 180ms var(--ease),
+        box-shadow 180ms var(--ease);
+      width: 100%;
+    }
+
+    .capture::after {
+      border: 1px solid transparent;
+      border-radius: 6px;
+      content: "";
+      inset: 3px;
+      pointer-events: none;
+      position: absolute;
+      transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease);
+    }
+
+    .capture:hover {
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    .capture:hover::after {
+      border-color: rgb(224 165 75 / 45%);
+      box-shadow: 0 10px 24px rgb(0 0 0 / 35%);
+    }
+
+    .capture:focus-visible,
+    .capture[aria-pressed="true"] {
+      outline: 0;
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    .capture:focus-visible::after,
+    .capture[aria-pressed="true"]::after {
+      border-color: var(--amber);
+      box-shadow:
+        0 0 0 3px var(--amber-glow),
+        0 12px 28px rgb(0 0 0 / 40%);
+    }
+
+    .capture img,
+    .missing {
+      aspect-ratio: 640 / 900;
+      border-radius: 5px;
+      width: 100%;
+    }
+
+    .capture img {
+      background: var(--preview-chrome);
+      display: block;
+      object-fit: cover;
+      object-position: top;
+    }
+
+    .capture.has-warnings::after {
+      border-color: rgb(240 184 91 / 64%);
+      box-shadow: inset 0 0 0 1px rgb(14 17 22 / 45%);
+    }
+
+    .capture.has-errors::after {
+      border-color: rgb(239 114 121 / 72%);
+      box-shadow: inset 0 0 0 1px rgb(14 17 22 / 45%);
+    }
+
+    .issue-counts {
+      display: grid;
+      gap: 4px;
+      pointer-events: none;
+      position: absolute;
+      right: 9px;
+      top: 9px;
+      z-index: 1;
+    }
+
+    .issue-count {
+      backdrop-filter: blur(8px);
+      border: 1px solid;
+      border-radius: 999px;
+      box-shadow: 0 4px 12px rgb(0 0 0 / 42%);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.62rem;
+      font-weight: 500;
+      line-height: 1;
+      min-width: 35px;
+      padding: 5px 7px;
+      text-align: center;
+    }
+
+    .issue-count.warning {
+      background: rgb(42 32 16 / 90%);
+      border-color: rgb(240 184 91 / 58%);
+      color: var(--warning);
+    }
+
+    .issue-count.error {
+      background: rgb(42 20 24 / 92%);
+      border-color: rgb(239 114 121 / 58%);
+      color: var(--error);
+    }
+
+    .missing {
+      align-items: center;
+      background:
+        repeating-linear-gradient(
+          -45deg,
+          rgb(232 214 180 / 3%),
+          rgb(232 214 180 / 3%) 6px,
+          transparent 6px,
+          transparent 12px
+        ),
+        var(--ink-soft);
+      border: 1px dashed var(--line-strong);
+      color: var(--fg-faint);
+      display: flex;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.68rem;
+      justify-content: center;
+      letter-spacing: 0.04em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .selection {
+      background: rgb(26 33 44 / 82%);
+      border: 1px solid var(--line-strong);
+      border-radius: calc(var(--radius) + 2px);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 18px;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: 100%;
+      padding: 18px 18px 78px;
+      position: relative;
+      backdrop-filter: blur(16px);
+    }
+
+    .selection::before {
+      background: linear-gradient(90deg, var(--amber), transparent 70%);
+      border-radius: calc(var(--radius) + 2px) calc(var(--radius) + 2px) 0 0;
+      content: "";
+      height: 2px;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+    }
+
+    .selection-copy {
+      align-content: start;
+      display: grid;
+      gap: 10px;
+    }
+
+    .selection-heading {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .selection-heading h2 {
+      flex: 1 1 100%;
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    .selection-copy p {
+      color: var(--fg-dim);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.78rem;
+    }
+
+    .preview {
+      appearance: none;
+      background:
+        radial-gradient(circle at 50% 0%, rgb(224 165 75 / 8%), transparent 45%),
+        linear-gradient(180deg, var(--ink-elevated), var(--preview-chrome));
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: inherit;
+      cursor: zoom-in;
+      display: grid;
+      min-height: 0;
+      overflow: hidden;
+      padding: 14px;
+      place-items: center;
+      position: relative;
+      width: 100%;
+    }
+
+    .preview::before {
+      border: 1px solid rgb(232 214 180 / 6%);
+      border-radius: 10px;
+      content: "";
+      inset: 8px;
+      pointer-events: none;
+      position: absolute;
+    }
+
+    .preview:focus-visible {
+      outline: 2px solid var(--amber);
+      outline-offset: 3px;
+    }
+
+    .preview-hint {
+      background: rgb(10 12 16 / 78%);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      bottom: 24px;
+      color: var(--fg-dim);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.64rem;
+      opacity: 0;
+      padding: 6px 9px;
+      pointer-events: none;
+      position: absolute;
+      right: 24px;
+      transform: translateY(4px);
+      transition: opacity 160ms var(--ease), transform 160ms var(--ease);
+    }
+
+    .preview:hover .preview-hint,
+    .preview:focus-visible .preview-hint {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .preview img {
+      background: #1c1f24;
+      border-radius: 6px;
+      box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
+      display: block;
+      max-height: 100%;
+      max-width: 100%;
+      object-fit: contain;
+      transition: opacity 220ms var(--ease), transform 280ms var(--ease);
+    }
+
+    .preview img.is-swapping {
+      opacity: 0.35;
+      transform: scale(0.985);
+    }
+
+    .detail-pane {
+      height: calc(100vh - 36px);
+      min-height: 560px;
+      min-width: 0;
+      position: sticky;
+      top: 18px;
+    }
+
+    .log-details {
+      background: rgb(10 12 16 / 96%);
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      bottom: 18px;
+      box-shadow: 0 18px 45px rgb(0 0 0 / 48%);
+      left: var(--log-drawer-left, auto);
+      max-height: min(62vh, 680px);
+      min-width: 0;
+      overflow: hidden;
+      position: fixed;
+      right: auto;
+      width: var(--log-drawer-width, min(520px, calc(100vw - 64px)));
+      z-index: 4;
+      backdrop-filter: blur(20px);
+    }
+
+    .log-details[open] {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: min(62vh, 680px);
+    }
+
+    .log-details[open] > .log-content {
+      height: calc(min(62vh, 680px) - 50px);
+    }
+
+    .log-details > summary {
+      align-items: center;
+      cursor: pointer;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      list-style: none;
+      min-height: 48px;
+      padding: 11px 14px;
+      user-select: none;
+    }
+
+    .log-details > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .log-details > summary::after {
+      color: var(--fg-faint);
+      content: "+";
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 1rem;
+    }
+
+    .log-details[open] > summary::after {
+      content: "−";
+    }
+
+    .log-drawer-title {
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .log-drawer-summary {
+      color: var(--fg-faint);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.68rem;
+      overflow: hidden;
+      text-align: right;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .log-details.has-warnings {
+      border-color: rgb(240 184 91 / 52%);
+    }
+
+    .log-details.has-errors {
+      border-color: rgb(239 114 121 / 58%);
+    }
+
+    .lightbox {
+      background: transparent;
+      border: 0;
+      height: 100vh;
+      max-height: none;
+      max-width: none;
+      padding: 28px;
+      width: 100vw;
+    }
+
+    .lightbox::backdrop {
+      background: rgb(3 5 8 / 88%);
+      backdrop-filter: blur(8px);
+    }
+
+    .lightbox-shell {
+      align-items: stretch;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: 100%;
+      margin: auto;
+      max-width: 1120px;
+      min-height: 0;
+    }
+
+    .lightbox-header {
+      align-items: center;
+      color: var(--fg);
+      display: flex;
+      gap: 18px;
+      justify-content: space-between;
+      padding-bottom: 12px;
+    }
+
+    .lightbox-title {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.78rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .lightbox-header form {
+      margin: 0;
+    }
+
+    .lightbox-close {
+      appearance: none;
+      background: rgb(26 33 44 / 92%);
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      color: var(--fg);
+      cursor: pointer;
+      font: inherit;
+      padding: 7px 12px;
+    }
+
+    .lightbox-close:hover,
+    .lightbox-close:focus-visible {
+      border-color: var(--amber);
+      outline: 0;
+    }
+
+    .lightbox-frame {
+      display: grid;
+      min-height: 0;
+      place-items: center;
+    }
+
+    .lightbox-frame img {
+      background: var(--preview-chrome);
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      box-shadow: 0 28px 80px rgb(0 0 0 / 62%);
+      display: block;
+      height: auto;
+      max-height: calc(100vh - 108px);
+      max-width: 100%;
+      object-fit: contain;
+      width: auto;
+    }
+
+    .log-content {
+      display: grid;
+      gap: 10px;
+      min-height: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+      padding: 0 14px 14px;
+      scrollbar-gutter: stable;
+    }
+
+    .log-summary {
+      color: var(--fg-dim);
+      display: flex;
+      flex-wrap: wrap;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.68rem;
+      gap: 6px 14px;
+    }
+
+    .log-summary .warning {
+      color: var(--warning);
+    }
+
+    .log-summary .error {
+      color: var(--error);
+    }
+
+    .log-summary .dropped {
+      color: var(--warning);
+    }
+
+    .log-list {
+      display: grid;
+      gap: 8px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .log-entry {
+      background: rgb(21 26 34 / 72%);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--info);
+      border-radius: 8px;
+      contain-intrinsic-size: auto 96px;
+      content-visibility: auto;
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+      padding: 10px;
+    }
+
+    .log-entry.warning {
+      background: var(--warning-soft);
+      border-left-color: var(--warning);
+    }
+
+    .log-entry.error {
+      background: var(--error-soft);
+      border-left-color: var(--error);
+    }
+
+    .log-kind {
+      color: var(--info);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.62rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .log-entry.warning .log-kind {
+      color: var(--warning);
+    }
+
+    .log-entry.error .log-kind {
+      color: var(--error);
+    }
+
+    .log-message,
+    .log-stack {
+      color: var(--fg);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.68rem;
+      line-height: 1.5;
+      margin: 0;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log-entry details {
+      border-top: 1px solid var(--line);
+      color: var(--fg-dim);
+      padding-top: 7px;
+    }
+
+    .log-entry summary {
+      cursor: pointer;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.64rem;
+    }
+
+    .log-stack {
+      color: var(--fg-dim);
+      margin-top: 7px;
+    }
+
+    .log-empty,
+    .log-dropped {
+      color: var(--fg-faint);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.68rem;
+      margin: 0;
+    }
+
+    .log-dropped {
+      color: var(--warning);
+    }
+
+    .legend {
+      align-items: center;
+      animation: rise 760ms var(--ease) 120ms both;
+      color: var(--fg-faint);
+      display: flex;
+      flex-wrap: wrap;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.72rem;
+      gap: 18px;
+      letter-spacing: 0.04em;
+    }
+
+    .legend span {
+      align-items: center;
+      display: inline-flex;
+      gap: 8px;
+    }
+
+    .mark {
+      border-radius: 50%;
+      display: inline-block;
+      height: 8px;
+      width: 8px;
+    }
+
+    .mark.captured {
+      background: var(--amber);
+      box-shadow: 0 0 0 3px var(--amber-soft);
+    }
+
+    .mark.missing {
+      border: 1px solid var(--line-strong);
+    }
+
+    .mark.warning {
+      background: var(--warning);
+      box-shadow: 0 0 0 3px var(--warning-soft);
+    }
+
+    .mark.error {
+      background: var(--error);
+      box-shadow: 0 0 0 3px var(--error-soft);
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 960px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-pane {
+        display: grid;
+        gap: 14px;
+        height: auto;
+        min-height: 0;
+        position: static;
+      }
+
+      .selection {
+        height: auto;
+        padding-bottom: 18px;
+      }
+
+      .log-details {
+        bottom: 12px;
+        left: 16px;
+        max-height: 60vh;
+        right: 16px;
+        width: auto;
+      }
+
+      .preview img {
+        max-height: 70vh;
+      }
+    }
+
+    @media (max-width: 680px) {
+      main {
+        padding: 20px 16px 32px;
+      }
+
+      .stat {
+        min-width: calc(50% - 5px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="capture-matrix">
+    <header>
+      <div class="brand">
+        <div class="eyebrow">Alchemy · Editor UI</div>
+        <h1>Capture <span>matrix</span></h1>
+        <p class="lede">
+          Cross-version Inspector snapshots. Pick a cell to inspect the full capture.
+        </p>
+      </div>
+      <div class="stats" aria-label="Capture summary">
+        <div class="stat primary">
+          <strong>{{CAPTURED_COUNT}} / {{TOTAL_COUNT}}</strong>
+          <span>Captured</span>
+        </div>
+        <div class="stat clean {{CLEAN_STATUS}}">
+          <strong>{{CLEAN_COUNT}} / {{TOTAL_COUNT}}</strong>
+          <span>Clean</span>
+        </div>
+        <div class="stat">
+          <strong>{{VERSION_COUNT}}</strong>
+          <span>Versions</span>
+        </div>
+        <div class="stat">
+          <strong>{{TEST_CASE_COUNT}}</strong>
+          <span>Cases</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <div class="matrices">
+        {{MATRICES}}
+      </div>
+
+      <div class="detail-pane">
+        <section class="selection" aria-live="polite">
+          <div class="selection-copy">
+            <div class="selection-heading">
+              <h2 id="selected-test">No capture selected</h2>
+              <span class="badge" id="selected-surface">Editor UI</span>
+              <span class="badge muted" id="selected-version">Unity</span>
+            </div>
+            <p id="selected-meta">Select a captured cell from the matrix.</p>
+          </div>
+          <button type="button" class="preview" id="preview-button"
+                  aria-label="Open the selected capture full size" disabled>
+            <img id="selected-image" alt="" hidden>
+            <span class="preview-hint">Open full size</span>
+          </button>
+        </section>
+
+      </div>
+    </div>
+
+    <details class="log-details" id="log-drawer">
+      <summary>
+        <span class="log-drawer-title">Inspector logs</span>
+        <span class="log-drawer-summary" id="selected-log-summary">
+          No capture selected
+        </span>
+      </summary>
+      <div class="log-content" id="selected-logs" aria-live="polite">
+        <p class="log-empty">Select a captured cell from the matrix.</p>
+      </div>
+    </details>
+
+    <dialog class="lightbox" id="capture-lightbox">
+      <div class="lightbox-shell">
+        <div class="lightbox-header">
+          <span class="lightbox-title" id="lightbox-title">Inspector capture</span>
+          <form method="dialog">
+            <button type="submit" class="lightbox-close">Close</button>
+          </form>
+        </div>
+        <div class="lightbox-frame">
+          <img id="lightbox-image" alt="">
+        </div>
+      </div>
+    </dialog>
+
+    <div class="legend">
+      <span><i class="mark captured"></i>Captured</span>
+      <span><i class="mark missing"></i>Missing</span>
+      <span><i class="mark warning"></i>Warning</span>
+      <span><i class="mark error"></i>Error</span>
+      <span>Click a thumbnail to inspect</span>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.getElementById("capture-matrix");
+      const buttons = [...root.querySelectorAll(".capture")];
+      const selectedTest = root.querySelector("#selected-test");
+      const selectedSurface = root.querySelector("#selected-surface");
+      const selectedVersion = root.querySelector("#selected-version");
+      const selectedMeta = root.querySelector("#selected-meta");
+      const previewButton = root.querySelector("#preview-button");
+      const selectedImage = root.querySelector("#selected-image");
+      const selectedLogs = root.querySelector("#selected-logs");
+      const logDrawer = root.querySelector("#log-drawer");
+      const selectedLogSummary = root.querySelector("#selected-log-summary");
+      const detailPane = root.querySelector(".detail-pane");
+      const lightbox = root.querySelector("#capture-lightbox");
+      const lightboxImage = root.querySelector("#lightbox-image");
+      const lightboxTitle = root.querySelector("#lightbox-title");
+      const narrowLayout = window.matchMedia("(max-width: 960px)");
+
+      const positionLogDrawer = () => {
+        if (narrowLayout.matches) {
+          logDrawer.style.removeProperty("--log-drawer-left");
+          logDrawer.style.removeProperty("--log-drawer-width");
+          return;
+        }
+
+        const detailRect = detailPane.getBoundingClientRect();
+        logDrawer.style.setProperty(
+          "--log-drawer-left",
+          `${detailRect.left + 18}px`
+        );
+        logDrawer.style.setProperty(
+          "--log-drawer-width",
+          `${detailRect.width - 36}px`
+        );
+      };
+
+      const select = button => {
+        buttons.forEach(candidate => {
+          candidate.setAttribute("aria-pressed", "false");
+        });
+        button.setAttribute("aria-pressed", "true");
+
+        const thumbnail = button.querySelector("img");
+        const surface = button.dataset.surface;
+        const testName = button.dataset.test;
+        const version = button.dataset.version;
+        const logCount = Number(button.dataset.logCount);
+        const warningCount = Number(button.dataset.warningCount);
+        const errorCount = Number(button.dataset.errorCount);
+        const droppedLogCount = Number(button.dataset.droppedLogCount);
+        const logTemplate = document.getElementById(button.dataset.logTemplate);
+        const diagnosticParts = [`${logCount} logs`];
+        if (warningCount > 0) {
+          diagnosticParts.push(`${warningCount} warnings`);
+        }
+        if (errorCount > 0) {
+          diagnosticParts.push(`${errorCount} errors`);
+        }
+        if (droppedLogCount > 0) {
+          diagnosticParts.push(`${droppedLogCount} omitted`);
+        }
+        selectedTest.textContent = testName;
+        selectedSurface.textContent = surface;
+        selectedVersion.textContent = `Unity ${version}`;
+        selectedMeta.textContent =
+          `640 × 900 · ${diagnosticParts.join(" · ")}`;
+        selectedLogSummary.textContent =
+          logCount === 0 ? "No logs" : diagnosticParts.join(" · ");
+        selectedLogs.replaceChildren(logTemplate.content.cloneNode(true));
+        logDrawer.classList.toggle(
+          "has-warnings",
+          warningCount > 0 && errorCount === 0
+        );
+        logDrawer.classList.toggle("has-errors", errorCount > 0);
+        logDrawer.open = logCount > 0;
+
+        const apply = () => {
+          selectedImage.src = thumbnail.src;
+          selectedImage.alt = `${surface} ${testName}, Unity ${version} capture`;
+          selectedImage.hidden = false;
+          previewButton.disabled = false;
+          selectedImage.classList.remove("is-swapping");
+        };
+
+        if (!selectedImage.hidden && selectedImage.src !== thumbnail.src) {
+          selectedImage.classList.add("is-swapping");
+          window.setTimeout(apply, 120);
+        } else {
+          apply();
+        }
+      };
+
+      buttons.forEach(button => {
+        button.addEventListener("click", () => select(button));
+      });
+      previewButton.addEventListener("click", () => {
+        if (selectedImage.hidden) {
+          return;
+        }
+
+        lightboxImage.src = selectedImage.src;
+        lightboxImage.alt = selectedImage.alt;
+        lightboxTitle.textContent =
+          `${selectedTest.textContent} · ${selectedVersion.textContent}`;
+        lightbox.showModal();
+      });
+      lightbox.addEventListener("click", event => {
+        if (event.target === lightbox) {
+          lightbox.close();
+        }
+      });
+      window.addEventListener("resize", positionLogDrawer, { passive: true });
+      positionLogDrawer();
+
+      if (buttons.length > 0) {
+        select(buttons[0]);
+      }
+    })();
+  </script>
+</body>
+</html>

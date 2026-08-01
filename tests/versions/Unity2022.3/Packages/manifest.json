@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "com.annulusgames.alchemy": "file:../../../../Alchemy/Assets/Alchemy",
+    "com.annulusgames.alchemy.editor-ui-test": "file:../../../Alchemy.Tests/Assets/Alchemy.Tests.EditorUI",
+    "com.annulusgames.alchemy.test": "file:../../../Alchemy.Tests/Assets/Alchemy.Tests",
+    "com.unity.serialization": "3.1.5",
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "testables": [
+    "com.annulusgames.alchemy.editor-ui-test",
+    "com.annulusgames.alchemy.test"
+  ]
+}

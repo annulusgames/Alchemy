@@ -1,0 +1,27 @@
+{
+    "name": "Alchemy.Tests.Pipeline",
+    "rootNamespace": "Alchemy.Tests.Pipeline",
+    "references": [
+        "GUID:71e9815631ba2574b92564e93b8efc9c",
+        "GUID:9b64a2fc1d4b46d2bb1c83d6bc7287ff"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "ALCHEMY_SUPPORT_PIPELINE"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.pipeline",
+            "expression": "",
+            "define": "ALCHEMY_SUPPORT_PIPELINE"
+        }
+    ],
+    "noEngineReferences": false
+}

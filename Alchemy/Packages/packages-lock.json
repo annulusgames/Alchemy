@@ -1,5 +1,21 @@
 {
   "dependencies": {
+    "com.annulusgames.alchemy.editor-ui-test": {
+      "version": "file:../../tests/Alchemy.Tests/Assets/Alchemy.Tests.EditorUI",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.test-framework": "1.1.31"
+      }
+    },
+    "com.annulusgames.alchemy.test": {
+      "version": "file:../../tests/Alchemy.Tests/Assets/Alchemy.Tests",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.test-framework": "1.1.31"
+      }
+    },
     "com.unity.burst": {
       "version": "1.8.29",
       "depth": 1,

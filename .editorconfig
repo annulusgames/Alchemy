@@ -10,6 +10,7 @@ trim_trailing_whitespace = true
 [*.cs]
 indent_size = 4
 max_line_length = 160
+csharp_style_namespace_declarations = block_scoped:suggestion
 
 #### Project C# Conventions ####
 
@@ -33,9 +34,8 @@ csharp_style_expression_bodied_indexers = when_on_single_line:suggestion
 csharp_style_expression_bodied_accessors = false:suggestion
 csharp_style_expression_bodied_local_functions = when_on_single_line:suggestion
 
-# Preserve compact control flow and Unity-compatible namespace syntax.
+# Preserve compact control flow
 csharp_prefer_braces = when_multiline:suggestion
-csharp_style_namespace_declarations = block_scoped:suggestion
 
 #### Project Naming Conventions ####
 
