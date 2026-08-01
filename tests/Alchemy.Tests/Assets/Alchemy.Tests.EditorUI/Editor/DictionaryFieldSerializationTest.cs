@@ -2,12 +2,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
 using Alchemy.Editor.Elements;
 using Alchemy.Serialization;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace Alchemy.Tests.EditorUI.Editor
 {
@@ -39,18 +37,14 @@ namespace Alchemy.Tests.EditorUI.Editor
             Assert.That(fieldInfo, Is.Not.Null);
 
             var reflectionField = new ReflectionField(target, fieldInfo);
-            var nestedListField = reflectionField.Q<ListField>();
-            Assert.That(nestedListField, Is.Not.Null);
+            var nestedListField = EditorTestUtility.QueryRequired<ListField>(reflectionField);
 
             var dictionary = (IDictionary)fieldInfo.GetValue(target);
             var nestedCollection = (IList)dictionary[1];
             nestedCollection[0] = "after";
 
             // Simulate the notification emitted after the nested ListField updates its collection.
-            var notifyOnValueChanged = typeof(ListField)
-                .GetMethod("NotifyOnValueChanged", BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.That(notifyOnValueChanged, Is.Not.Null);
-            notifyOnValueChanged.Invoke(nestedListField, null);
+            EditorTestUtility.InvokeNonPublicMethod(nestedListField, "NotifyOnValueChanged");
 
             Assert.That(((IList)dictionary[1])[0], Is.EqualTo("after"));
 
