@@ -189,7 +189,7 @@ catch (global::System.Exception ex)
 {{
     if ({alchemySerializationDataName}.{field.Name}.isCreated)
     {{
-        this.{field.Name} = global::Alchemy.Serialization.Internal.SerializationHelper.FromJson<{field.Type.ToDisplayString()}>({alchemySerializationDataName}.{field.Name}.data, {alchemySerializationDataName}.UnityObjectReferences);
+        this.{field.Name} = global::Alchemy.Serialization.Internal.SerializationHelper.FromJson<{field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}>({alchemySerializationDataName}.{field.Name}.data, {alchemySerializationDataName}.UnityObjectReferences);
     }}
 }}
 catch (global::System.Exception ex)

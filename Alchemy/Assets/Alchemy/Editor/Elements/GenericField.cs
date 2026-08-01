@@ -99,6 +99,17 @@ namespace Alchemy.Editor.Elements
             {
                 AddField(new IntegerField(label), (int)obj);
             }
+            else if (type == typeof(byte))
+            {
+                var control = new IntegerField(label) { value = (byte)obj };
+                control.RegisterValueChangedCallback(x =>
+                {
+                    var newValue = (byte)Math.Clamp(x.newValue, byte.MinValue, byte.MaxValue);
+                    control.SetValueWithoutNotify(newValue);
+                    OnValueChanged?.Invoke(newValue);
+                });
+                Add(control);
+            }
 
             else if (type == typeof(uint))
             {

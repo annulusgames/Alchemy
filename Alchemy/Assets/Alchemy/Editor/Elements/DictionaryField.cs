@@ -142,7 +142,10 @@ namespace Alchemy.Editor.Elements
                 valueField.OnValueChanged -= SetValue;
                 valueField.OnValueChanged += x =>
                 {
-                    ReflectionHelper.GetProperty(collection.GetType(), "Item").SetValue(collection, x, new object[] { key });
+                    value = x;
+                    keyValuePair = Activator.CreateInstance(kvType, key, value);
+                    ReflectionHelper.GetProperty(collection.GetType(), "Item").SetValue(collection, value, new object[] { key });
+                    OnValueChanged?.Invoke(keyValuePair);
                 };
             }
 
