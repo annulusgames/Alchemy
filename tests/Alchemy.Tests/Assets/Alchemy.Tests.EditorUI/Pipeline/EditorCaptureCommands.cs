@@ -380,40 +380,50 @@ namespace Alchemy.Tests.Pipeline
 
         static int Capture(CaptureOperation current)
         {
-            var rect = current.Window.position;
-            var width = Mathf.RoundToInt(rect.width);
-            var height = Mathf.RoundToInt(rect.height);
-            if (width != current.Width || height != current.Height)
+            var pointRect = current.Window.position;
+            var pointWidth = Mathf.RoundToInt(pointRect.width);
+            var pointHeight = Mathf.RoundToInt(pointRect.height);
+            if (pointWidth != current.Width || pointHeight != current.Height)
             {
                 throw new InvalidOperationException(
-                    $"Inspector window size was {width}x{height}; " +
+                    $"Inspector window size was {pointWidth}x{pointHeight}; " +
                     $"expected {current.Width}x{current.Height}.");
             }
 
-            var origin = new Vector2(
-                Mathf.Round(rect.x),
-                Mathf.Round(rect.y));
-            var pixels = UnityEditorInternal.InternalEditorUtility.ReadScreenPixel(
-                origin,
-                width,
-                height);
-            if (pixels == null || pixels.Length != width * height)
+            var pixelRect = EditorGUIUtility.PointsToPixels(pointRect);
+            var pixelXMin = Mathf.RoundToInt(pixelRect.xMin);
+            var pixelYMin = Mathf.RoundToInt(pixelRect.yMin);
+            var pixelXMax = Mathf.RoundToInt(pixelRect.xMax);
+            var pixelYMax = Mathf.RoundToInt(pixelRect.yMax);
+            var pixelWidth = pixelXMax - pixelXMin;
+            var pixelHeight = pixelYMax - pixelYMin;
+            var pixels = ReadWindowPixels(
+                pixelXMin,
+                pixelYMin,
+                pixelWidth,
+                pixelHeight);
+            if (pixels == null || pixels.Length != pixelWidth * pixelHeight)
             {
                 throw new InvalidOperationException(
-                    $"Expected {width * height} pixels but received " +
+                    $"Expected {pixelWidth * pixelHeight} pixels but received " +
                     $"{(pixels == null ? 0 : pixels.Length)}.");
             }
 
-            var texture = new Texture2D(
-                width,
-                height,
+            var sourceTexture = new Texture2D(
+                pixelWidth,
+                pixelHeight,
                 TextureFormat.RGB24,
                 false);
+            Texture2D outputTexture = null;
             try
             {
-                texture.SetPixels(pixels);
-                texture.Apply(false, false);
-                var png = texture.EncodeToPNG();
+                sourceTexture.SetPixels(pixels);
+                sourceTexture.Apply(false, false);
+                outputTexture = ResizeCapture(
+                    sourceTexture,
+                    current.Width,
+                    current.Height);
+                var png = outputTexture.EncodeToPNG();
                 var directory = Path.GetDirectoryName(current.OutputPath);
                 if (string.IsNullOrWhiteSpace(directory))
                 {
@@ -428,7 +438,118 @@ namespace Alchemy.Tests.Pipeline
             }
             finally
             {
-                Object.DestroyImmediate(texture);
+                if (outputTexture != null && outputTexture != sourceTexture)
+                {
+                    Object.DestroyImmediate(outputTexture);
+                }
+
+                Object.DestroyImmediate(sourceTexture);
+            }
+        }
+
+        static Color[] ReadWindowPixels(
+            int x,
+            int y,
+            int width,
+            int height)
+        {
+            if (Application.platform != RuntimePlatform.OSXEditor)
+            {
+                return UnityEditorInternal.InternalEditorUtility
+                    .ReadScreenPixel(
+                        new Vector2(x, y),
+                        width,
+                        height);
+            }
+
+            if (x < 0 || y < 0)
+            {
+                throw new InvalidOperationException(
+                    $"Inspector capture does not support negative macOS " +
+                    $"screen coordinates: ({x}, {y}).");
+            }
+
+            // On macOS, ReadScreenPixel ignores its origin on Retina displays.
+            // Read the screen prefix that contains the window, then crop it in
+            // texture space. Pixel rows are bottom-up, so the requested window
+            // occupies the bottom rows of a prefix ending at y + height.
+            var screenWidth = x + width;
+            var screenHeight = y + height;
+            var screenPixels = UnityEditorInternal.InternalEditorUtility
+                .ReadScreenPixel(
+                    Vector2.zero,
+                    screenWidth,
+                    screenHeight);
+            if (screenPixels == null ||
+                screenPixels.Length != screenWidth * screenHeight)
+            {
+                throw new InvalidOperationException(
+                    $"Expected {screenWidth * screenHeight} macOS screen " +
+                    $"pixels but received " +
+                    $"{(screenPixels == null ? 0 : screenPixels.Length)}.");
+            }
+
+            var result = new Color[width * height];
+            for (var row = 0; row < height; row++)
+            {
+                Array.Copy(
+                    screenPixels,
+                    row * screenWidth + x,
+                    result,
+                    row * width,
+                    width);
+            }
+
+            return result;
+        }
+
+        static Texture2D ResizeCapture(
+            Texture2D source,
+            int width,
+            int height)
+        {
+            if (source.width == width && source.height == height)
+            {
+                return source;
+            }
+
+            source.filterMode = FilterMode.Bilinear;
+            var previousRenderTexture = RenderTexture.active;
+            var renderTexture = RenderTexture.GetTemporary(
+                width,
+                height,
+                0,
+                RenderTextureFormat.ARGB32);
+            Texture2D result = null;
+            try
+            {
+                Graphics.Blit(source, renderTexture);
+                RenderTexture.active = renderTexture;
+                result = new Texture2D(
+                    width,
+                    height,
+                    TextureFormat.RGB24,
+                    false);
+                result.ReadPixels(
+                    new Rect(0f, 0f, width, height),
+                    0,
+                    0);
+                result.Apply(false, false);
+                return result;
+            }
+            catch
+            {
+                if (result != null)
+                {
+                    Object.DestroyImmediate(result);
+                }
+
+                throw;
+            }
+            finally
+            {
+                RenderTexture.active = previousRenderTexture;
+                RenderTexture.ReleaseTemporary(renderTexture);
             }
         }
 
