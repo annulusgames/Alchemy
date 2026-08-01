@@ -10,6 +10,7 @@ trim_trailing_whitespace = true
 [*.cs]
 indent_size = 4
 max_line_length = 160
+csharp_style_namespace_declarations = block_scoped:suggestion
 
 #### Project C# Conventions ####
 
