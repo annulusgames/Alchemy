@@ -6,6 +6,8 @@ using Alchemy.Editor.Elements;
 using Alchemy.Serialization;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
+using UnityEngine.UIElements;
 
 namespace Alchemy.Tests.EditorUI.Editor
 {
@@ -21,9 +23,21 @@ namespace Alchemy.Tests.EditorUI.Editor
 
     public class DictionaryFieldSerializationTest
     {
-        [TestCase(nameof(DictionaryCollectionSerializationTarget.arrayValues))]
-        [TestCase(nameof(DictionaryCollectionSerializationTarget.listValues))]
-        public void Test_NestedCollectionEditSurvivesSerializationRoundTrip(string fieldName)
+        [UnityTest]
+        public IEnumerator Test_ArrayValueEditSurvivesSerializationRoundTrip()
+        {
+            return Test_NestedCollectionEditSurvivesSerializationRoundTrip(
+                nameof(DictionaryCollectionSerializationTarget.arrayValues));
+        }
+
+        [UnityTest]
+        public IEnumerator Test_ListValueEditSurvivesSerializationRoundTrip()
+        {
+            return Test_NestedCollectionEditSurvivesSerializationRoundTrip(
+                nameof(DictionaryCollectionSerializationTarget.listValues));
+        }
+
+        static IEnumerator Test_NestedCollectionEditSurvivesSerializationRoundTrip(string fieldName)
         {
             var target = new DictionaryCollectionSerializationTarget
             {
@@ -37,21 +51,32 @@ namespace Alchemy.Tests.EditorUI.Editor
             Assert.That(fieldInfo, Is.Not.Null);
 
             var reflectionField = new ReflectionField(target, fieldInfo);
-            var nestedListField = EditorTestUtility.QueryRequired<ListField>(reflectionField);
+            var foldout = EditorTestUtility.QueryRequired<Foldout>(reflectionField);
+            foldout.value = true;
+            var window = EditorTestUtility.ShowInWindow(reflectionField);
+            try
+            {
+                yield return null;
 
-            var dictionary = (IDictionary)fieldInfo.GetValue(target);
-            var nestedCollection = (IList)dictionary[1];
-            nestedCollection[0] = "after";
+                var listView = EditorTestUtility.QueryRequired<ListView>(reflectionField);
+                listView.Rebuild();
+                yield return null;
 
-            // Simulate the notification emitted after the nested ListField updates its collection.
-            EditorTestUtility.InvokeNonPublicMethod(nestedListField, "NotifyOnValueChanged");
+                var textField = EditorTestUtility.QueryRequired<TextField>(reflectionField);
+                textField.value = "after";
 
-            Assert.That(((IList)dictionary[1])[0], Is.EqualTo("after"));
+                var dictionary = (IDictionary)fieldInfo.GetValue(target);
+                Assert.That(((IList)dictionary[1])[0], Is.EqualTo("after"));
 
-            callback.OnAfterDeserialize();
+                callback.OnAfterDeserialize();
 
-            dictionary = (IDictionary)fieldInfo.GetValue(target);
-            Assert.That(((IList)dictionary[1])[0], Is.EqualTo("after"));
+                dictionary = (IDictionary)fieldInfo.GetValue(target);
+                Assert.That(((IList)dictionary[1])[0], Is.EqualTo("after"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
         }
     }
 }

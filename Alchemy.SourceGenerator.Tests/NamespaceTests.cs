@@ -134,4 +134,55 @@ public class NamespaceTests
 
         await Assert.That(result.AllGeneratedText).Contains("__alchemySerializationData_My_Game_Player");
     }
+
+    [Test]
+    public async Task Dictionary_types_are_globally_qualified_when_root_namespace_is_shadowed()
+    {
+        var result = GeneratorUtils.Run("""
+            using System;
+            using System.Collections.Generic;
+            using Alchemy.Serialization;
+            using Artillery.Entities;
+            using Artillery.Entities.Units;
+
+            namespace Artillery.Artillery
+            {
+                public sealed class NamespaceCollision { }
+            }
+
+            namespace Artillery.Entities
+            {
+                public enum UnitTeam
+                {
+                    Ally,
+                    Enemy
+                }
+            }
+
+            namespace Artillery.Entities.Units
+            {
+                public class BasicUnit : UnityEngine.MonoBehaviour { }
+            }
+
+            namespace Artillery.Entities.Units.Configuration
+            {
+                [AlchemySerialize]
+                public partial class UnitConfiguration
+                {
+                    [AlchemySerializeField, NonSerialized]
+                    public Dictionary<UnitTeam, UnityEngine.GameObject> teamObjects = new();
+
+                    [AlchemySerializeField, NonSerialized]
+                    public Dictionary<int, BasicUnit> units = new();
+
+                    [AlchemySerializeField, NonSerialized]
+                    public Dictionary<UnitTeam, BasicUnit> teamUnits = new();
+                }
+            }
+            """);
+
+        await Assert.That(result.AllGeneratedText).Contains(
+            "FromJson<global::System.Collections.Generic.Dictionary<global::Artillery.Entities.UnitTeam, global::UnityEngine.GameObject>>");
+        await Assert.That(result.DescribeCompilationErrors()).IsEqualTo("<none>");
+    }
 }

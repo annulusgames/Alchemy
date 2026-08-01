@@ -1,11 +1,25 @@
-using System.Reflection;
+using System;
+using System.Linq;
 using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Alchemy.Tests.EditorUI.Editor
 {
     internal static class EditorTestUtility
     {
+        sealed class TestWindow : EditorWindow { }
+
+        public static EditorWindow ShowInWindow(VisualElement content)
+        {
+            var window = ScriptableObject.CreateInstance<TestWindow>();
+            window.position = new Rect(0f, 0f, 640f, 480f);
+            window.rootVisualElement.Add(content);
+            window.Show();
+            return window;
+        }
+
         public static T QueryRequired<T>(VisualElement root) where T : VisualElement
         {
             var element = root.Q<T>();
@@ -16,15 +30,22 @@ namespace Alchemy.Tests.EditorUI.Editor
             return element;
         }
 
-        public static object InvokeNonPublicMethod(object target, string methodName, params object[] arguments)
+        public static T QueryRequired<T>(VisualElement root, Func<T, bool> predicate) where T : VisualElement
         {
-            var method = target.GetType()
-                .GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+            var element = root.Query<T>().ToList().FirstOrDefault(predicate);
             Assert.That(
-                method,
+                element,
                 Is.Not.Null,
-                $"Expected {target.GetType().Name}.{methodName} to exist.");
-            return method.Invoke(target, arguments);
+                $"Expected a matching {typeof(T).Name} in {root.GetType().Name}.");
+            return element;
+        }
+
+        public static void Click(Button button)
+        {
+            button.Focus();
+            using var submitEvent = NavigationSubmitEvent.GetPooled();
+            submitEvent.target = button;
+            button.SendEvent(submitEvent);
         }
     }
 }
