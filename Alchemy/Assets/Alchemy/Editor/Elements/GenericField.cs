@@ -99,16 +99,21 @@ namespace Alchemy.Editor.Elements
             {
                 AddField(new IntegerField(label), (int)obj);
             }
+            else if (type == typeof(sbyte))
+            {
+                AddSmallIntegerField(label, (sbyte)obj, sbyte.MinValue, sbyte.MaxValue, x => (sbyte)x);
+            }
             else if (type == typeof(byte))
             {
-                var control = new IntegerField(label) { value = (byte)obj };
-                control.RegisterValueChangedCallback(x =>
-                {
-                    var newValue = (byte)Math.Clamp(x.newValue, byte.MinValue, byte.MaxValue);
-                    control.SetValueWithoutNotify(newValue);
-                    OnValueChanged?.Invoke(newValue);
-                });
-                Add(control);
+                AddSmallIntegerField(label, (byte)obj, byte.MinValue, byte.MaxValue, x => (byte)x);
+            }
+            else if (type == typeof(short))
+            {
+                AddSmallIntegerField(label, (short)obj, short.MinValue, short.MaxValue, x => (short)x);
+            }
+            else if (type == typeof(ushort))
+            {
+                AddSmallIntegerField(label, (ushort)obj, ushort.MinValue, ushort.MaxValue, x => (ushort)x);
             }
 
             else if (type == typeof(uint))
@@ -266,6 +271,34 @@ namespace Alchemy.Editor.Elements
         public event Action<object> OnValueChanged;
         bool isDelayed;
         bool changed;
+
+        void AddSmallIntegerField<T>(string label, int value, int minValue, int maxValue, Func<int, T> convert)
+        {
+            var control = new IntegerField(label) { value = value };
+            control.RegisterValueChangedCallback(x =>
+            {
+                var newValue = Math.Clamp(x.newValue, minValue, maxValue);
+                control.SetValueWithoutNotify(newValue);
+                if (isDelayed)
+                {
+                    changed = true;
+                }
+                else
+                {
+                    OnValueChanged?.Invoke(convert(newValue));
+                }
+            });
+            if (isDelayed)
+            {
+                control.RegisterCallback<FocusOutEvent>(_ =>
+                {
+                    if (!changed) return;
+                    OnValueChanged?.Invoke(convert(control.value));
+                    changed = false;
+                });
+            }
+            Add(control);
+        }
 
         void AddField<T>(BaseField<T> control, T value)
         {

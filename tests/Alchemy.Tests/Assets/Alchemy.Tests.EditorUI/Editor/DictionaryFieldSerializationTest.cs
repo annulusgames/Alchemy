@@ -58,11 +58,15 @@ namespace Alchemy.Tests.EditorUI.Editor
             {
                 yield return null;
 
-                var listView = EditorTestUtility.QueryRequired<ListView>(reflectionField);
+                var dictionaryItem = EditorTestUtility.QueryRequired<HashMapFieldBase.HashMapItemBase>(reflectionField);
+                var listField = EditorTestUtility.QueryRequired<ListField>(dictionaryItem);
+                var listView = EditorTestUtility.QueryRequired<ListView>(listField);
                 listView.Rebuild();
                 yield return null;
 
-                var textField = EditorTestUtility.QueryRequired<TextField>(reflectionField);
+                var textField = EditorTestUtility.QueryRequired<TextField>(
+                    listView,
+                    field => field.label == "Element 0");
                 textField.value = "after";
 
                 var dictionary = (IDictionary)fieldInfo.GetValue(target);

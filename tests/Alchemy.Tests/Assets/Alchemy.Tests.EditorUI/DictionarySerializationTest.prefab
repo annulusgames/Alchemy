@@ -1,0 +1,86 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1515897830369383587
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8483165521676513262}
+  - component: {fileID: 8927840334069668456}
+  m_Layer: 0
+  m_Name: DictionarySerializationTest
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8483165521676513262
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1515897830369383587}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8927840334069668456
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1515897830369383587}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49945db4d049472db986e6e1eddce306, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Alchemy.Tests.EditorUI::Alchemy.Tests.EditorUI.DictionarySerializationTest
+  __alchemySerializationData_Alchemy_Tests_EditorUI_DictionarySerializationTest:
+    sbyteKeys:
+      isCreated: 1
+      data: "[\n    {\n        \"Key\": -101,\n        \"Value\": 1\n    }\n]"
+    byteKeys:
+      isCreated: 1
+      data: "[\n    {\n        \"Key\": 251,\n        \"Value\": 2\n    }\n]"
+    shortKeys:
+      isCreated: 1
+      data: "[\n    {\n        \"Key\": -30001,\n        \"Value\": 3\n    }\n]"
+    ushortKeys:
+      isCreated: 1
+      data: "[\n    {\n        \"Key\": 60001,\n        \"Value\": 4\n    }\n]"
+    intKeys:
+      isCreated: 1
+      data: "[\n    {\n        \"Key\": -2000000001,\n        \"Value\": 5\n    }\n]"
+    uintKeys:
+      isCreated: 1
+      data: "[\n    {\n        \"Key\": 4000000001,\n        \"Value\": 6\n    }\n]"
+    longKeys:
+      isCreated: 1
+      data: "[\n    {\n        \"Key\": -900000000000000001,\n        \"Value\":
+        7\n    }\n]"
+    ulongKeys:
+      isCreated: 1
+      data: "[\n    {\n        \"Key\": 18000000000000000001,\n        \"Value\":
+        8\n    }\n]"
+    floatKeys:
+      isCreated: 1
+      data: "[\n    {\n        \"Key\": 123.625,\n        \"Value\": 9\n    }\n]"
+    doubleKeys:
+      isCreated: 1
+      data: "[\n    {\n        \"Key\": -98765.5,\n        \"Value\": 10\n    }\n]"
+    boolKeys:
+      isCreated: 1
+      data: "[\n    {\n        \"Key\": true,\n        \"Value\": 11\n    }\n]"
+    stringKeys:
+      isCreated: 1
+      data: "{\n    \"Alchemy\": 12\n}"
+    unityObjectReferences: []

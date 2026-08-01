@@ -183,6 +183,10 @@ public class NamespaceTests
 
         await Assert.That(result.AllGeneratedText).Contains(
             "FromJson<global::System.Collections.Generic.Dictionary<global::Artillery.Entities.UnitTeam, global::UnityEngine.GameObject>>");
+        await Assert.That(result.AllGeneratedText).Contains(
+            "FromJson<global::System.Collections.Generic.Dictionary<int, global::Artillery.Entities.Units.BasicUnit>>");
+        await Assert.That(result.AllGeneratedText).Contains(
+            "FromJson<global::System.Collections.Generic.Dictionary<global::Artillery.Entities.UnitTeam, global::Artillery.Entities.Units.BasicUnit>>");
         await Assert.That(result.DescribeCompilationErrors()).IsEqualTo("<none>");
     }
 }
