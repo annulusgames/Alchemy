@@ -96,24 +96,6 @@ internal sealed class UnityEditorLifecycle(UnityCli unityCli)
         return Path.Combine(editorPath, "Editor", "Unity");
     }
 
-    internal static int? FindRunningEditorProcessId(string executable)
-    {
-        var processName = Path.GetFileNameWithoutExtension(executable);
-        foreach (var process in Process.GetProcessesByName(processName))
-        {
-            using (process)
-            {
-                if (process.MainModule?.FileName is { } processPath &&
-                    PathsEqual(executable, processPath))
-                {
-                    return process.Id;
-                }
-            }
-        }
-
-        return null;
-    }
-
     internal static async Task CloseProcessAsync(
         int processId,
         Action<string> writeProgress,

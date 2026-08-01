@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using TUnit.Core;
 
@@ -112,7 +113,7 @@ internal static class UnityTest
         {
             if (project.MajorVersion >= 6000)
             {
-                await RunUnityCliModeAsync(
+                await RunUnityProcessModeAsync(
                     project,
                     context,
                     mode,
@@ -153,7 +154,7 @@ internal static class UnityTest
         }
     }
 
-    private static async Task RunUnityCliModeAsync(
+    private static async Task RunUnityProcessModeAsync(
         UnityProject project,
         UnityRunContext context,
         TestMode mode,
@@ -165,9 +166,11 @@ internal static class UnityTest
             project.ProjectPath,
             _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(cancellationToken);
-        ConnectedUnityEditor? editor = null;
+        Process? editor = null;
         try
         {
+            var editorExecutable =
+                UnityEditorLifecycle.GetEditorExecutable(context.EditorPath);
             var editorArguments = BuildEditorTestArguments(
                 mode,
                 reportPath,
@@ -175,26 +178,29 @@ internal static class UnityTest
             WriteProgress(
                 project,
                 $"{mode}: opening one Unity Editor...");
-            editor = await UnityCli.OpenEditorWithArgumentsAsync(
-                project,
-                editorArguments,
-                cancellationToken,
-                waitForPipeline: false,
-                editorExecutable: UnityEditorLifecycle.GetEditorExecutable(
-                    context.EditorPath));
+            editor = ProcessRunner.Start(
+                new ProcessSpec(
+                    editorExecutable,
+                    editorArguments,
+                    project.ProjectPath));
             WriteProgress(
                 project,
-                $"{mode}: Editor {editor.ProcessId} is running");
+                $"{mode}: Editor {editor.Id} is running");
 
             var deadline = DateTimeOffset.UtcNow + RunTimeout;
             while (DateTimeOffset.UtcNow < deadline)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var connectedEditor = await UnityCli.FindConnectedEditorAsync(
-                    project,
-                    cancellationToken);
-                if (connectedEditor is null && File.Exists(reportPath))
+                if (editor.HasExited)
                 {
+                    if (!File.Exists(reportPath))
+                    {
+                        throw new UnityExecutionException(
+                            $"Unity {project.EditorVersion} {mode} exited with " +
+                            $"code {editor.ExitCode} without producing a test " +
+                            $"report. See {editorLogPath}.");
+                    }
+
                     WriteProgress(
                         project,
                         $"{mode}: Editor completed the selected mode");
@@ -212,24 +218,24 @@ internal static class UnityTest
         }
         finally
         {
-            var processId = editor?.ProcessId > 0
-                ? editor.ProcessId
-                : UnityEditorLifecycle.FindRunningEditorProcessId(
-                    UnityEditorLifecycle.GetEditorExecutable(
-                        context.EditorPath));
-            if (processId is not null)
+            if (editor is not null)
             {
-                await UnityEditorLifecycle.CloseProcessAsync(
-                    processId.Value,
-                    message => WriteProgress(project, message),
-                    CancellationToken.None);
+                if (!editor.HasExited)
+                {
+                    await UnityEditorLifecycle.CloseProcessAsync(
+                        editor.Id,
+                        message => WriteProgress(project, message),
+                        CancellationToken.None);
+                }
+
+                editor.Dispose();
             }
 
             gate.Release();
         }
     }
 
-    private static string BuildEditorTestArguments(
+    private static IReadOnlyList<string> BuildEditorTestArguments(
         TestMode mode,
         string reportPath,
         string editorLogPath)
@@ -238,10 +244,20 @@ internal static class UnityTest
             ? "Alchemy.Tests.TestCommands.RunAllEditModeTests"
             : "Alchemy.Tests.TestCommands.RunAllPlayModeTests";
         return
-            $"-batchmode -nographics -automated -projectPath . " +
-            $"-executeMethod {command} " +
-            $"-testResults \"{reportPath}\" --auto-quit " +
-            $"-logFile \"{editorLogPath}\"";
+        [
+            "-batchmode",
+            "-nographics",
+            "-automated",
+            "-projectPath",
+            ".",
+            "-executeMethod",
+            command,
+            "-testResults",
+            reportPath,
+            "--auto-quit",
+            "-logFile",
+            editorLogPath,
+        ];
     }
 
     private static void ValidateReport(
