@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.UIElements;
@@ -21,7 +22,18 @@ namespace Alchemy.Editor.Elements
         public ListField(IList target, string label)
         {
             Assert.IsNotNull(target);
-            list = target;
+            if (target is Array array)
+            {
+                this.array = array;
+                arrayElementType = array.GetType().GetElementType();
+                var listType = typeof(List<>).MakeGenericType(arrayElementType);
+                list = (IList)Activator.CreateInstance(listType);
+                foreach (var item in array) list.Add(item);
+            }
+            else
+            {
+                list = target;
+            }
 
             listView = GUIHelper.CreateDefaultListView(label);
             listView.makeItem = () => new Item();
@@ -55,6 +67,11 @@ namespace Alchemy.Editor.Elements
                 NotifyOnValueChanged();
             };
             listView.itemsAdded += indexes => NotifyOnValueChanged();
+            listView.itemsRemoved += indexes =>
+            {
+                if (arrayElementType == null) listView.schedule.Execute(NotifyOnValueChanged);
+                else NotifyOnItemsRemoved(indexes);
+            };
 
             listView.Q<Label>().style.unityFontStyleAndWeight = FontStyle.Bold;
             Add(listView);
@@ -62,12 +79,38 @@ namespace Alchemy.Editor.Elements
 
         readonly IList list;
         readonly ListView listView;
+        readonly Type arrayElementType;
+        Array array;
 
         public event Action<object> OnValueChanged;
 
         void NotifyOnValueChanged()
         {
-            OnValueChanged?.Invoke(list);
+            if (arrayElementType == null)
+            {
+                OnValueChanged?.Invoke(list);
+                return;
+            }
+
+            if (array.Length != list.Count)
+            {
+                array = Array.CreateInstance(arrayElementType, list.Count);
+            }
+            list.CopyTo(array, 0);
+            OnValueChanged?.Invoke(array);
+        }
+
+        void NotifyOnItemsRemoved(IEnumerable<int> indexes)
+        {
+            var removedIndexes = new HashSet<int>(indexes);
+            array = Array.CreateInstance(arrayElementType, list.Count - removedIndexes.Count);
+            var destinationIndex = 0;
+            for (var i = 0; i < list.Count; i++)
+            {
+                if (removedIndexes.Contains(i)) continue;
+                array.SetValue(list[i], destinationIndex++);
+            }
+            OnValueChanged?.Invoke(array);
         }
     }
 }
