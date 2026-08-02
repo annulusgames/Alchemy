@@ -109,7 +109,7 @@ namespace Alchemy.Editor.Drawers
                 default:
                     var labelElement = TargetElement.Q<Label>();
                     if (labelElement == null) return;
-                    labelElement.text = labelElement.text;
+                    labelElement.text = labelTextAttribute.Text;
                     break;
             }
         }
