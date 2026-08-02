@@ -6,7 +6,7 @@ using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Alchemy.Tests.EditMode.Serialization
+namespace Alchemy.Tests.Serialization.EditMode
 {
     [Serializable]
     class UnityObjectContainer

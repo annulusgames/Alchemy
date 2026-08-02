@@ -5,7 +5,7 @@ using Alchemy.Serialization.Internal;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Alchemy.Tests.EditMode.Serialization
+namespace Alchemy.Tests.Serialization.EditMode
 {
     [Serializable]
     class SerializableClassData

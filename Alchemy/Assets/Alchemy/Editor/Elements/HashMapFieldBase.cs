@@ -118,6 +118,7 @@ namespace Alchemy.Editor.Elements
             foreach (var item in (IEnumerable)collection)
             {
                 var element = CreateItem(collection, item, "Element " + i);
+                element.OnValueChanged += _ => OnValueChanged?.Invoke(collection);
                 element.OnClose += () =>
                 {
                     if (isInputting) return;

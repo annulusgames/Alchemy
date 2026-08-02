@@ -69,6 +69,8 @@ public static class GeneratorUtils
         namespace UnityEngine
         {
             public class Object { }
+            public class GameObject : Object { }
+            public class MonoBehaviour : Object { }
             public interface ISerializationCallbackReceiver
             {
                 void OnBeforeSerialize();

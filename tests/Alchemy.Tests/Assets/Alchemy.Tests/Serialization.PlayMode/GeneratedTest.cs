@@ -6,7 +6,7 @@ using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Alchemy.Tests.PlayMode.Serialization
+namespace Alchemy.Tests.Serialization.PlayMode
 {
     [Serializable]
     class GeneratedClassData

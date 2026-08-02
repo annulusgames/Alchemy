@@ -140,8 +140,8 @@ namespace Alchemy.Tests
 
         private static void EnsureTestAssembliesLoaded()
         {
-            Assembly.Load("Alchemy.Tests.EditMode.Serialization");
-            Assembly.Load("Alchemy.Tests.PlayMode.Serialization");
+            Assembly.Load("Alchemy.Tests.Serialization.EditMode");
+            Assembly.Load("Alchemy.Tests.Serialization.PlayMode");
         }
 
         private static TestMode GetTestMode(RunState runState)
