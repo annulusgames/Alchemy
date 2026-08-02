@@ -59,6 +59,18 @@ namespace Alchemy.Editor.Elements
                         text = CreateButtonText
                     });
                 }
+                else if (type.IsArray && type.GetArrayRank() == 1)
+                {
+                    nullLabelElement.Add(new Button(() =>
+                    {
+                        var instance = Array.CreateInstance(type.GetElementType(), 0);
+                        Build(instance, type, label, isDelayed);
+                        OnValueChanged?.Invoke(instance);
+                    })
+                    {
+                        text = CreateButtonText
+                    });
+                }
                 else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>)) // nullable
                 {
                     nullLabelElement.Add(new Button(() =>
