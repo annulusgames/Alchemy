@@ -1,7 +1,7 @@
 #if ALCHEMY_SUPPORT_SERIALIZATION
 using NUnit.Framework;
 
-namespace Alchemy.Tests.EditMode.Serialization
+namespace Alchemy.Tests.Serialization.EditMode
 {
     public class PrimitiveTest
     {

@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Alchemy.Tests.EditorUI.Editor
+namespace Alchemy.Tests.EditorUI.PlayModeInEditor
 {
     internal static class EditorTestUtility
     {

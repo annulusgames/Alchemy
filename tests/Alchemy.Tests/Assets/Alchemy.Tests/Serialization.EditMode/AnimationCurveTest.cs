@@ -2,7 +2,7 @@
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Alchemy.Tests.EditMode.Serialization
+namespace Alchemy.Tests.Serialization.EditMode
 {
     public class AnimationCurveTest
     {

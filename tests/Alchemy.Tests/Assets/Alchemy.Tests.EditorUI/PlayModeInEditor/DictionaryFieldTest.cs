@@ -5,7 +5,7 @@ using NUnit.Framework;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
-namespace Alchemy.Tests.EditorUI.Editor
+namespace Alchemy.Tests.EditorUI.PlayModeInEditor
 {
     public class DictionaryFieldTest
     {

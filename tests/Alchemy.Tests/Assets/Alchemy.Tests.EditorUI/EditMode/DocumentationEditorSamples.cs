@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Alchemy.Tests.EditorUI.Editor
+namespace Alchemy.Tests.EditorUI.EditMode
 {
     public sealed class DocumentationEditorWindow : AlchemyEditorWindow
     {

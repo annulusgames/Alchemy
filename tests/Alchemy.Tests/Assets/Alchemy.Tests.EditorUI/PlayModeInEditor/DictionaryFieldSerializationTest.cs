@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
-namespace Alchemy.Tests.EditorUI.Editor
+namespace Alchemy.Tests.EditorUI.PlayModeInEditor
 {
     [AlchemySerialize]
     internal partial class DictionaryCollectionSerializationTarget
