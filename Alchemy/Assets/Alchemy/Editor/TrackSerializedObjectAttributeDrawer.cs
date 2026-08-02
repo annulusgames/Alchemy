@@ -6,10 +6,13 @@ namespace Alchemy.Editor.Drawers
     {
         public override void OnCreateElement()
         {
-            TargetElement.TrackSerializedObjectValue(SerializedObject, x =>
+            if (SerializedObject != null)
             {
-                OnInspectorChanged();
-            });
+                TargetElement.TrackSerializedObjectValue(SerializedObject, x =>
+                {
+                    OnInspectorChanged();
+                });
+            }
 
             OnInspectorChanged();
             TargetElement.schedule.Execute(() => OnInspectorChanged());
