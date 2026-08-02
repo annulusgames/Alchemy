@@ -172,7 +172,11 @@ namespace Alchemy.Editor.Elements
             else if (type == typeof(char))
             {
                 var charField = new TextField(label, 1, false, false, default) { value = obj.ToString() };
-                charField.RegisterValueChangedCallback(x => OnValueChanged?.Invoke(x.newValue[0]));
+                charField.RegisterValueChangedCallback(x =>
+                {
+                    if (string.IsNullOrEmpty(x.newValue)) return;
+                    OnValueChanged?.Invoke(x.newValue[0]);
+                });
                 Add(charField);
             }
             else if (type.IsEnum)

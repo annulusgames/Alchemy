@@ -187,7 +187,7 @@ namespace Alchemy.Editor.Drawers
 
         public override void OnCreateElement()
         {
-            if (SerializedProperty.propertyType != SerializedPropertyType.ObjectReference) return;
+            if (SerializedProperty == null || SerializedProperty.propertyType != SerializedPropertyType.ObjectReference) return;
 
             var message = ((RequiredAttribute)Attribute).Message ?? ObjectNames.NicifyVariableName(SerializedProperty.displayName) + " is required.";
             helpBox = new HelpBox(message, HelpBoxMessageType.Error);
@@ -211,6 +211,8 @@ namespace Alchemy.Editor.Drawers
 
         public override void OnCreateElement()
         {
+            if (SerializedProperty == null) return;
+
             var message = ((ValidateInputAttribute)Attribute).Message ?? ObjectNames.NicifyVariableName(SerializedProperty.displayName) + " is not valid.";
             helpBox = new HelpBox(message, HelpBoxMessageType.Error);
 
