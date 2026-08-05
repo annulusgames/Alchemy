@@ -17,6 +17,9 @@ namespace Alchemy.Inspector
             GroupPath = groupPath;
         }
 
+        /// <summary>
+        /// Specifies the path of the group. Groups can be nested using `/`.
+        /// </summary>
         public string GroupPath { get; }
     }
 }
