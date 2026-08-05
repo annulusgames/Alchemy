@@ -390,6 +390,34 @@ namespace Alchemy.Tests.Pipeline
                     $"expected {current.Width}x{current.Height}.");
             }
 
+            // Windows ReadScreenPixel expects point-space origin/size.
+            // macOS Retina needs pixel-space conversion + a screen-prefix read.
+            return Application.platform == RuntimePlatform.OSXEditor
+                ? CaptureMacOS(current, pointRect)
+                : CaptureWindows(current, pointRect);
+        }
+
+        static int CaptureWindows(CaptureOperation current, Rect pointRect)
+        {
+            var width = current.Width;
+            var height = current.Height;
+            var origin = new Vector2(
+                Mathf.Round(pointRect.x),
+                Mathf.Round(pointRect.y));
+            var pixels = UnityEditorInternal.InternalEditorUtility
+                .ReadScreenPixel(origin, width, height);
+            if (pixels == null || pixels.Length != width * height)
+            {
+                throw new InvalidOperationException(
+                    $"Expected {width * height} pixels but received " +
+                    $"{(pixels == null ? 0 : pixels.Length)}.");
+            }
+
+            return WriteCapturePng(pixels, width, height, current.OutputPath);
+        }
+
+        static int CaptureMacOS(CaptureOperation current, Rect pointRect)
+        {
             var pixelRect = EditorGUIUtility.PointsToPixels(pointRect);
             var pixelXMin = Mathf.RoundToInt(pixelRect.xMin);
             var pixelYMin = Mathf.RoundToInt(pixelRect.yMin);
@@ -397,7 +425,7 @@ namespace Alchemy.Tests.Pipeline
             var pixelYMax = Mathf.RoundToInt(pixelRect.yMax);
             var pixelWidth = pixelXMax - pixelXMin;
             var pixelHeight = pixelYMax - pixelYMin;
-            var pixels = ReadWindowPixels(
+            var pixels = ReadMacOSWindowPixels(
                 pixelXMin,
                 pixelYMin,
                 pixelWidth,
@@ -423,18 +451,7 @@ namespace Alchemy.Tests.Pipeline
                     sourceTexture,
                     current.Width,
                     current.Height);
-                var png = outputTexture.EncodeToPNG();
-                var directory = Path.GetDirectoryName(current.OutputPath);
-                if (string.IsNullOrWhiteSpace(directory))
-                {
-                    throw new InvalidOperationException(
-                        $"Could not determine the output directory for " +
-                        $"'{current.OutputPath}'.");
-                }
-
-                Directory.CreateDirectory(directory);
-                File.WriteAllBytes(current.OutputPath, png);
-                return png.Length;
+                return WriteCapturePng(outputTexture, current.OutputPath);
             }
             finally
             {
@@ -447,21 +464,12 @@ namespace Alchemy.Tests.Pipeline
             }
         }
 
-        static Color[] ReadWindowPixels(
+        static Color[] ReadMacOSWindowPixels(
             int x,
             int y,
             int width,
             int height)
         {
-            if (Application.platform != RuntimePlatform.OSXEditor)
-            {
-                return UnityEditorInternal.InternalEditorUtility
-                    .ReadScreenPixel(
-                        new Vector2(x, y),
-                        width,
-                        height);
-            }
-
             if (x < 0 || y < 0)
             {
                 throw new InvalidOperationException(
@@ -501,6 +509,45 @@ namespace Alchemy.Tests.Pipeline
             }
 
             return result;
+        }
+
+        static int WriteCapturePng(
+            Color[] pixels,
+            int width,
+            int height,
+            string outputPath)
+        {
+            var texture = new Texture2D(
+                width,
+                height,
+                TextureFormat.RGB24,
+                false);
+            try
+            {
+                texture.SetPixels(pixels);
+                texture.Apply(false, false);
+                return WriteCapturePng(texture, outputPath);
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+            }
+        }
+
+        static int WriteCapturePng(Texture2D texture, string outputPath)
+        {
+            var png = texture.EncodeToPNG();
+            var directory = Path.GetDirectoryName(outputPath);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                throw new InvalidOperationException(
+                    $"Could not determine the output directory for " +
+                    $"'{outputPath}'.");
+            }
+
+            Directory.CreateDirectory(directory);
+            File.WriteAllBytes(outputPath, png);
+            return png.Length;
         }
 
         static Texture2D ResizeCapture(
