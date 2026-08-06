@@ -25,22 +25,11 @@ namespace Alchemy.Editor
         /// </summary>
         public string UniqueId => uniqueId;
 
-        /// <summary>
-        /// Drawing order of the group.
-        /// </summary>
-        public int Order => order;
-
         string uniqueId;
-        int order;
 
         internal void SetUniqueId(string id)
         {
             this.uniqueId = id;
-        }
-
-        internal void SetOrder(int order)
-        {
-            this.order = order;
         }
     }
 }

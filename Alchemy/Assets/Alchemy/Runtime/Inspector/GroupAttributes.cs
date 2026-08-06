@@ -30,6 +30,7 @@ namespace Alchemy.Inspector
 
     /// <summary>
     /// Creates a group that divides multiple members into tabs.
+    /// Order controls this tab group among sibling groups only; tab order follows member declaration order.
     /// </summary>
     public sealed class TabGroupAttribute : PropertyGroupAttribute
     {

@@ -37,7 +37,10 @@ namespace Alchemy.Inspector
         public string GroupPath { get; }
 
         /// <summary>
-        /// Drawing order of the group.
+        /// Drawing order among sibling groups. Lower values are drawn first.
+        /// Groups without an explicit order are drawn after ordered groups, preserving relative declaration order.
+        /// For nested paths (for example <c>A/B</c>), the order applies only to the leaf group (<c>B</c>).
+        /// Ungrouped members under the same parent are always drawn before groups.
         /// </summary>
         public int Order { get; }
 
