@@ -24,7 +24,7 @@
     <!-- The generator targets netstandard2.0 against Microsoft.CodeAnalysis 3.9.0.
          It is referenced here as a plain library; the newer Roslyn above supplies the
          runtime implementation of ISourceGenerator. -->
-    <ProjectReference Include="..\Alchemy.SourceGenerator\Alchemy.SourceGenerator.csproj" />
+    <ProjectReference Include="..\..\Alchemy.SourceGenerator\Alchemy.SourceGenerator.csproj" />
   </ItemGroup>
 
 </Project>
