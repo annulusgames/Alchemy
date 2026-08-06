@@ -30,8 +30,15 @@ namespace Alchemy.Editor
             readonly List<MemberInfo> members = new();
             readonly List<GroupNode> children = new();
 
+            bool hasDefinedOrder;
+
             public string Name => name;
+            /// <summary>
+            /// Sibling drawing order. Defaults to <see cref="int.MaxValue"/> when no attribute specifies Order.
+            /// </summary>
+            public int Order { get; private set; } = int.MaxValue;
             public IEnumerable<MemberInfo> Members => members;
+            public IReadOnlyList<GroupNode> Children => children;
             public AlchemyGroupDrawer Drawer => drawer;
             public VisualElement VisualElement { get; set; }
             public GroupNode Parent { get; private set; }
@@ -50,6 +57,32 @@ namespace Alchemy.Editor
             public void AddMember(MemberInfo memberInfo)
             {
                 members.Add(memberInfo);
+            }
+
+            public void RegisterOrder(PropertyGroupAttribute attribute)
+            {
+                if (!attribute.HasDefinedOrder) return;
+
+                Order = hasDefinedOrder ? Math.Min(Order, attribute.Order) : attribute.Order;
+                hasDefinedOrder = true;
+            }
+
+            public void SortChildrenRecursive()
+            {
+                var sorted = children
+                    .Select((node, index) => (node, index))
+                    .OrderBy(x => x.node.Order)
+                    .ThenBy(x => x.index)
+                    .Select(x => x.node)
+                    .ToList();
+
+                children.Clear();
+                children.AddRange(sorted);
+
+                foreach (var child in children)
+                {
+                    child.SortChildrenRecursive();
+                }
             }
 
             public IEnumerable<GroupNode> DescendantsAndSelf()
@@ -178,14 +211,22 @@ namespace Alchemy.Editor
                     .OrderBy(x => x.Item2.Length))
                 {
                     parentNode = rootNode;
-                    foreach (var groupName in hierarchy)
+                    for (var i = 0; i < hierarchy.Length; i++)
                     {
+                        var groupName = hierarchy[i];
                         var next = parentNode.Find(x => x.Name == groupName);
                         if (next == null)
                         {
-                            var drawer = AlchemyEditorUtility.CreateGroupDrawer(groupAttribute, targetType);
+                            var nodePath = string.Join("/", hierarchy.Take(i + 1));
+                            var drawer = AlchemyEditorUtility.CreateGroupDrawer(groupAttribute, targetType, nodePath);
                             next = new GroupNode(groupName, drawer);
                             parentNode.Add(next);
+                        }
+
+                        // Order on a group attribute applies to the leaf group of that path.
+                        if (i == hierarchy.Length - 1)
+                        {
+                            next.RegisterOrder(groupAttribute);
                         }
 
                         parentNode = next;
@@ -195,6 +236,7 @@ namespace Alchemy.Editor
                 parentNode.AddMember(member);
             }
 
+            rootNode.SortChildrenRecursive();
             return rootNode;
         }
 
