@@ -59,7 +59,7 @@ dotnet_naming_symbols.private_instance_fields.applicable_accessibilities = priva
 dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 dotnet_naming_style.camel_case_style.capitalization = camel_case
 
-[Alchemy.SourceGenerator.Tests/*.cs]
+[tests/Alchemy.SourceGenerator.Tests/*.cs]
 csharp_style_namespace_declarations = file_scoped:suggestion
 
 [*.{json,yml,yaml}]

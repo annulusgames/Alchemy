@@ -6,12 +6,12 @@ on:
       - main
     paths:
       - 'Alchemy.SourceGenerator/**'
-      - 'Alchemy.SourceGenerator.Tests/**'
+      - 'tests/Alchemy.SourceGenerator.Tests/**'
       - '.github/workflows/ci.yml'
   pull_request:
     paths:
       - 'Alchemy.SourceGenerator/**'
-      - 'Alchemy.SourceGenerator.Tests/**'
+      - 'tests/Alchemy.SourceGenerator.Tests/**'
       - '.github/workflows/ci.yml'
   workflow_dispatch:
 
@@ -41,7 +41,7 @@ jobs:
       - name: Test
         run: >
           dotnet run
-          --project Alchemy.SourceGenerator.Tests/Alchemy.SourceGenerator.Tests.csproj
+          --project tests/Alchemy.SourceGenerator.Tests/Alchemy.SourceGenerator.Tests.csproj
           --configuration Release
           --no-build
           --

@@ -5,7 +5,7 @@ VisualStudioVersion = 25.0.1706.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alchemy.SourceGenerator", "Alchemy.SourceGenerator.csproj", "{073160C2-08C9-4905-A4D0-7897AADB4E6C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alchemy.SourceGenerator.Tests", "..\Alchemy.SourceGenerator.Tests\Alchemy.SourceGenerator.Tests.csproj", "{74109E75-6475-4613-BFC1-2296669ADC59}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alchemy.SourceGenerator.Tests", "..\tests\Alchemy.SourceGenerator.Tests\Alchemy.SourceGenerator.Tests.csproj", "{74109E75-6475-4613-BFC1-2296669ADC59}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

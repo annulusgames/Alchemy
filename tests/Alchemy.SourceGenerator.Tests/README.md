@@ -3,7 +3,7 @@
 Tests for `AlchemySerializeGenerator`, using [TUnit](https://tunit.dev/).
 
 ```bash
-cd Alchemy.SourceGenerator.Tests
+cd tests/Alchemy.SourceGenerator.Tests
 dotnet run
 ```
 
