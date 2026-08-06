@@ -7,16 +7,28 @@ namespace Alchemy.Inspector
     /// </summary>
     public abstract class PropertyGroupAttribute : Attribute
     {
-        public PropertyGroupAttribute(int order = 0)
+        protected PropertyGroupAttribute()
+        {
+            GroupPath = string.Empty;
+        }
+
+        protected PropertyGroupAttribute(string groupPath)
+        {
+            GroupPath = groupPath;
+        }
+
+        protected PropertyGroupAttribute(int order)
         {
             GroupPath = string.Empty;
             Order = order;
+            HasDefinedOrder = true;
         }
 
-        public PropertyGroupAttribute(string groupPath, int order = 0)
+        protected PropertyGroupAttribute(string groupPath, int order)
         {
             GroupPath = groupPath;
             Order = order;
+            HasDefinedOrder = true;
         }
 
         /// <summary>
@@ -28,5 +40,7 @@ namespace Alchemy.Inspector
         /// Drawing order of the group.
         /// </summary>
         public int Order { get; }
+
+        public bool HasDefinedOrder { get; }
     }
 }
