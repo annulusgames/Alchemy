@@ -44,6 +44,7 @@ namespace Alchemy.Editor
             public void Add(GroupNode node)
             {
                 children.Add(node);
+                children.Sort((a, b) => (a.drawer?.Order ?? 0).CompareTo(b.drawer?.Order ?? 0));
                 node.Parent = this;
             }
 
