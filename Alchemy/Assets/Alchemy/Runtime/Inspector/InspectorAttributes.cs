@@ -17,7 +17,8 @@ namespace Alchemy.Inspector
     public sealed class HideScriptFieldAttribute : Attribute { }
 
     /// <summary>
-    /// Changes the display order of the field. The default order is 0, and members are displayed in ascending order.
+    /// Changes the display order of the member. The default order is 0, and members are displayed in ascending order.
+    /// Uses the same scale as group <c>order</c>, so ungrouped members and sibling groups interleave by this value.
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class OrderAttribute : Attribute
@@ -25,7 +26,7 @@ namespace Alchemy.Inspector
         public OrderAttribute(int order) => Order = order;
 
         /// <summary>
-        /// The display order of the member.
+        /// The display order of the member. Shares the same scale as group <c>order</c>.
         /// </summary>
         public int Order { get; }
     }

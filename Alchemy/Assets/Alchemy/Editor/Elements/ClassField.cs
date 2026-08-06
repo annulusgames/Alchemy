@@ -20,42 +20,45 @@ namespace Alchemy.Editor.Elements
             var clickable = InternalAPIHelper.GetClickable(toggle);
             InternalAPIHelper.SetAcceptClicksIfDisabled(clickable, true);
 
-            // Build node
             var rootNode = InspectorHelper.BuildInspectorNode(type);
-
-            // Add elements
-            foreach (var node in rootNode.DescendantsAndSelf())
-            {
-                // Get or create group element
-                if (node.Parent == null)
-                {
-                    node.VisualElement = foldout;
-                }
-                else if (node.Drawer == null)
-                {
-                    node.VisualElement = node.Parent.VisualElement;
-                }
-                else
-                {
-                    node.VisualElement = node.Drawer.CreateRootElement(node.Name);
-                    node.Parent.VisualElement.Add(node.VisualElement);
-                }
-
-                // Add member elements
-                foreach (var member in node.Members.OrderByAttributeThenByMemberType())
-                {
-                    var element = new ReflectionField(obj, member);
-                    element.style.width = Length.Percent(100f);
-                    element.OnValueChanged += x => OnValueChanged?.Invoke(obj);
-
-                    var e = node.Drawer?.GetGroupElement(member.GetCustomAttribute<PropertyGroupAttribute>());
-                    if (e == null) node.VisualElement.Add(element);
-                    else e.Add(element);
-                    AlchemyAttributeDrawer.ExecutePropertyDrawers(null, null, obj, member, element);
-                }
-            }
+            rootNode.VisualElement = foldout;
+            BuildNodeElements(rootNode, obj, value => OnValueChanged?.Invoke(value));
 
             Add(foldout);
+        }
+
+        static void BuildNodeElements(
+            InspectorHelper.GroupNode node,
+            object obj,
+            Action<object> onValueChanged)
+        {
+            foreach (var (member, child) in InspectorHelper.GetOrderedSiblings(node))
+            {
+                if (child != null)
+                {
+                    if (child.Drawer == null)
+                    {
+                        child.VisualElement = node.VisualElement;
+                    }
+                    else
+                    {
+                        child.VisualElement = child.Drawer.CreateRootElement(child.Name);
+                        node.VisualElement.Add(child.VisualElement);
+                    }
+
+                    BuildNodeElements(child, obj, onValueChanged);
+                    continue;
+                }
+
+                var element = new ReflectionField(obj, member);
+                element.style.width = Length.Percent(100f);
+                element.OnValueChanged += _ => onValueChanged?.Invoke(obj);
+
+                var e = node.Drawer?.GetGroupElement(member.GetCustomAttribute<PropertyGroupAttribute>());
+                if (e == null) node.VisualElement.Add(element);
+                else e.Add(element);
+                AlchemyAttributeDrawer.ExecutePropertyDrawers(null, null, obj, member, element);
+            }
         }
 
         public event Action<object> OnValueChanged;

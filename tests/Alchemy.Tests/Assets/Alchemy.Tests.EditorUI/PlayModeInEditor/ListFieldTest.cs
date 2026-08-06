@@ -10,6 +10,10 @@ namespace Alchemy.Tests.EditorUI.PlayModeInEditor
 {
     public class ListFieldTest
     {
+        // Stable across Unity versions: public BaseListView.footerAddButtonName exists from
+        // 2022.2+, while 2021.2 keeps the same element name on ListView privately.
+        const string FooterAddButtonName = "unity-list-view__add-button";
+
         [UnityTest]
         public IEnumerator Test_ArrayCanAddAndRemoveElements()
         {
@@ -27,7 +31,7 @@ namespace Alchemy.Tests.EditorUI.PlayModeInEditor
                 var listView = EditorTestUtility.QueryRequired<ListView>(reflectionField);
                 var addButton = EditorTestUtility.QueryRequired<Button>(
                     listView,
-                    button => button.name == BaseListView.footerAddButtonName);
+                    button => button.name == FooterAddButtonName);
                 EditorTestUtility.Click(addButton);
                 yield return null;
 
@@ -49,10 +53,19 @@ namespace Alchemy.Tests.EditorUI.PlayModeInEditor
 
         static void RemoveItem(ListView listView, int index)
         {
-            var viewControllerProperty = typeof(BaseListView).GetProperty(
-                "viewController",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic |
-                BindingFlags.DeclaredOnly);
+            // Unity 2021.2 declares viewController on ListView. Unity 2022+ moves it to
+            // BaseListView (and BaseVerticalCollectionView also declares it), so a plain
+            // GetProperty on ListView throws AmbiguousMatchException.
+            PropertyInfo viewControllerProperty = null;
+            for (var type = typeof(ListView); type != null; type = type.BaseType)
+            {
+                viewControllerProperty = type.GetProperty(
+                    "viewController",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic |
+                    BindingFlags.DeclaredOnly);
+                if (viewControllerProperty != null)
+                    break;
+            }
             Assert.That(viewControllerProperty, Is.Not.Null);
 
             var viewController = viewControllerProperty.GetValue(listView);
