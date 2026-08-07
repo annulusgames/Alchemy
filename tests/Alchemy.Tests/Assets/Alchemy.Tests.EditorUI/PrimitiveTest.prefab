@@ -44,16 +44,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62e9e9eaf0f243cc824dd00920cf9ca4, type: 3}
   m_Name:
   m_EditorClassIdentifier: Alchemy.Tests.EditorUI::Alchemy.Tests.EditorUI.PrimitiveTest
-  sbyteValue: -101
-  byteValue: 251
-  shortValue: -30001
-  ushortValue: 60001
-  intValue: -2000000001
-  uintValue: 4000000001
-  longValue: -900000000000000001
-  ulongValue: 18000000000000000001
-  floatValue: 123.625
-  doubleValue: -98765.5
-  boolValue: 1
-  charValue: 32080
-  stringValue: "Alchemy \"JSON\" \n \u56E3\u7D50"
