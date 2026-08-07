@@ -217,6 +217,7 @@ namespace Alchemy.Editor
 
         internal static IReadOnlyList<string> GetOrderedSiblingNames(GroupNode node) =>
             EnumerateOrderedSiblings(node)
+                .Where(x => x.Group != null || IsInspectorVisibleSiblingMember(x.Member))
                 .Select(x => x.Group?.Name ?? x.Member!.Name)
                 .ToArray();
 
@@ -226,8 +227,9 @@ namespace Alchemy.Editor
 
         static IEnumerable<SiblingItem> EnumerateOrderedSiblings(GroupNode node)
         {
+            // Ordering only — visibility is decided later by AddMemberElement /
+            // CreateMemberElement (Inspector) or ReflectionField (ClassField).
             var memberItems = node.MemberEntries
-                .Where(entry => IsOrderedSiblingMember(entry.Member))
                 .Select(entry =>
                     new SiblingItem(
                         GetMemberOrder(entry.Member),
@@ -243,10 +245,10 @@ namespace Alchemy.Editor
                 .ThenBy(x => x.DeclaredAt);
         }
 
-        static bool IsOrderedSiblingMember(MemberInfo member)
+        // Narrowed visibility for inspector-order introspection (tests / sibling names).
+        // Not used by the build/render path — that must not drop AlchemySerializeField.
+        static bool IsInspectorVisibleSiblingMember(MemberInfo member)
         {
-            // Only members that can produce inspector UI participate in sibling order.
-            // Base Unity Object/MonoBehaviour members otherwise pollute declaration ties.
             if (member is MethodInfo methodInfo)
             {
                 return methodInfo.HasCustomAttribute<ButtonAttribute>();
@@ -261,6 +263,13 @@ namespace Alchemy.Editor
             {
                 return true;
             }
+
+#if ALCHEMY_SUPPORT_SERIALIZATION
+            if (member.HasCustomAttribute<AlchemySerializeFieldAttribute>())
+            {
+                return true;
+            }
+#endif
 
             if (member is FieldInfo fieldInfo)
             {
@@ -287,20 +296,17 @@ namespace Alchemy.Editor
         {
             var rootNode = new GroupNode("Inspector-Group-Root", null);
 
-            // Get all members, ordered by Reflection declaration ordinal so DeclaredAt
-            // is stable within each member kind (fields, then properties, then methods).
-            var members = ReflectionHelper.GetMembers(targetType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, true)
-                .Where(x => x is MethodInfo or FieldInfo or PropertyInfo)
-                .OrderBy(x => DeclarationOrderHelper.GetOrdinal(x, targetType))
-                .ToArray();
+            // Order members once, then assign sequential DeclaredAt (avoids int-packed ordinals).
+            var members = DeclarationOrderHelper.OrderMembers(
+                targetType,
+                ReflectionHelper.GetMembers(targetType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, true));
 
-            foreach (var member in members)
+            foreach (var (member, declaredAt) in members)
             {
-                var ordinal = DeclarationOrderHelper.GetOrdinal(member, targetType);
                 var groupAttributes = member.GetCustomAttributes<PropertyGroupAttribute>(true);
                 if (groupAttributes.Count() == 0)
                 {
-                    rootNode.AddMember(member, ordinal);
+                    rootNode.AddMember(member, declaredAt);
                     continue;
                 }
 
@@ -324,7 +330,7 @@ namespace Alchemy.Editor
                         }
 
                         // Earliest declaring member wins for group placement among siblings.
-                        next.NotifyDeclaredAt(ordinal);
+                        next.NotifyDeclaredAt(declaredAt);
 
                         // Order on a group attribute applies to the leaf group of that path.
                         if (i == hierarchy.Length - 1)
@@ -336,7 +342,7 @@ namespace Alchemy.Editor
                     }
                 }
 
-                parentNode.AddMember(member, ordinal);
+                parentNode.AddMember(member, declaredAt);
             }
 
             rootNode.SortChildrenRecursive();
