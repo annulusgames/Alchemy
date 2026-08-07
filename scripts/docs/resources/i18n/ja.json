@@ -1,0 +1,227 @@
+{
+  "attributes": {
+    "AssetsOnlyAttribute": {
+      "summary": "オブジェクトのフィールドに入力可能な参照をアセットに限定します。"
+    },
+    "BlockquoteAttribute": {
+      "summary": "Inspector上に引用句を表示します。",
+      "params": {
+        "text": "引用句に表示するテキスト"
+      }
+    },
+    "BoxGroupAttribute": {
+      "summary": "複数のメンバーをボックスにまとめて表示するグループを作成します。",
+      "params": {
+        "groupPath": "グループのパスを指定します。グループは`/`で区切ることでネストすることが可能です。",
+        "order": "兄弟グループおよびグループ外メンバーとの描画順です。`Order`属性と同じ尺度を使い、値が小さいほど先に描画されます。明示的なorderがないグループはデフォルトで0（順序未指定のメンバーと同じ）になり、同点は宣言順で決まります。ネストしたパス（例: `A/B`）では、末端のグループ（`B`）にのみ適用されます。"
+      }
+    },
+    "ButtonAttribute": {
+      "summary": "メソッドを実行可能なボタンをInspectorに表示します。メソッドが引数を持つ場合には、引数を入力可能なフィールドが追加されます。"
+    },
+    "DisableAlchemyEditorAttribute": {
+      "summary": "対象のクラスのAlchemyEditorを無効化し、デフォルトのInspectorを使用して描画します。フィールドにこの属性を追加した場合、そのフィールドのみをデフォルトのPropertyFieldを用いて描画するように変更します。"
+    },
+    "DisableIfAttribute": {
+      "summary": "対象のメンバーのbool値がtrueの場合、フィールドが編集不可能になります。",
+      "params": {
+        "condition": "条件の判定に使用するフィールド、プロパティまたはメソッドの名前"
+      }
+    },
+    "DisableInEditModeAttribute": {
+      "summary": "Edit Mode中はフィールドが編集不可能になります。"
+    },
+    "DisableInPlayModeAttribute": {
+      "summary": "Play Mode中はフィールドが編集不可能になります。"
+    },
+    "EnableIfAttribute": {
+      "summary": "対象のメンバーのbool値がtrueの場合にのみフィールドを編集可能になります。",
+      "params": {
+        "condition": "条件の判定に使用するフィールド、プロパティまたはメソッドの名前"
+      }
+    },
+    "FoldoutGroupAttribute": {
+      "summary": "複数のメンバーを折りたたみ可能なグループを作成します。",
+      "params": {
+        "groupPath": "グループのパスを指定します。グループは`/`で区切ることでネストすることが可能です。",
+        "order": "兄弟グループおよびグループ外メンバーとの描画順です。`Order`属性と同じ尺度を使い、値が小さいほど先に描画されます。明示的なorderがないグループはデフォルトで0（順序未指定のメンバーと同じ）になり、同点は宣言順で決まります。ネストしたパス（例: `A/B`）では、末端のグループ（`B`）にのみ適用されます。"
+      }
+    },
+    "GroupAttribute": {
+      "summary": "複数のメンバーをまとめて表示するグループを作成します。",
+      "params": {
+        "groupPath": "グループのパスを指定します。グループは`/`で区切ることでネストすることが可能です。",
+        "order": "兄弟グループおよびグループ外メンバーとの描画順です。`Order`属性と同じ尺度を使い、値が小さいほど先に描画されます。明示的なorderがないグループはデフォルトで0（順序未指定のメンバーと同じ）になり、同点は宣言順で決まります。ネストしたパス（例: `A/B`）では、末端のグループ（`B`）にのみ適用されます。"
+      }
+    },
+    "HelpBoxAttribute": {
+      "summary": "フィールドの上にメモや警告を追加します。",
+      "params": {
+        "message": "ボックス内に表示するテキスト",
+        "messageType": "メッセージの種類"
+      }
+    },
+    "HideIfAttribute": {
+      "summary": "対象のメンバーのbool値がtrueの場合はInspectorに表示されなくなります。",
+      "params": {
+        "condition": "条件の判定に使用するフィールド、プロパティまたはメソッドの名前"
+      }
+    },
+    "HideInEditModeAttribute": {
+      "summary": "Edit Mode中はフィールドが非表示になります。"
+    },
+    "HideInPlayModeAttribute": {
+      "summary": "Play Mode中はフィールドが非表示になります。"
+    },
+    "HideLabelAttribute": {
+      "summary": "フィールドのラベルを非表示にします。"
+    },
+    "HideScriptFieldAttribute": {
+      "summary": "対象のScriptフィールドを非表示にします。"
+    },
+    "HorizontalGroupAttribute": {
+      "summary": "複数のメンバーを水平方向に並べて表示するグループを作成します。",
+      "params": {
+        "groupPath": "グループのパスを指定します。グループは`/`で区切ることでネストすることが可能です。",
+        "order": "兄弟グループおよびグループ外メンバーとの描画順です。`Order`属性と同じ尺度を使い、値が小さいほど先に描画されます。明示的なorderがないグループはデフォルトで0（順序未指定のメンバーと同じ）になり、同点は宣言順で決まります。ネストしたパス（例: `A/B`）では、末端のグループ（`B`）にのみ適用されます。"
+      }
+    },
+    "HorizontalLineAttribute": {
+      "summary": "Inspector上に水平線を追加します。",
+      "params": {
+        "r": "線の色の赤成分",
+        "g": "線の色の緑成分",
+        "b": "線の色の青成分",
+        "a": "線の色のアルファ値"
+      }
+    },
+    "IndentAttribute": {
+      "summary": "フィールドにインデントを追加します。",
+      "params": {
+        "indent": "インデントの数"
+      }
+    },
+    "InlineEditorAttribute": {
+      "summary": "対象のScriptableObjectやコンポーネントのInspectorをインラインで表示し、編集が可能になります。"
+    },
+    "InlineGroupAttribute": {
+      "summary": "追加の装飾なしでメンバーをまとめて表示するインライングループを作成します。",
+      "params": {
+        "groupPath": "グループのパスを指定します。グループは`/`で区切ることでネストすることが可能です。",
+        "order": "兄弟グループおよびグループ外メンバーとの描画順です。`Order`属性と同じ尺度を使い、値が小さいほど先に描画されます。明示的なorderがないグループはデフォルトで0（順序未指定のメンバーと同じ）になり、同点は宣言順で決まります。ネストしたパス（例: `A/B`）では、末端のグループ（`B`）にのみ適用されます。"
+      }
+    },
+    "LabelTextAttribute": {
+      "summary": "フィールドのラベルのテキストを上書きします。",
+      "params": {
+        "text": "フィールドのラベルに表示するテキスト"
+      }
+    },
+    "LabelWidthAttribute": {
+      "summary": "フィールドのラベル幅を設定します。",
+      "params": {
+        "width": "ラベルの幅（ピクセル）"
+      }
+    },
+    "ListViewSettingsAttribute": {
+      "summary": "コレクションの表示に関する設定を変更します。この属性を用いることで行を見やすくしたり、要素数/要素順をInspectorから変更不可能な配列を作成したりすることが可能になります。",
+      "params": {
+        "ShowAddRemoveFooter": "要素の追加/削除を行うフッターを表示するか",
+        "ShowAlternatingRowBackgrounds": "一行ごとに背景色を変更するかどうか",
+        "ShowBorder": "境界線を表示するか",
+        "ShowBoundCollectionSize": "要素数を変更するフィールドを表示するか",
+        "ShowFoldoutHeader": "折りたたみ可能なヘッダーを表示するか",
+        "SelectionType": "要素の選択に関する設定",
+        "Reorderable": "要素を並び替え可能か",
+        "ReorderMode": "並び替えの表示に関する設定"
+      }
+    },
+    "OnInspectorDestroyAttribute": {
+      "summary": "Inspectorが破棄された際にメソッドを実行します。"
+    },
+    "OnInspectorDisableAttribute": {
+      "summary": "Inspectorが無効化された際にメソッドを実行します。"
+    },
+    "OnInspectorEnableAttribute": {
+      "summary": "Inspectorが有効化された際にメソッドを実行します。"
+    },
+    "OnListViewChangedAttribute": {
+      "summary": "コレクションの変更を検知してメソッドを呼び出します。各イベントの詳細はUnityの[ListViewのドキュメント](https://docs.unity3d.com/ScriptReference/UIElements.ListView.html)を参照してください。",
+      "notes": [
+        {
+          "type": "WARNING",
+          "body": "各イベントの引数の型が、下の表に示した引数(またはListViewのイベントの引数)と完全に一致していることを確認してください。一致しない場合、メソッドを実行できずエラーが発生します。"
+        }
+      ],
+      "params": {
+        "OnItemChanged": "要素の値を変更した際に呼ばれるメソッドの名前 `(int index, T value)`",
+        "OnItemIndexChanged": "要素のindexが変更された際に呼ばれるメソッドの名前 `(int before, int after)`",
+        "OnItemsAdded": "要素が追加された際に呼ばれるメソッドの名前 `(IEnumerable<int> indices)`",
+        "OnItemsRemoved": "要素が削除された際に呼ばれるメソッドの名前 `(IEnumerable<int> indices)`",
+        "OnItemsChosen": "要素がEnterキーやダブルクリックで選択された際に呼ばれるメソッドの名前 `(IEnumerable<object> items)`",
+        "OnItemsSourceChanged": "要素の個数など、元のコレクションが変更された際に呼ばれるメソッドの名前 `(引数なし)`",
+        "OnSelectionChanged": "選択中の要素が変更された際に呼ばれるメソッドの名前 `(IEnumerable<object> items)`",
+        "OnSelectedIndicesChanged": "選択中のindexが変更された際に呼ばれるメソッドの名前 `(IEnumerable<int> indices)`"
+      }
+    },
+    "OnValueChangedAttribute": {
+      "summary": "フィールドの値が変更された際に、指定された名前のメソッドを実行します。",
+      "params": {
+        "methodName": "値の変更時に呼ばれるメソッドの名前"
+      }
+    },
+    "OrderAttribute": {
+      "summary": "メンバーの表示順を変更します。Orderのデフォルト値は0で、メンバーは昇順に表示されます。グループのorderと同じ尺度を使うため、グループ外メンバーと兄弟グループはこの値で交互に並びます。",
+      "params": {
+        "order": "メンバーの表示順。グループのorderと同じ尺度です。"
+      }
+    },
+    "PreviewAttribute": {
+      "summary": "フィールドの横に参照アセットのプレビューを表示します。",
+      "params": {
+        "align": "プレビュー画像の配置",
+        "size": "プレビュー画像のサイズ"
+      }
+    },
+    "ReadOnlyAttribute": {
+      "summary": "フィールドを編集不可能にします。"
+    },
+    "RequiredAttribute": {
+      "summary": "フィールドにオブジェクトの参照が割り当てられていない場合に警告を表示します。",
+      "params": {
+        "message": "警告に表示するテキスト"
+      }
+    },
+    "ShowIfAttribute": {
+      "summary": "対象のメンバーのbool値がtrueの場合にのみInspectorに表示されます。",
+      "params": {
+        "condition": "条件の判定に使用するフィールド、プロパティまたはメソッドの名前"
+      }
+    },
+    "ShowInInspectorAttribute": {
+      "summary": "シリアライズされていないフィールドやプロパティをInspectorから編集可能にします。これらの値はシリアライズされず、変更は保存されないことに留意してください。"
+    },
+    "TabGroupAttribute": {
+      "summary": "複数のメンバーをタブに分割するグループを作成します。Orderはこのタブグループの兄弟グループおよびグループ外メンバーとの順序のみを制御し、タブ自体の順序はメンバーの宣言順に従います。",
+      "params": {
+        "groupPath": "グループのパスを指定します。グループは`/`で区切ることでネストすることが可能です。",
+        "tabName": "メンバーが所属するタブの名前を指定します。",
+        "order": "兄弟グループおよびグループ外メンバーとの描画順です。`Order`属性と同じ尺度を使い、値が小さいほど先に描画されます。明示的なorderがないグループはデフォルトで0（順序未指定のメンバーと同じ）になり、同点は宣言順で決まります。ネストしたパス（例: `A/B`）では、末端のグループ（`B`）にのみ適用されます。"
+      }
+    },
+    "TitleAttribute": {
+      "summary": "Inspector上に区切り線付きのヘッダーを表示します。",
+      "params": {
+        "titleText": "ヘッダーに表示するテキスト",
+        "subtitle": "タイトルの下に小さく表示されるテキスト"
+      }
+    },
+    "ValidateInputAttribute": {
+      "summary": "指定された名前のメンバーの値がfalseである場合に警告を表示します。",
+      "params": {
+        "condition": "値の検証に使用するフィールド、プロパティまたはメソッドの名前",
+        "message": "警告に表示するテキスト"
+      }
+    }
+  }
+}
