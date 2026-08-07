@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Alchemy.Tests.EditorUI
 {
     [DocumentationSample]
-    public class AssetsOnlyTest : MonoBehaviour
+    public class InlineGroupTest : MonoBehaviour
     {
         [Order(-1)]
         [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
@@ -12,11 +12,14 @@ namespace Alchemy.Tests.EditorUI
         public int __docCaptureStart;
 
         #region document
-        [AssetsOnly]
-        public Object asset1;
+        [InlineGroup("Group1")]
+        public float foo;
 
-        [AssetsOnly]
-        public GameObject asset2;
+        [InlineGroup("Group1")]
+        public Vector3 bar;
+
+        [InlineGroup("Group1")]
+        public GameObject baz;
         #endregion
 
         [Order(int.MaxValue)]

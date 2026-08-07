@@ -3,10 +3,12 @@ using UnityEngine;
 
 namespace Alchemy.Tests.EditorUI
 {
-    [DocumentationSample]
+    [DocumentationSample(Capture = false)]
     public class DisableInPlayModeTest : MonoBehaviour
     {
+        #region document
         [DisableInPlayMode]
         public float foo;
+        #endregion
     }
 }

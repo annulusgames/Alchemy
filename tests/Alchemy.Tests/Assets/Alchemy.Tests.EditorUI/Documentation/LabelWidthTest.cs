@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Alchemy.Tests.EditorUI
 {
     [DocumentationSample]
-    public class AssetsOnlyTest : MonoBehaviour
+    public class LabelWidthTest : MonoBehaviour
     {
         [Order(-1)]
         [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
@@ -12,11 +12,14 @@ namespace Alchemy.Tests.EditorUI
         public int __docCaptureStart;
 
         #region document
-        [AssetsOnly]
-        public Object asset1;
+        [LabelWidth(80f)]
+        public float foo;
 
-        [AssetsOnly]
-        public GameObject asset2;
+        [LabelWidth(120f)]
+        public Vector3 bar;
+
+        [LabelWidth(40f)]
+        public GameObject baz;
         #endregion
 
         [Order(int.MaxValue)]

@@ -3,9 +3,10 @@ using UnityEngine;
 
 namespace Alchemy.Tests.EditorUI
 {
-    [DocumentationSample]
+    [DocumentationSample(Capture = false)]
     public class OnValueChangedTest : MonoBehaviour
     {
+        #region document
         [OnValueChanged("OnValueChanged")]
         public int foo;
 
@@ -13,5 +14,6 @@ namespace Alchemy.Tests.EditorUI
         {
             Debug.Log(value);
         }
+        #endregion
     }
 }

@@ -6,6 +6,12 @@ namespace Alchemy.Tests.EditorUI
     [DocumentationSample]
     public class DisableIfTest : MonoBehaviour
     {
+        [Order(-1)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureStart;
+
+        #region document
         public bool isDisabled;
 
         public bool IsDisabled => isDisabled;
@@ -19,5 +25,11 @@ namespace Alchemy.Tests.EditorUI
 
         [DisableIf("IsDisabledMethod")]
         public int disableIfMethod;
+        #endregion
+
+        [Order(int.MaxValue)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureEnd;
     }
 }

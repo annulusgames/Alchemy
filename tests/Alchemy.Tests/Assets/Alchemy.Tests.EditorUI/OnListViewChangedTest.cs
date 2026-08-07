@@ -4,9 +4,10 @@ using Alchemy.Inspector;
 
 namespace Alchemy.Tests.EditorUI
 {
-    [DocumentationSample]
+    [DocumentationSample(Capture = false)]
     public class OnListViewChangedTest : MonoBehaviour
     {
+        #region document
         [OnListViewChanged(
             OnItemChanged = nameof(OnItemChanged),
             OnItemsAdded = nameof(OnItemsAdded),
@@ -58,5 +59,6 @@ namespace Alchemy.Tests.EditorUI
         {
             Debug.Log($"Index Changed: [{before} -> {after}]");
         }
+        #endregion
     }
 }

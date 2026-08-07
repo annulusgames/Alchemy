@@ -6,6 +6,12 @@ namespace Alchemy.Tests.EditorUI
     [DocumentationSample]
     public class OrderTest : MonoBehaviour
     {
+        [Order(-1)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureStart;
+
+        #region document
         [Order(2)]
         public float foo;
 
@@ -41,5 +47,11 @@ namespace Alchemy.Tests.EditorUI
 
         [Group("Group1", 10)]
         public bool group1Baz;
+        #endregion
+
+        [Order(int.MaxValue)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureEnd;
     }
 }
