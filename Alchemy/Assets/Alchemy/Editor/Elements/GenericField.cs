@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -173,9 +174,13 @@ namespace Alchemy.Editor.Elements
             {
                 AddField(new FloatField(label), (float)obj);
             }
-            else if (type == typeof(double) || type == typeof(decimal))
+            else if (type == typeof(double))
             {
                 AddField(new DoubleField(label), (double)obj);
+            }
+            else if (type == typeof(decimal))
+            {
+                AddDecimalField(label, (decimal)obj);
             }
             else if (type == typeof(string))
             {
@@ -183,7 +188,7 @@ namespace Alchemy.Editor.Elements
             }
             else if (type == typeof(char))
             {
-                var charField = new TextField(label, 1, false, false, default) { value = obj.ToString() };
+                var charField = new TextField(label, 1, false, false, default) { value = ((char)obj).ToString() };
                 charField.RegisterValueChangedCallback(x =>
                 {
                     if (string.IsNullOrEmpty(x.newValue)) return;
@@ -310,6 +315,51 @@ namespace Alchemy.Editor.Elements
                 {
                     if (!changed) return;
                     OnValueChanged?.Invoke(convert(control.value));
+                    changed = false;
+                });
+            }
+            Add(control);
+        }
+
+        void AddDecimalField(string label, decimal value)
+        {
+            var control = new TextField(label)
+            {
+                value = value.ToString(CultureInfo.InvariantCulture)
+            };
+            control.RegisterValueChangedCallback(x =>
+            {
+                if (!decimal.TryParse(
+                    x.newValue,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out var parsed))
+                {
+                    return;
+                }
+
+                if (isDelayed)
+                {
+                    changed = true;
+                }
+                else
+                {
+                    OnValueChanged?.Invoke(parsed);
+                }
+            });
+            if (isDelayed)
+            {
+                control.RegisterCallback<FocusOutEvent>(_ =>
+                {
+                    if (!changed) return;
+                    if (decimal.TryParse(
+                        control.value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out var parsed))
+                    {
+                        OnValueChanged?.Invoke(parsed);
+                    }
                     changed = false;
                 });
             }

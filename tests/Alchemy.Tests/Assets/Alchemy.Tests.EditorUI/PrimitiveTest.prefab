@@ -42,5 +42,49 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 62e9e9eaf0f243cc824dd00920cf9ca4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Alchemy.Tests.EditorUI::Alchemy.Tests.EditorUI.PrimitiveTest
+  __alchemySerializationData_Alchemy_Tests_EditorUI_PrimitiveTest:
+    sbyteValue:
+      isCreated: 1
+      data: -101
+    byteValue:
+      isCreated: 1
+      data: 251
+    shortValue:
+      isCreated: 1
+      data: -30001
+    ushortValue:
+      isCreated: 1
+      data: 60001
+    intValue:
+      isCreated: 1
+      data: -2000000001
+    uintValue:
+      isCreated: 1
+      data: 4000000001
+    longValue:
+      isCreated: 1
+      data: -900000000000000001
+    ulongValue:
+      isCreated: 1
+      data: 18000000000000000001
+    floatValue:
+      isCreated: 1
+      data: 123.625
+    doubleValue:
+      isCreated: 1
+      data: -98765.5
+    decimalValue:
+      isCreated: 1
+      data: '"79228162514264337593543950335"'
+    boolValue:
+      isCreated: 1
+      data: true
+    charValue:
+      isCreated: 1
+      data: 32080
+    stringValue:
+      isCreated: 1
+      data: "\"Alchemy \\\"JSON\\\" \\n \u56E3\u7D50\""
+    unityObjectReferences: []
