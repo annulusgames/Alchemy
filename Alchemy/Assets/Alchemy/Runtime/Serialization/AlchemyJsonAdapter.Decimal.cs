@@ -16,9 +16,18 @@ namespace Alchemy.Serialization.Internal
             var view = context.SerializedValue;
             if (view.IsNull()) return default;
 
-            // Unity.Serialization treats System.Decimal as an empty object ("{}") by default.
-            if (view.Type == TokenType.Object) return default;
+            if (view.Type == TokenType.Object)
+            {
+                using var enumerator = view.AsObjectView().GetEnumerator();
+                if (!enumerator.MoveNext())
+                {
+                    // Legacy value serialized by Unity.Serialization as "{}".
+                    return default;
+                }
+            }
 
+            // Non-empty objects reach AsStringView() and fail instead of
+            // being silently converted to zero.
             return decimal.Parse(
                 view.AsStringView().ToString(),
                 NumberStyles.Float,

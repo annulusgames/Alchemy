@@ -323,6 +323,7 @@ namespace Alchemy.Editor.Elements
 
         void AddDecimalField(string label, decimal value)
         {
+            var committedValue = value;
             var control = new TextField(label)
             {
                 value = value.ToString(CultureInfo.InvariantCulture)
@@ -344,25 +345,35 @@ namespace Alchemy.Editor.Elements
                 }
                 else
                 {
+                    committedValue = parsed;
                     OnValueChanged?.Invoke(parsed);
                 }
             });
-            if (isDelayed)
+            control.RegisterCallback<FocusOutEvent>(_ =>
             {
-                control.RegisterCallback<FocusOutEvent>(_ =>
+                if (decimal.TryParse(
+                    control.value,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out var parsed))
                 {
-                    if (!changed) return;
-                    if (decimal.TryParse(
-                        control.value,
-                        NumberStyles.Float,
-                        CultureInfo.InvariantCulture,
-                        out var parsed))
+                    if (isDelayed && changed)
                     {
+                        committedValue = parsed;
                         OnValueChanged?.Invoke(parsed);
                     }
-                    changed = false;
-                });
-            }
+
+                    control.SetValueWithoutNotify(
+                        parsed.ToString(CultureInfo.InvariantCulture));
+                }
+                else
+                {
+                    control.SetValueWithoutNotify(
+                        committedValue.ToString(CultureInfo.InvariantCulture));
+                }
+
+                changed = false;
+            });
             Add(control);
         }
 

@@ -1,5 +1,9 @@
 #if ALCHEMY_SUPPORT_SERIALIZATION
+using System;
+using System.Collections.Generic;
+using Alchemy.Serialization.Internal;
 using NUnit.Framework;
+using Object = UnityEngine.Object;
 
 namespace Alchemy.Tests.Serialization.EditMode
 {
@@ -44,6 +48,21 @@ namespace Alchemy.Tests.Serialization.EditMode
             Assert.That(
                 TestUtility.RoundTrip(FlagsEnum.First | FlagsEnum.Second),
                 Is.EqualTo(FlagsEnum.First | FlagsEnum.Second));
+        }
+
+        [Test]
+        public void Test_Deserialize_LegacyEmptyObjectDecimal_ReturnsZero()
+        {
+            var refs = new List<Object>();
+            Assert.That(SerializationHelper.FromJson<decimal>("{}", refs), Is.EqualTo(0m));
+        }
+
+        [Test]
+        public void Test_Deserialize_NonEmptyObjectDecimal_Throws()
+        {
+            var refs = new List<Object>();
+            Assert.Throws<InvalidOperationException>(
+                () => SerializationHelper.FromJson<decimal>("{\"value\":1}", refs));
         }
     }
 }
