@@ -451,6 +451,7 @@ namespace Alchemy.Inspector
         public bool Reorderable { get; set; } = true;
         /// <summary>Reorder mode for list items.</summary>
         public ListViewReorderMode ReorderMode { get; set; } = ListViewReorderMode.Animated;
+        public string ElementLabelTextSelector { get; set; } = null;
     }
 
     /// <summary>
