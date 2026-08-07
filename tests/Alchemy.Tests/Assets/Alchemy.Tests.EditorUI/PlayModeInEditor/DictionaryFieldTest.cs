@@ -2,6 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using Alchemy.Editor.Elements;
 using NUnit.Framework;
+#if !UNITY_2022_1_OR_NEWER
+using UnityEditor.UIElements; // IntegerField lives here before Unity 2022.1
+#endif
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
