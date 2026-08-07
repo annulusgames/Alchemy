@@ -30,7 +30,9 @@ namespace Alchemy.Tests.Serialization.EditMode
             Assert.That(TestUtility.RoundTrip(18000000000000000001UL), Is.EqualTo(18000000000000000001UL));
             Assert.That(TestUtility.RoundTrip(123.625f), Is.EqualTo(123.625f));
             Assert.That(TestUtility.RoundTrip(-98765.5d), Is.EqualTo(-98765.5d));
+            Assert.That(TestUtility.RoundTrip(1234567890.1234567890123456789m), Is.EqualTo(1234567890.1234567890123456789m));
             Assert.That(TestUtility.RoundTrip(true), Is.True);
+            Assert.That(TestUtility.RoundTrip('結'), Is.EqualTo('結'));
             Assert.That(TestUtility.RoundTrip("Alchemy \"JSON\" \n 団結"), Is.EqualTo("Alchemy \"JSON\" \n 団結"));
             Assert.That(TestUtility.RoundTrip<string>(null), Is.Null);
         }
