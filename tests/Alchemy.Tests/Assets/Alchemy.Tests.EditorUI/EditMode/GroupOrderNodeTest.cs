@@ -1,11 +1,27 @@
+using System;
 using System.Linq;
 using Alchemy.Editor;
 using Alchemy.Inspector;
 using Alchemy.Tests.EditorUI;
 using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.UIElements;
+#if ALCHEMY_SUPPORT_SERIALIZATION
+using Alchemy.Serialization;
+#endif
 
 namespace Alchemy.Tests.EditorUI.EditMode
 {
+#if ALCHEMY_SUPPORT_SERIALIZATION
+    [AlchemySerialize]
+    partial class AlchemySerializeFieldVisibilityTarget : ScriptableObject
+    {
+        [AlchemySerializeField, NonSerialized]
+        int privateValue;
+    }
+#endif
+
     public class GroupOrderNodeTest
     {
         [Test]
@@ -169,6 +185,70 @@ namespace Alchemy.Tests.EditorUI.EditMode
                 $"Issue #112 order. Actual: [{string.Join(", ", actual)}]");
         }
 
+        [Test]
+        public void GetOrderedSiblingNames_ThreeLevelClassInheritance_BaseBeforeDerived()
+        {
+            var root = InspectorHelper.BuildInspectorNode(typeof(DeclaredAtDerived));
+
+            Assert.That(
+                InspectorHelper.GetOrderedSiblingNames(root),
+                Is.EqualTo(new[] { "a", "b", "c" }));
+        }
+
+        [Test]
+        public void GetOrderedSiblingNames_MultiLevelMonoBehaviourInheritance_BaseBeforeDerived()
+        {
+            var names = InspectorHelper.GetOrderedSiblingNames(
+                InspectorHelper.BuildInspectorNode(typeof(DeclaredAtMonoDerived)));
+            var indexA = names.ToList().IndexOf("a");
+            var indexB = names.ToList().IndexOf("b");
+            var indexC = names.ToList().IndexOf("c");
+
+            Assert.That(indexA, Is.GreaterThanOrEqualTo(0));
+            Assert.That(indexB, Is.GreaterThan(indexA));
+            Assert.That(indexC, Is.GreaterThan(indexB));
+        }
+
+#if ALCHEMY_SUPPORT_SERIALIZATION
+        [Test]
+        public void GetOrderedSiblings_IncludesPrivateAlchemySerializeField()
+        {
+            var root = InspectorHelper.BuildInspectorNode(typeof(AlchemySerializeFieldVisibilityTarget));
+
+            Assert.That(
+                InspectorHelper.GetOrderedSiblings(root).Any(x => x.Member?.Name == "privateValue"),
+                Is.True);
+            Assert.That(
+                InspectorHelper.GetOrderedSiblingNames(root),
+                Does.Contain("privateValue"));
+        }
+
+        [Test]
+        public void BuildElements_DrawsPrivateAlchemySerializeField()
+        {
+            var target = ScriptableObject.CreateInstance<AlchemySerializeFieldVisibilityTarget>();
+            try
+            {
+                var serializedObject = new SerializedObject(target);
+                var root = new VisualElement();
+                InspectorHelper.BuildElements(
+                    serializedObject,
+                    root,
+                    target,
+                    name => serializedObject.FindProperty(name));
+
+                Assert.That(
+                    root.Query<IntegerField>().ToList().Any(field => field.label == "Private Value"),
+                    Is.True,
+                    "Private [AlchemySerializeField] must remain drawable after sibling ordering.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(target);
+            }
+        }
+#endif
+
         sealed class OrderedGroups
         {
             [Group("Third", 30)] public float c;
@@ -251,6 +331,36 @@ namespace Alchemy.Tests.EditorUI.EditMode
 
             [Button, Alchemy.Inspector.Order(1)]
             void OrderedButtonLater() { }
+        }
+
+        class DeclaredAtBaseA
+        {
+            public int a;
+        }
+
+        class DeclaredAtBaseB : DeclaredAtBaseA
+        {
+            public int b;
+        }
+
+        class DeclaredAtDerived : DeclaredAtBaseB
+        {
+            public int c;
+        }
+
+        class DeclaredAtMonoBaseA : MonoBehaviour
+        {
+            public int a;
+        }
+
+        class DeclaredAtMonoBaseB : DeclaredAtMonoBaseA
+        {
+            public int b;
+        }
+
+        class DeclaredAtMonoDerived : DeclaredAtMonoBaseB
+        {
+            public int c;
         }
     }
 }

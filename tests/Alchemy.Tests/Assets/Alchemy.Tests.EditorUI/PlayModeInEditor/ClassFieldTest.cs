@@ -1,3 +1,4 @@
+using System.Linq;
 using Alchemy.Editor.Elements;
 using Alchemy.Inspector;
 using NUnit.Framework;
@@ -34,6 +35,27 @@ namespace Alchemy.Tests.EditorUI.PlayModeInEditor
             public int value;
 
             public bool IsValid(int input) => input >= 0;
+        }
+
+        sealed class PrivateFieldTarget
+        {
+            int privateValue;
+            public int publicValue;
+        }
+
+        [Test]
+        public void Test_PrivateFieldsAreDrawnViaReflectionField()
+        {
+            var target = new PrivateFieldTarget();
+            var field = new ClassField(target, target.GetType(), "Target");
+
+            Assert.That(
+                field.Query<IntegerField>().ToList().Any(x => x.label == "Private Value"),
+                Is.True,
+                "ClassField must still draw private fields via ReflectionField.");
+            Assert.That(
+                field.Query<IntegerField>().ToList().Any(x => x.label == "Public Value"),
+                Is.True);
         }
 
         [Test]
