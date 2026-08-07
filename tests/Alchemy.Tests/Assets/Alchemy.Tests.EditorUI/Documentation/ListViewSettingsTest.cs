@@ -7,6 +7,12 @@ namespace Alchemy.Tests.EditorUI
     [DocumentationSample]
     public class ListViewSettingsTest : MonoBehaviour
     {
+        [Order(-1)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureStart;
+
+        #region document
         [ListViewSettings(
             ShowAlternatingRowBackgrounds = AlternatingRowBackground.All,
             ShowFoldoutHeader = false)]
@@ -22,5 +28,11 @@ namespace Alchemy.Tests.EditorUI
             Vector3.zero,
             Vector3.one
         };
+        #endregion
+
+        [Order(int.MaxValue)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureEnd;
     }
 }

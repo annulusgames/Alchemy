@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace Alchemy.Tests.EditorUI
 {
-    [DocumentationSample]
+    [DocumentationSample(Capture = false)]
+    #region document
     [HideScriptField]
     public class HideScriptFieldTest : MonoBehaviour
     {
@@ -11,4 +12,5 @@ namespace Alchemy.Tests.EditorUI
         public Vector3 bar;
         public GameObject baz;
     }
+    #endregion
 }

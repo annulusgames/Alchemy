@@ -7,6 +7,12 @@ namespace Alchemy.Tests.EditorUI
     [DocumentationSample]
     public class HelpBoxTest : MonoBehaviour
     {
+        [Order(-1)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureStart;
+
+        #region document
         [HelpBox("Custom Info")]
         public float foo;
 
@@ -15,5 +21,11 @@ namespace Alchemy.Tests.EditorUI
 
         [HelpBox("Custom Error", HelpBoxMessageType.Error)]
         public GameObject baz;
+        #endregion
+
+        [Order(int.MaxValue)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureEnd;
     }
 }

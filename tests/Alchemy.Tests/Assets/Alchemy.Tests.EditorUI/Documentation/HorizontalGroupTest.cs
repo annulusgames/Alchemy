@@ -6,6 +6,12 @@ namespace Alchemy.Tests.EditorUI
     [DocumentationSample]
     public class HorizontalGroupTest : MonoBehaviour
     {
+        [Order(-1)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureStart;
+
+        #region document
         [HorizontalGroup("Group1")]
         public int a;
 
@@ -38,5 +44,11 @@ namespace Alchemy.Tests.EditorUI
         [HorizontalGroup("Group2")]
         [BoxGroup("Group2/Box2")]
         public GameObject gamma;
+        #endregion
+
+        [Order(int.MaxValue)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureEnd;
     }
 }

@@ -7,12 +7,14 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Disables AlchemyEditor for the target class and uses the default Inspector instead. When this attribute is added to a field, only that field is rendered using the default PropertyField.
     /// </summary>
+    /// <alchemy-attr-category>General</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class DisableAlchemyEditorAttribute : Attribute { }
 
     /// <summary>
     /// Hides the target script field.
     /// </summary>
+    /// <alchemy-attr-category>General</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Class)]
     public sealed class HideScriptFieldAttribute : Attribute { }
 
@@ -20,6 +22,7 @@ namespace Alchemy.Inspector
     /// Changes the display order of the member. The default order is 0, and members are displayed in ascending order.
     /// Uses the same scale as group <c>order</c>, so ungrouped members and sibling groups interleave by this value.
     /// </summary>
+    /// <alchemy-attr-category>General</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class OrderAttribute : Attribute
     {
@@ -34,30 +37,35 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Displays a button in the Inspector that can execute a method. If the method has parameters, input fields for those parameters will be added.
     /// </summary>
+    /// <alchemy-attr-category>General</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class ButtonAttribute : Attribute { }
 
     /// <summary>
     /// Displays nonserialized fields and properties in the Inspector. Writable members can be edited, but their values are not serialized or persisted.
     /// </summary>
+    /// <alchemy-attr-category>General</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class ShowInInspectorAttribute : Attribute { }
 
     /// <summary>
     /// Restricts an object field to asset references.
     /// </summary>
+    /// <alchemy-attr-category>General</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class AssetsOnlyAttribute : Attribute { }
 
     /// <summary>
     /// Displays the Inspector for the referenced ScriptableObject or component inline, allowing it to be edited in place.
     /// </summary>
+    /// <alchemy-attr-category>General</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class InlineEditorAttribute : Attribute { }
 
     /// <summary>
     /// Adds an indent to the field in the Inspector.
     /// </summary>
+    /// <alchemy-attr-category>General</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class IndentAttribute : Attribute
     {
@@ -72,42 +80,49 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Makes the field uneditable.
     /// </summary>
+    /// <alchemy-attr-category>General</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class ReadOnlyAttribute : Attribute { }
 
     /// <summary>
     /// Hides the field while in Play Mode.
     /// </summary>
+    /// <alchemy-attr-category>Conditionals</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class HideInPlayModeAttribute : Attribute { }
 
     /// <summary>
     /// Hides the field while in Edit Mode.
     /// </summary>
+    /// <alchemy-attr-category>Conditionals</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class HideInEditModeAttribute : Attribute { }
 
     /// <summary>
     /// During Play Mode, the field becomes disabled.
     /// </summary>
+    /// <alchemy-attr-category>Conditionals</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class DisableInPlayModeAttribute : Attribute { }
 
     /// <summary>
     /// During Edit Mode, the field becomes disabled.
     /// </summary>
+    /// <alchemy-attr-category>Conditionals</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class DisableInEditModeAttribute : Attribute { }
 
     /// <summary>
     /// Hides the label of the field.
     /// </summary>
+    /// <alchemy-attr-category>Decorations</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class HideLabelAttribute : Attribute { }
 
     /// <summary>
     /// Overrides the label text of the field.
     /// </summary>
+    /// <alchemy-attr-category>Decorations</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class LabelTextAttribute : Attribute
     {
@@ -122,6 +137,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Sets the width of the field label.
     /// </summary>
+    /// <alchemy-attr-category>Decorations</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class LabelWidthAttribute : Attribute
     {
@@ -136,6 +152,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Hides the member in the Inspector when the specified condition evaluates to true.
     /// </summary>
+    /// <alchemy-attr-category>Conditionals</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class HideIfAttribute : Attribute
     {
@@ -150,6 +167,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Displays the field in the Inspector when the specified condition evaluates to true.
     /// </summary>
+    /// <alchemy-attr-category>Conditionals</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class ShowIfAttribute : Attribute
     {
@@ -164,6 +182,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Disables the field when the specified condition evaluates to true.
     /// </summary>
+    /// <alchemy-attr-category>Conditionals</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class DisableIfAttribute : Attribute
     {
@@ -178,6 +197,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Enables the field when the specified condition evaluates to true.
     /// </summary>
+    /// <alchemy-attr-category>Conditionals</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class EnableIfAttribute : Attribute
     {
@@ -192,6 +212,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Displays a warning when no object reference is assigned to the field.
     /// </summary>
+    /// <alchemy-attr-category>Validation</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class RequiredAttribute : Attribute
     {
@@ -207,6 +228,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Displays a warning when the specified validation condition evaluates to false.
     /// </summary>
+    /// <alchemy-attr-category>Validation</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class ValidateInputAttribute : Attribute
     {
@@ -236,6 +258,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Adds a note or warning above a field.
     /// </summary>
+    /// <alchemy-attr-category>Decorations</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class HelpBoxAttribute : Attribute
     {
@@ -259,6 +282,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Displays a preview of the referenced asset next to the field.
     /// </summary>
+    /// <alchemy-attr-category>Decorations</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class PreviewAttribute : Attribute
     {
@@ -286,6 +310,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Adds a horizontal line to the Inspector.
     /// </summary>
+    /// <alchemy-attr-category>Decorations</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class HorizontalLineAttribute : Attribute
     {
@@ -321,6 +346,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Displays a header with a separator line in the Inspector.
     /// </summary>
+    /// <alchemy-attr-category>Decorations</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class TitleAttribute : Attribute
     {
@@ -351,6 +377,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Displays a quotation in the Inspector.
     /// </summary>
+    /// <alchemy-attr-category>Decorations</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public sealed class BlockquoteAttribute : Attribute
     {
@@ -368,6 +395,7 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Executes a method with the specified name when the value of the field changes.
     /// </summary>
+    /// <alchemy-attr-category>Events</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field)]
     public sealed class OnValueChangedAttribute : Attribute
     {
@@ -382,24 +410,28 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Executes a method when the Inspector is enabled.
     /// </summary>
+    /// <alchemy-attr-category>Events</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class OnInspectorEnableAttribute : Attribute { }
 
     /// <summary>
     /// Executes a method when the Inspector is disabled.
     /// </summary>
+    /// <alchemy-attr-category>Events</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class OnInspectorDisableAttribute : Attribute { }
 
     /// <summary>
     /// Executes a method when the Inspector is destroyed.
     /// </summary>
+    /// <alchemy-attr-category>Events</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class OnInspectorDestroyAttribute : Attribute { }
 
     /// <summary>
     /// Changes how collections are displayed. This attribute can improve row readability and prevent users from changing the collection size or element order in the Inspector.
     /// </summary>
+    /// <alchemy-attr-category>General</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field)]
     public sealed class ListViewSettingsAttribute : Attribute
     {
@@ -424,6 +456,10 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Detects changes in collections and invokes methods accordingly. Refer to Unity's <see href="https://docs.unity3d.com/ScriptReference/UIElements.ListView.html">ListView documentation</see> for details on each event.
     /// </summary>
+    /// <alchemy-attr-note type="WARNING">
+    /// Ensure that each callback method's parameter types exactly match the corresponding <c>ListView</c> event signature shown below. Otherwise, Alchemy reports an error and does not invoke the method.
+    /// </alchemy-attr-note>
+    /// <alchemy-attr-category>Events</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field)]
     public sealed class OnListViewChangedAttribute : Attribute
     {

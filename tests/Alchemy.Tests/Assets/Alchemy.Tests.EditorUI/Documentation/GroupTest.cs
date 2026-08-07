@@ -6,6 +6,12 @@ namespace Alchemy.Tests.EditorUI
     [DocumentationSample]
     public class GroupTest : MonoBehaviour
     {
+        [Order(-1)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureStart;
+
+        #region document
         [Group("Group1")]
         public float foo;
 
@@ -23,5 +29,11 @@ namespace Alchemy.Tests.EditorUI
 
         [Group("Group2")]
         public GameObject gamma;
+        #endregion
+
+        [Order(int.MaxValue)]
+        [HorizontalLine(DocumentationCapture.CyanR, DocumentationCapture.CyanG, DocumentationCapture.CyanB)]
+        [HideLabel]
+        public int __docCaptureEnd;
     }
 }
