@@ -72,6 +72,8 @@
   - name: Title
     href: attributes/title.md
   - name: Validation
+  - name: Child Objects Only
+    href: attributes/child-objects-only.md
   - name: Required
     href: attributes/required.md
   - name: Validate Input

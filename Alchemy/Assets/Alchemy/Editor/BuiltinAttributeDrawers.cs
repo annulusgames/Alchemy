@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Alchemy.Editor.Elements;
 using Alchemy.Inspector;
@@ -177,6 +178,111 @@ namespace Alchemy.Editor.Drawers
         {
             var condition = ReflectionHelper.GetValueBool(Target, ((EnableIfAttribute)Attribute).Condition);
             TargetElement.SetEnabled(condition);
+        }
+    }
+
+    [CustomAttributeDrawer(typeof(ChildObjectsOnlyAttribute))]
+    public sealed class ChildObjectsOnlyDrawer : TrackSerializedObjectAttributeDrawer
+    {
+        const string UnsupportedMessage =
+            "ChildObjectsOnly can only be used on GameObject, Component, or UnityEngine.Object references, including arrays and lists of those types, when the Inspector target is a Component or GameObject.";
+
+        HelpBox helpBox;
+        bool subscribed;
+
+        public override void OnCreateElement()
+        {
+            if (SerializedProperty == null) return;
+
+            var owner = ChildObjectsOnlyValidation.GetOwnerTransform(SerializedObject);
+            if (owner == null || !ChildObjectsOnlyValidation.IsSupportedProperty(SerializedProperty))
+            {
+                helpBox = new HelpBox(UnsupportedMessage, HelpBoxMessageType.Warning);
+                InsertHelpBox();
+                return;
+            }
+
+            var attribute = (ChildObjectsOnlyAttribute)Attribute;
+            var message = attribute.Message ?? ChildObjectsOnlyValidation.DefaultErrorMessage(
+                SerializedProperty.displayName,
+                attribute.IncludeSelf);
+            helpBox = new HelpBox(message, HelpBoxMessageType.Error);
+            InsertHelpBox();
+
+            TargetElement.RegisterCallback<AttachToPanelEvent>(OnAttachToPanel);
+            TargetElement.RegisterCallback<DetachFromPanelEvent>(OnDetachFromPanel);
+            if (TargetElement.panel != null)
+            {
+                Subscribe();
+            }
+
+            TargetElement.TrackPropertyValue(SerializedProperty, _ => OnInspectorChanged());
+            base.OnCreateElement();
+        }
+
+        protected override void OnInspectorChanged()
+        {
+            if (helpBox == null) return;
+            if (!ChildObjectsOnlyValidation.TryAccessProperty(SerializedProperty, out _, out _))
+            {
+                return;
+            }
+
+            var attribute = (ChildObjectsOnlyAttribute)Attribute;
+            var valid = ChildObjectsOnlyValidation.IsSerializedPropertyValid(SerializedProperty, attribute.IncludeSelf);
+            helpBox.style.display = valid ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        void InsertHelpBox()
+        {
+            var parent = TargetElement.parent;
+            parent.Insert(parent.IndexOf(TargetElement), helpBox);
+        }
+
+        void OnAttachToPanel(AttachToPanelEvent evt)
+        {
+            Subscribe();
+            OnInspectorChanged();
+        }
+
+        void OnDetachFromPanel(DetachFromPanelEvent evt) => Unsubscribe();
+
+        void OnExternalChange()
+        {
+            if (!ChildObjectsOnlyValidation.TryAccessProperty(SerializedProperty, out var serializedObject, out _))
+            {
+                return;
+            }
+
+            try
+            {
+                if (!serializedObject.hasModifiedProperties)
+                {
+                    serializedObject.UpdateIfRequiredOrScript();
+                }
+            }
+            catch (Exception)
+            {
+                return;
+            }
+
+            OnInspectorChanged();
+        }
+
+        void Subscribe()
+        {
+            if (subscribed) return;
+            EditorApplication.hierarchyChanged += OnExternalChange;
+            Undo.undoRedoPerformed += OnExternalChange;
+            subscribed = true;
+        }
+
+        void Unsubscribe()
+        {
+            if (!subscribed) return;
+            EditorApplication.hierarchyChanged -= OnExternalChange;
+            Undo.undoRedoPerformed -= OnExternalChange;
+            subscribed = false;
         }
     }
 

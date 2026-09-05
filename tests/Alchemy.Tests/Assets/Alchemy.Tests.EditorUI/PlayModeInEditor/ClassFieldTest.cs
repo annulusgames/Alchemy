@@ -37,6 +37,12 @@ namespace Alchemy.Tests.EditorUI.PlayModeInEditor
             public bool IsValid(int input) => input >= 0;
         }
 
+        sealed class ChildObjectsOnlyTarget
+        {
+            [ChildObjectsOnly]
+            public GameObject value;
+        }
+
         sealed class PrivateFieldTarget
         {
             int privateValue;
@@ -87,6 +93,14 @@ namespace Alchemy.Tests.EditorUI.PlayModeInEditor
         public void Test_ValidateInputAttributeDoesNotRequireSerializedProperty()
         {
             var target = new ValidateInputTarget();
+
+            Assert.DoesNotThrow(() => new ClassField(target, target.GetType(), "Target"));
+        }
+
+        [Test]
+        public void Test_ChildObjectsOnlyAttributeDoesNotRequireSerializedProperty()
+        {
+            var target = new ChildObjectsOnlyTarget();
 
             Assert.DoesNotThrow(() => new ClassField(target, target.GetType(), "Target"));
         }
