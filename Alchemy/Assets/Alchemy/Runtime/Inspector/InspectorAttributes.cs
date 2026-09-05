@@ -212,10 +212,11 @@ namespace Alchemy.Inspector
     /// <summary>
     /// Displays an error when the assigned object is not a GameObject or Component on the owner or its descendants.
     /// Supports GameObject, Component, and <c>UnityEngine.Object</c> fields, including arrays and lists of those types.
-    /// Null references are allowed; combine with <c>Required</c> to also error when the field is unassigned.
+    /// Null references are allowed. Combine with <c>Required</c> on a scalar object reference to also error when that field is unassigned.
+    /// <c>Required</c> does not apply to arrays or lists; null collection elements remain allowed.
     /// </summary>
     /// <alchemy-attr-note type="NOTE">
-    /// <c>IncludeSelf</c> defaults to true, which accepts the owner GameObject and components on it. Set it to false to accept descendants only. Arrays and lists of object references show a single error if any element is invalid. Nested fields on collection elements are validated individually.
+    /// <c>IncludeSelf</c> defaults to true, which accepts the owner GameObject and components on it. Set it to false to accept descendants only. Arrays and lists of object references show a single error if any element is invalid. Null collection elements remain allowed. Nested fields on collection elements are validated individually.
     /// </alchemy-attr-note>
     /// <alchemy-attr-category>Validation</alchemy-attr-category>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]

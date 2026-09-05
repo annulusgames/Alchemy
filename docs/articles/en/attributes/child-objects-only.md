@@ -2,10 +2,10 @@
 
 # Child Objects Only Attribute
 
-Displays an error when the assigned object is not a GameObject or Component on the owner or its descendants. Supports GameObject, Component, and `UnityEngine.Object` fields, including arrays and lists of those types. Null references are allowed; combine with `Required` to also error when the field is unassigned.
+Displays an error when the assigned object is not a GameObject or Component on the owner or its descendants. Supports GameObject, Component, and `UnityEngine.Object` fields, including arrays and lists of those types. Null references are allowed. Combine with `Required` on a scalar object reference to also error when that field is unassigned. `Required` does not apply to arrays or lists; null collection elements remain allowed.
 
 > [!NOTE]
-> `IncludeSelf` defaults to true, which accepts the owner GameObject and components on it. Set it to false to accept descendants only. Arrays and lists of object references show a single error if any element is invalid. Nested fields on collection elements are validated individually.
+> `IncludeSelf` defaults to true, which accepts the owner GameObject and components on it. Set it to false to accept descendants only. Arrays and lists of object references show a single error if any element is invalid. Null collection elements remain allowed. Nested fields on collection elements are validated individually.
 
 [!code-csharp[](../../../../tests/Alchemy.Tests/Assets/Alchemy.Tests.EditorUI/Documentation/ChildObjectsOnlyTest.cs#document)]
 

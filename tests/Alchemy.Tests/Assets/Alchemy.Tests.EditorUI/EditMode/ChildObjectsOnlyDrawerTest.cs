@@ -273,6 +273,319 @@ namespace Alchemy.Tests.EditorUI.EditMode
             }
         }
 
+        [Test]
+        public void Validation_PendingMultiObjectChildMustBeValidForEveryOwner()
+        {
+            var ownerA = CreateOwner();
+            var ownerB = CreateOwner();
+            try
+            {
+                var hostA = ownerA.GetComponent<ChildObjectsOnlyHost>();
+                var hostB = ownerB.GetComponent<ChildObjectsOnlyHost>();
+                var childA = CreateChild(ownerA, "ChildA");
+
+                using var serializedObject = new SerializedObject(new UnityEngine.Object[] { hostA, hostB });
+                var childProperty = serializedObject.FindProperty("child");
+                childProperty.objectReferenceValue = childA;
+
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(
+                    ChildObjectsOnlyValidation.IsSerializedPropertyValid(childProperty, true),
+                    Is.False);
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(hostA.child, Is.Null);
+                Assert.That(hostB.child, Is.Null);
+                Assert.That(childProperty.objectReferenceValue, Is.SameAs(childA));
+            }
+            finally
+            {
+                DestroyHierarchy(ownerA);
+                DestroyHierarchy(ownerB);
+            }
+        }
+
+        [Test]
+        public void Validation_UnrelatedPendingDoesNotHideSharedArrayTail()
+        {
+            var ownerA = CreateOwner();
+            var ownerB = CreateOwner();
+            var unrelated = new GameObject("Unrelated");
+            try
+            {
+                var hostA = ownerA.GetComponent<ChildObjectsOnlyHost>();
+                var hostB = ownerB.GetComponent<ChildObjectsOnlyHost>();
+                hostA.children = new[] { unrelated };
+                hostB.children = Array.Empty<GameObject>();
+
+                using var serializedObject = new SerializedObject(new UnityEngine.Object[] { hostA, hostB });
+                var childrenProperty = serializedObject.FindProperty("children");
+                Assert.That(
+                    ChildObjectsOnlyValidation.IsSerializedPropertyValid(childrenProperty, true),
+                    Is.False);
+
+                serializedObject.FindProperty("unsupported").intValue = 1;
+
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(
+                    ChildObjectsOnlyValidation.IsSerializedPropertyValid(childrenProperty, true),
+                    Is.False);
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(hostA.children, Has.Length.EqualTo(1));
+                Assert.That(hostA.children[0], Is.SameAs(unrelated));
+                Assert.That(hostB.children, Is.Empty);
+                Assert.That(serializedObject.FindProperty("unsupported").intValue, Is.EqualTo(1));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(unrelated);
+                DestroyHierarchy(ownerA);
+                DestroyHierarchy(ownerB);
+            }
+        }
+
+        [Test]
+        public void Validation_AcceptsValidPendingChangeWithoutApplying()
+        {
+            var owner = CreateOwner();
+            var unrelated = new GameObject("Unrelated");
+            try
+            {
+                var host = owner.GetComponent<ChildObjectsOnlyHost>();
+                var child = CreateChild(owner, "Child");
+                host.child = unrelated;
+                host.children = new[] { unrelated };
+
+                using var serializedObject = new SerializedObject(host);
+                var childProperty = serializedObject.FindProperty("child");
+                var childrenProperty = serializedObject.FindProperty("children");
+
+                childProperty.objectReferenceValue = child;
+                childrenProperty.GetArrayElementAtIndex(0).objectReferenceValue = child;
+
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(
+                    ChildObjectsOnlyValidation.IsSerializedPropertyValid(childProperty, true),
+                    Is.True);
+                Assert.That(
+                    ChildObjectsOnlyValidation.IsSerializedPropertyValid(childrenProperty, true),
+                    Is.True);
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(host.child, Is.SameAs(unrelated));
+                Assert.That(host.children[0], Is.SameAs(unrelated));
+                Assert.That(childProperty.objectReferenceValue, Is.SameAs(child));
+                Assert.That(
+                    childrenProperty.GetArrayElementAtIndex(0).objectReferenceValue,
+                    Is.SameAs(child));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(unrelated);
+                DestroyHierarchy(owner);
+            }
+        }
+
+        [Test]
+        public void Validation_UnrelatedPendingPreservesPerTargetScalarValues()
+        {
+            var ownerA = CreateOwner();
+            var ownerB = CreateOwner();
+            try
+            {
+                var hostA = ownerA.GetComponent<ChildObjectsOnlyHost>();
+                var hostB = ownerB.GetComponent<ChildObjectsOnlyHost>();
+                hostA.child = CreateChild(ownerA, "ChildA");
+                hostB.child = CreateChild(ownerB, "ChildB");
+
+                using var serializedObject = new SerializedObject(new UnityEngine.Object[] { hostA, hostB });
+                var childProperty = serializedObject.FindProperty("child");
+                serializedObject.FindProperty("unsupported").intValue = 1;
+
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(
+                    ChildObjectsOnlyValidation.IsSerializedPropertyValid(childProperty, true),
+                    Is.True);
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(hostA.child.name, Is.EqualTo("ChildA"));
+                Assert.That(hostB.child.name, Is.EqualTo("ChildB"));
+            }
+            finally
+            {
+                DestroyHierarchy(ownerA);
+                DestroyHierarchy(ownerB);
+            }
+        }
+
+        [Test]
+        public void Validation_PendingNullClearsInvalidMultiObjectChildWithoutApplying()
+        {
+            var ownerA = CreateOwner();
+            var ownerB = CreateOwner();
+            var unrelated = new GameObject("Unrelated");
+            try
+            {
+                var hostA = ownerA.GetComponent<ChildObjectsOnlyHost>();
+                var hostB = ownerB.GetComponent<ChildObjectsOnlyHost>();
+                hostA.child = unrelated;
+                hostB.child = unrelated;
+
+                using var serializedObject = new SerializedObject(new UnityEngine.Object[] { hostA, hostB });
+                var childProperty = serializedObject.FindProperty("child");
+                childProperty.objectReferenceValue = null;
+
+                Assert.That(
+                    ChildObjectsOnlyValidation.IsSerializedPropertyValid(childProperty, true),
+                    Is.True);
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(hostA.child, Is.SameAs(unrelated));
+                Assert.That(hostB.child, Is.SameAs(unrelated));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(unrelated);
+                DestroyHierarchy(ownerA);
+                DestroyHierarchy(ownerB);
+            }
+        }
+
+        [Test]
+        public void Validation_PendingSharedArrayGrowMustBeValidForEveryOwner()
+        {
+            var ownerA = CreateOwner();
+            var ownerB = CreateOwner();
+            try
+            {
+                var hostA = ownerA.GetComponent<ChildObjectsOnlyHost>();
+                var hostB = ownerB.GetComponent<ChildObjectsOnlyHost>();
+                hostA.children = Array.Empty<GameObject>();
+                hostB.children = Array.Empty<GameObject>();
+                var childA = CreateChild(ownerA, "ChildA");
+
+                using var serializedObject = new SerializedObject(new UnityEngine.Object[] { hostA, hostB });
+                var childrenProperty = serializedObject.FindProperty("children");
+                childrenProperty.arraySize = 1;
+                childrenProperty.GetArrayElementAtIndex(0).objectReferenceValue = childA;
+
+                Assert.That(
+                    ChildObjectsOnlyValidation.IsSerializedPropertyValid(childrenProperty, true),
+                    Is.False);
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(hostA.children, Is.Empty);
+                Assert.That(hostB.children, Is.Empty);
+                Assert.That(
+                    childrenProperty.GetArrayElementAtIndex(0).objectReferenceValue,
+                    Is.SameAs(childA));
+            }
+            finally
+            {
+                DestroyHierarchy(ownerA);
+                DestroyHierarchy(ownerB);
+            }
+        }
+
+        [Test]
+        public void Validation_PendingArrayShrinkIgnoresRemovedInvalidTail()
+        {
+            var ownerA = CreateOwner();
+            var ownerB = CreateOwner();
+            var unrelated = new GameObject("Unrelated");
+            try
+            {
+                var hostA = ownerA.GetComponent<ChildObjectsOnlyHost>();
+                var hostB = ownerB.GetComponent<ChildObjectsOnlyHost>();
+                var childA = CreateChild(ownerA, "ChildA");
+                var childB = CreateChild(ownerB, "ChildB");
+                hostA.children = new[] { childA, unrelated };
+                hostB.children = new[] { childB, unrelated };
+
+                using var serializedObject = new SerializedObject(new UnityEngine.Object[] { hostA, hostB });
+                var childrenProperty = serializedObject.FindProperty("children");
+                childrenProperty.arraySize = 1;
+
+                Assert.That(
+                    ChildObjectsOnlyValidation.IsSerializedPropertyValid(childrenProperty, true),
+                    Is.True);
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(hostA.children, Has.Length.EqualTo(2));
+                Assert.That(hostB.children, Has.Length.EqualTo(2));
+                Assert.That(childrenProperty.arraySize, Is.EqualTo(1));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(unrelated);
+                DestroyHierarchy(ownerA);
+                DestroyHierarchy(ownerB);
+            }
+        }
+
+        [Test]
+        public void Validation_PendingArrayGrowDuplicatesPerTargetLastElement()
+        {
+            var ownerA = CreateOwner();
+            var ownerB = CreateOwner();
+            try
+            {
+                var hostA = ownerA.GetComponent<ChildObjectsOnlyHost>();
+                var hostB = ownerB.GetComponent<ChildObjectsOnlyHost>();
+                var childA = CreateChild(ownerA, "ChildA");
+                var childB = CreateChild(ownerB, "ChildB");
+                hostA.children = new[] { childA };
+                hostB.children = new[] { childB };
+
+                using var serializedObject = new SerializedObject(new UnityEngine.Object[] { hostA, hostB });
+                var childrenProperty = serializedObject.FindProperty("children");
+                childrenProperty.arraySize = 2;
+
+                Assert.That(
+                    ChildObjectsOnlyValidation.IsSerializedPropertyValid(childrenProperty, true),
+                    Is.True);
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(hostA.children, Has.Length.EqualTo(1));
+                Assert.That(hostB.children, Has.Length.EqualTo(1));
+                Assert.That(childrenProperty.arraySize, Is.EqualTo(2));
+            }
+            finally
+            {
+                DestroyHierarchy(ownerA);
+                DestroyHierarchy(ownerB);
+            }
+        }
+
+        [Test]
+        public void Validation_PendingUniformElementEditDoesNotDropInvalidTails()
+        {
+            var ownerA = CreateOwner();
+            var ownerB = CreateOwner();
+            var unrelated = new GameObject("Unrelated");
+            try
+            {
+                var hostA = ownerA.GetComponent<ChildObjectsOnlyHost>();
+                var hostB = ownerB.GetComponent<ChildObjectsOnlyHost>();
+                var childA = CreateChild(ownerA, "ChildA");
+                var childB = CreateChild(ownerB, "ChildB");
+                hostA.children = new[] { childA, unrelated };
+                hostB.children = new[] { childB, unrelated };
+
+                using var serializedObject = new SerializedObject(new UnityEngine.Object[] { hostA, hostB });
+                var childrenProperty = serializedObject.FindProperty("children");
+                childrenProperty.GetArrayElementAtIndex(0).objectReferenceValue = null;
+
+                Assert.That(
+                    ChildObjectsOnlyValidation.IsSerializedPropertyValid(childrenProperty, true),
+                    Is.False);
+                Assert.That(serializedObject.hasModifiedProperties, Is.True);
+                Assert.That(hostA.children, Has.Length.EqualTo(2));
+                Assert.That(hostB.children, Has.Length.EqualTo(2));
+                Assert.That(hostA.children[1], Is.SameAs(unrelated));
+                Assert.That(hostB.children[1], Is.SameAs(unrelated));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(unrelated);
+                DestroyHierarchy(ownerA);
+                DestroyHierarchy(ownerB);
+            }
+        }
+
         [UnityTest]
         public IEnumerator Drawer_ShowsErrorHelpBoxWhilePreservingInvalidValue()
         {

@@ -116,20 +116,10 @@ namespace Alchemy.Editor
                 return false;
             }
 
-            // Pending inspector edits live on the shared SerializedObject. Do not Update/Apply
-            // them; the shared property still has the in-progress values for the edited target.
-            if (hasPendingEdits)
-            {
-                if (!IsPropertyValid(property, GetOwnerTransform(serializedObject), includeSelf))
-                {
-                    return false;
-                }
-            }
-
-            // Multi-object shared properties use the minimum arraySize, so trailing values on
-            // longer targets are invisible unless each target is read through an isolated object.
-            var startIndex = hasPendingEdits ? 1 : 0;
-            for (var i = startIndex; i < targets.Length; i++)
+            // Do not Update/Apply: pending inspector edits must stay on the shared object.
+            // Shared getters expose one value (or min arraySize) across targets, so mixed
+            // values and array tails are read from an isolated copy of each target.
+            for (var i = 0; i < targets.Length; i++)
             {
                 var target = targets[i];
                 if (target == null) return false;
@@ -139,7 +129,12 @@ namespace Alchemy.Editor
                 {
                     var isolatedProperty = isolated.FindProperty(path);
                     if (isolatedProperty == null) return false;
-                    if (!IsPropertyValid(isolatedProperty, GetOwnerTransform(target), includeSelf))
+                    if (!IsTargetPropertyValid(
+                            property,
+                            isolatedProperty,
+                            GetOwnerTransform(target),
+                            includeSelf,
+                            hasPendingEdits))
                     {
                         return false;
                     }
@@ -150,6 +145,144 @@ namespace Alchemy.Editor
                 }
             }
 
+            return true;
+        }
+
+        static bool IsTargetPropertyValid(
+            SerializedProperty sharedProperty,
+            SerializedProperty isolatedProperty,
+            Transform owner,
+            bool includeSelf,
+            bool hasPendingEdits)
+        {
+            if (!hasPendingEdits)
+            {
+                return IsPropertyValid(isolatedProperty, owner, includeSelf);
+            }
+
+            try
+            {
+                if (sharedProperty.propertyType == SerializedPropertyType.ObjectReference)
+                {
+                    var value = sharedProperty.hasMultipleDifferentValues
+                        ? isolatedProperty.objectReferenceValue
+                        : sharedProperty.objectReferenceValue;
+                    return IsValid(value, owner, includeSelf);
+                }
+
+                if (sharedProperty.isArray && sharedProperty.propertyType != SerializedPropertyType.String)
+                {
+                    if (!sharedProperty.hasMultipleDifferentValues)
+                    {
+                        return IsPropertyValid(sharedProperty, owner, includeSelf);
+                    }
+
+                    return IsPendingArrayValid(sharedProperty, isolatedProperty, owner, includeSelf);
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+
+            return false;
+        }
+
+        static bool IsPendingArrayValid(
+            SerializedProperty sharedProperty,
+            SerializedProperty isolatedProperty,
+            Transform owner,
+            bool includeSelf)
+        {
+            var sharedSize = sharedProperty.arraySize;
+            var isolatedSize = isolatedProperty.arraySize;
+            var sizesDiffer = ArraySizesDiffer(sharedProperty);
+            var length = sizesDiffer ? isolatedSize : sharedSize;
+
+            for (var i = 0; i < length; i++)
+            {
+                if (!TryGetPendingArrayElement(
+                        sharedProperty,
+                        isolatedProperty,
+                        i,
+                        sharedSize,
+                        isolatedSize,
+                        out var value))
+                {
+                    return false;
+                }
+
+                if (!IsValid(value, owner, includeSelf))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        static bool ArraySizesDiffer(SerializedProperty arrayProperty)
+        {
+            var sizeProperty = arrayProperty.FindPropertyRelative("Array.size");
+            if (sizeProperty == null)
+            {
+                sizeProperty = arrayProperty.serializedObject.FindProperty(
+                    arrayProperty.propertyPath + ".Array.size");
+            }
+
+            return sizeProperty != null && sizeProperty.hasMultipleDifferentValues;
+        }
+
+        static bool TryGetPendingArrayElement(
+            SerializedProperty sharedProperty,
+            SerializedProperty isolatedProperty,
+            int index,
+            int sharedSize,
+            int isolatedSize,
+            out UnityEngine.Object value)
+        {
+            value = null;
+            if (index < sharedSize)
+            {
+                var sharedElement = sharedProperty.GetArrayElementAtIndex(index);
+                if (sharedElement == null ||
+                    sharedElement.propertyType != SerializedPropertyType.ObjectReference)
+                {
+                    return false;
+                }
+
+                if (!sharedElement.hasMultipleDifferentValues)
+                {
+                    value = sharedElement.objectReferenceValue;
+                    return true;
+                }
+
+                if (index < isolatedSize)
+                {
+                    return TryGetObjectReference(isolatedProperty, index, out value);
+                }
+
+                if (isolatedSize > 0)
+                {
+                    return TryGetObjectReference(isolatedProperty, isolatedSize - 1, out value);
+                }
+
+                return true;
+            }
+
+            return index < isolatedSize && TryGetObjectReference(isolatedProperty, index, out value);
+        }
+
+        static bool TryGetObjectReference(SerializedProperty arrayProperty, int index, out UnityEngine.Object value)
+        {
+            value = null;
+            var element = arrayProperty.GetArrayElementAtIndex(index);
+            if (element == null || element.propertyType != SerializedPropertyType.ObjectReference)
+            {
+                return false;
+            }
+
+            value = element.objectReferenceValue;
             return true;
         }
 
