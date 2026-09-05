@@ -2,10 +2,10 @@
 
 # Child Objects Only Attribute
 
-割り当てられたオブジェクトが、自身または子孫上のGameObject/コンポーネントでない場合にエラーを表示します。GameObject、Component、`UnityEngine.Object`のフィールドと、それらの配列・リストをサポートします。未割り当ては許容されます。スカラーのオブジェクト参照では、未設定もエラーにしたい場合に`Required`と組み合わせます。`Required`は配列やリストには適用されないため、コレクション要素のnullは引き続き許容されます。
+自身のGameObject階層外への参照にエラーを表示します。GameObjectとComponent、およびそれらの配列・リストに対応します。
 
 > [!NOTE]
-> `IncludeSelf`のデフォルトはtrueで、自身のGameObjectおよび自身に付いているコンポーネントを許容します。falseにすると子孫のみが対象です。オブジェクト参照の配列やリストでは、いずれかの要素が不正な場合にエラーが1つ表示されます。コレクション要素のnullは許容されます。コレクション要素上のネストしたフィールドは個別に検証されます。
+> デフォルトでは自身も許容します。子孫のみに制限するには`IncludeSelf = false`を指定します。コレクション要素を含め、nullは許容されます。単一の参照を必須にするには`Required`を併用します。
 
 [!code-csharp[](../../../../tests/Alchemy.Tests/Assets/Alchemy.Tests.EditorUI/Documentation/ChildObjectsOnlyTest.cs#document)]
 
