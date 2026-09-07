@@ -98,6 +98,9 @@ namespace Alchemy.Editor.Elements
                         break;
                     case PropertyField propertyField:
                         propertyField.label = value;
+                        // To reflect changes, simply setting the value to the label property is not enough,
+                        // so you need to directly modify the label of elements with a specific class.
+                        propertyField.Query<Label>(className: "unity-property-field__label").ForEach(x => x.text = value);
                         break;
                     case SerializeReferenceField serializeReferenceField:
                         serializeReferenceField.foldout.text = value;

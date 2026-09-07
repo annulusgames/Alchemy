@@ -25,16 +25,25 @@ namespace Alchemy.Editor.Elements
             {
                 var arrayElement = property.GetArrayElementAtIndex(index);
                 var e = new AlchemyPropertyField(arrayElement, property.GetPropertyType(true), true);
+                var elementLabelTextSelector = property.GetAttribute<ListViewSettingsAttribute>()?.ElementLabelTextSelector;
+                if (!string.IsNullOrEmpty(elementLabelTextSelector))
+                {
+                    e.Label = (string)ReflectionHelper.Invoke(parentObj, elementLabelTextSelector, index);
+                }
                 element.Add(e);
                 element.Bind(arrayElement.serializedObject);
-                if (events != null)
+                e.TrackPropertyValue(arrayElement, x =>
                 {
-                    e.TrackPropertyValue(arrayElement, x =>
+                    if (events != null)
                     {
                         ReflectionHelper.Invoke(parentObj, events.OnItemChanged,
                             new object[] { index, x.GetValue<object>() });
-                    });
-                }
+                    }
+                    if (!string.IsNullOrEmpty(elementLabelTextSelector))
+                    {
+                        e.Label = (string)ReflectionHelper.Invoke(parentObj, elementLabelTextSelector, index);
+                    }
+                });
             };
             listView.unbindItem = (element, index) =>
             {
