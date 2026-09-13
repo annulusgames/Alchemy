@@ -10,7 +10,7 @@ Fully generates `docs/articles/{lang}/attributes/*.md` and Attributes TOC sectio
   Missing/blank fields fall back to English XML.
   - To add a locale: extend `DocLanguage.All` (+ toc marker / table header), add
   `docs/articles/{lang}/` and `resources/i18n/{lang}.json`.
-- Screenshots in `docs/images/generated/img-attribute-{slug}*.png`
+- Screenshots in `docs/images/generated/img-attribute-{slug}.png` (optional numeric suffixes, such as `-1`, are also supported).
 
 ## Usage
 

@@ -40,20 +40,28 @@
   - name: Conditionals
   - name: Disable If
     href: attributes/disable-if.md
+  - name: Disable In
+    href: attributes/disable-in.md
   - name: Disable In Edit Mode
     href: attributes/disable-in-edit-mode.md
   - name: Disable In Play Mode
     href: attributes/disable-in-play-mode.md
   - name: Enable If
     href: attributes/enable-if.md
+  - name: Enable In
+    href: attributes/enable-in.md
   - name: Hide If
     href: attributes/hide-if.md
+  - name: Hide In
+    href: attributes/hide-in.md
   - name: Hide In Edit Mode
     href: attributes/hide-in-edit-mode.md
   - name: Hide In Play Mode
     href: attributes/hide-in-play-mode.md
   - name: Show If
     href: attributes/show-if.md
+  - name: Show In
+    href: attributes/show-in.md
   - name: Decorations
   - name: Blockquote
     href: attributes/blockquote.md
@@ -76,10 +84,10 @@
     href: attributes/child-objects-only.md
   - name: Required
     href: attributes/required.md
-  - name: Required List Length
-    href: attributes/required-list-length.md
   - name: Required In
     href: attributes/required-in.md
+  - name: Required List Length
+    href: attributes/required-list-length.md
   - name: Scene Objects Only
     href: attributes/scene-objects-only.md
   - name: Validate Input

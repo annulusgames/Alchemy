@@ -7,6 +7,8 @@ internal sealed class RepoPaths
         Path.Combine(Root, "Alchemy", "Assets", "Alchemy", "Runtime", "Inspector", "InspectorAttributes.cs");
     public string GroupAttributes =>
         Path.Combine(Root, "Alchemy", "Assets", "Alchemy", "Runtime", "Inspector", "GroupAttributes.cs");
+    public string PrefabConditionalAttributes =>
+        Path.Combine(Root, "Alchemy", "Assets", "Alchemy", "Runtime", "Inspector", "PrefabConditionalAttributes.cs");
     public string PropertyGroupAttribute =>
         Path.Combine(Root, "Alchemy", "Assets", "Alchemy", "Runtime", "Inspector", "PropertyGroupAttribute.cs");
     public string SamplesRoot =>
