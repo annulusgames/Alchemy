@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Alchemy.Inspector;
 using UnityEditor;
 using UnityEngine.UIElements;
@@ -8,6 +9,7 @@ namespace Alchemy.Editor.Elements
 {
     internal sealed class PrefabConditionalElement : VisualElement
     {
+        static readonly ConditionalWeakTable<VisualElement, UnityEngine.Object[]> inspectorTargets = new();
         readonly UnityEngine.Object[] targets;
         readonly PrefabKind? showIn;
         readonly PrefabKind hideIn;
@@ -60,7 +62,8 @@ namespace Alchemy.Editor.Elements
 
             // Use the inspected roots, not a nested managed object or the value of the member.
             // Keep the owners rather than a SerializedObject that may be disposed before detachment.
-            var targets = serializedObject != null ? serializedObject.targetObjects : new[] { target as UnityEngine.Object };
+            var targets = serializedObject != null ? serializedObject.targetObjects
+                : target is UnityEngine.Object owner ? new[] { owner } : null;
             var wrapper = new PrefabConditionalElement(targets, showIn, hideIn, enableIn, disableIn);
             wrapper.style.width = targetElement.style.width;
             wrapper.style.flexGrow = targetElement.style.flexGrow;
@@ -76,6 +79,15 @@ namespace Alchemy.Editor.Elements
 
         void UpdateState()
         {
+            var targets = this.targets;
+            if (targets == null)
+            {
+                for (var ancestor = parent; ancestor != null; ancestor = ancestor.parent)
+                {
+                    if (inspectorTargets.TryGetValue(ancestor, out targets)) break;
+                }
+            }
+            targets ??= Array.Empty<UnityEngine.Object>();
             var visible = !showIn.HasValue || targets.Length != 0;
             var enabled = !enableIn.HasValue || targets.Length != 0;
 
@@ -89,6 +101,17 @@ namespace Alchemy.Editor.Elements
 
             style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             SetEnabled(enabled);
+        }
+
+        internal static void SetInspectorTargets(VisualElement root, SerializedObject serializedObject, object target)
+        {
+            var owners = serializedObject != null ? serializedObject.targetObjects
+                : target is UnityEngine.Object owner ? new[] { owner } : null;
+            if (owners == null) return;
+
+            inspectorTargets.Remove(root);
+            inspectorTargets.Add(root, owners);
+            root.Query<PrefabConditionalElement>().ForEach(element => element.UpdateState());
         }
 
         void OnAttachToPanel(AttachToPanelEvent evt)
