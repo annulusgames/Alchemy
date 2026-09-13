@@ -158,6 +158,13 @@ internal static class PageGenerator
         return Directory.EnumerateFiles(paths.Images, prefix + "*.png")
             .Select(Path.GetFileName)
             .OfType<string>()
+            .Where(name =>
+            {
+                var suffix = Path.GetFileNameWithoutExtension(name)[prefix.Length..];
+                var number = suffix.TrimStart('-');
+                return suffix.Length == 0 ||
+                    (number.Length > 0 && number.All(char.IsDigit));
+            })
             .Order(StringComparer.Ordinal)
             .ToArray();
     }

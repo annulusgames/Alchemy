@@ -56,6 +56,7 @@ namespace Alchemy.Editor
         internal static void ExecutePropertyDrawers(SerializedObject serializedObject, SerializedProperty property, object target, MemberInfo memberInfo, VisualElement memberElement)
         {
             var attributes = memberInfo.GetCustomAttributes();
+            Elements.PrefabConditionalElement.Wrap(serializedObject, target, attributes, memberElement);
             var processorTypes = TypeCache.GetTypesWithAttribute(typeof(CustomAttributeDrawerAttribute));
             foreach (var attribute in attributes)
             {

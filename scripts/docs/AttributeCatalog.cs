@@ -18,7 +18,7 @@ internal static class AttributeCatalog
         var results = new List<AttributeInfo>();
         var errors = new List<string>();
 
-        foreach (var sourcePath in new[] { paths.InspectorAttributes, paths.GroupAttributes })
+        foreach (var sourcePath in new[] { paths.InspectorAttributes, paths.GroupAttributes, paths.PrefabConditionalAttributes })
         {
             var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(sourcePath));
             var root = tree.GetCompilationUnitRoot();

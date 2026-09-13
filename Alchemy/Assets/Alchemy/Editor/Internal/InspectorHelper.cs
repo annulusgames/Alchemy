@@ -126,6 +126,7 @@ namespace Alchemy.Editor
             var rootNode = BuildInspectorNode(target.GetType());
             rootNode.VisualElement = rootElement;
             BuildNodeElements(rootNode, serializedObject, target, findPropertyFunc);
+            PrefabConditionalElement.SetInspectorTargets(rootElement, serializedObject, target);
         }
 
         static void BuildNodeElements(

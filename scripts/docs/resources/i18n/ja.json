@@ -40,6 +40,12 @@
         "condition": "条件の判定に使用するフィールド、プロパティまたはメソッドの名前"
       }
     },
+    "DisableInAttribute": {
+      "summary": "検査対象のいずれかのオブジェクトが指定されたプレハブのコンテキストに一致する場合、メンバーを編集不可にします。",
+      "params": {
+        "prefabKind": "メンバーを編集不可にするプレハブのコンテキスト。ビット単位のOR演算子で複数のフラグを組み合わせられます。"
+      }
+    },
     "DisableInEditModeAttribute": {
       "summary": "Edit Mode中はフィールドが編集不可能になります。"
     },
@@ -50,6 +56,12 @@
       "summary": "対象のメンバーのbool値がtrueの場合にのみフィールドを編集可能になります。",
       "params": {
         "condition": "条件の判定に使用するフィールド、プロパティまたはメソッドの名前"
+      }
+    },
+    "EnableInAttribute": {
+      "summary": "検査対象のすべてのオブジェクトが指定されたプレハブのコンテキストに一致する場合のみ、メンバーを編集可能にします。",
+      "params": {
+        "prefabKind": "メンバーを編集できるプレハブのコンテキスト。ビット単位のOR演算子で複数のフラグを組み合わせられます。"
       }
     },
     "FoldoutGroupAttribute": {
@@ -77,6 +89,12 @@
       "summary": "対象のメンバーのbool値がtrueの場合はInspectorに表示されなくなります。",
       "params": {
         "condition": "条件の判定に使用するフィールド、プロパティまたはメソッドの名前"
+      }
+    },
+    "HideInAttribute": {
+      "summary": "検査対象のいずれかのオブジェクトが指定されたプレハブのコンテキストに一致する場合、メンバーを非表示にします。",
+      "params": {
+        "prefabKind": "メンバーを非表示にするプレハブのコンテキスト。ビット単位のOR演算子で複数のフラグを組み合わせられます。"
       }
     },
     "HideInEditModeAttribute": {
@@ -204,6 +222,13 @@
         "message": "警告に表示するテキスト"
       }
     },
+    "RequiredInAttribute": {
+      "summary": "指定した Prefab コンテキストでオブジェクト参照が未割り当ての場合にエラーを表示します。",
+      "params": {
+        "prefabKind": "フィールドを必須にする Prefab コンテキスト",
+        "message": "エラーに表示するテキスト"
+      }
+    },
     "RequiredListLengthAttribute": {
       "summary": "配列またはリストの要素数が指定した範囲外のときにエラーを表示します。",
       "notes": [
@@ -216,13 +241,6 @@
         "length": "必要な要素数（この数と一致する必要があります）",
         "min": "最小要素数。下限なしの場合は`null`",
         "max": "最大要素数。上限なしの場合は`null`"
-      }
-    },
-    "RequiredInAttribute": {
-      "summary": "指定した Prefab コンテキストでオブジェクト参照が未割り当ての場合にエラーを表示します。",
-      "params": {
-        "prefabKind": "フィールドを必須にする Prefab コンテキスト",
-        "message": "エラーに表示するテキスト"
       }
     },
     "SceneObjectsOnlyAttribute": {
@@ -241,6 +259,12 @@
       "summary": "対象のメンバーのbool値がtrueの場合にのみInspectorに表示されます。",
       "params": {
         "condition": "条件の判定に使用するフィールド、プロパティまたはメソッドの名前"
+      }
+    },
+    "ShowInAttribute": {
+      "summary": "検査対象のすべてのオブジェクトが指定されたプレハブのコンテキストに一致する場合のみ、メンバーを表示します。",
+      "params": {
+        "prefabKind": "メンバーを表示できるプレハブのコンテキスト。ビット単位のOR演算子で複数のフラグを組み合わせられます。"
       }
     },
     "ShowInInspectorAttribute": {
