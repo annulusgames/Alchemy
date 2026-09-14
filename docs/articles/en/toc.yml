@@ -11,6 +11,8 @@
   href: group-attributes.md
 - name: Button Attribute
   href: button-attribute.md
+- name: Value Dropdown Attribute
+  href: value-dropdown.md
 - name: SerializeReference
   href: serialize-reference.md
 - name: Attributes
