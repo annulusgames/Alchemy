@@ -188,8 +188,13 @@ namespace Alchemy.Editor
             var property = findPropertyFunc(member.Name);
             var isManagedReferenceProperty = property?.propertyType == SerializedPropertyType.ManagedReference;
 
+            // Select the value UI before constructing a potentially expensive custom drawer.
+            if (ValueDropdownSource.GetAttribute(member) != null)
+            {
+                element = CreateMemberElement(serializedObject, target, member, findPropertyFunc);
+            }
             // Add default PropertyField if the property has a custom PropertyDrawer
-            if ((member is FieldInfo fieldInfo && InternalAPIHelper.GetDrawerTypeForType(fieldInfo.FieldType, isManagedReferenceProperty) != null) ||
+            else if ((member is FieldInfo fieldInfo && InternalAPIHelper.GetDrawerTypeForType(fieldInfo.FieldType, isManagedReferenceProperty) != null) ||
                 (member is PropertyInfo propertyInfo && InternalAPIHelper.GetDrawerTypeForType(propertyInfo.PropertyType, isManagedReferenceProperty) != null))
             {
                 if (property != null)
@@ -375,11 +380,11 @@ namespace Alchemy.Editor
                         {
                             if (memberInfo is FieldInfo fieldInfo)
                             {
-                                return new AlchemyPropertyField(property, fieldInfo.FieldType);
+                                return new AlchemyPropertyField(property, fieldInfo.FieldType, false, false, memberInfo);
                             }
                             else
                             {
-                                return new AlchemyPropertyField(property, ((PropertyInfo)memberInfo).PropertyType);
+                                return new AlchemyPropertyField(property, ((PropertyInfo)memberInfo).PropertyType, false, false, memberInfo);
                             }
                         }
                     }

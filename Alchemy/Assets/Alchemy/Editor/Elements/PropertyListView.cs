@@ -24,7 +24,7 @@ namespace Alchemy.Editor.Elements
             listView.bindItem = (element, index) =>
             {
                 var arrayElement = property.GetArrayElementAtIndex(index);
-                var e = new AlchemyPropertyField(arrayElement, property.GetPropertyType(true), true);
+                var e = new AlchemyPropertyField(arrayElement, property.GetPropertyType(true), true, true);
                 element.Add(e);
                 element.Bind(arrayElement.serializedObject);
                 if (events != null)

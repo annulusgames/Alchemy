@@ -32,6 +32,14 @@ namespace Alchemy.Editor.Elements
                 return;
             }
 
+            if (ValueDropdownGUI.TryCreateReflection(target, memberInfo,
+                () => OnBeforeValueChange?.Invoke(target),
+                () => OnValueChanged?.Invoke(target), out var dropdown))
+            {
+                Add(dropdown);
+                return;
+            }
+
             object value;
             GenericField element;
             switch (memberInfo)
