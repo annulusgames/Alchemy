@@ -5,7 +5,7 @@
     "com.annulusgames.alchemy.test": "file:../../../Alchemy.Tests/Assets/Alchemy.Tests",
     "com.unity.serialization": "3.1.5",
     "com.unity.modules.uielements": "1.0.0",
-    "com.unity.pipeline": "0.4.0-exp.1"
+    "com.unity.pipeline": "0.8.0-exp.1"
   },
   "testables": [
     "com.annulusgames.alchemy.editor-ui-test",
