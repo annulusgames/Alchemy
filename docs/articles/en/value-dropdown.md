@@ -21,7 +21,7 @@ public class ValueDropdownExample : MonoBehaviour
 
 Providers can be public or private, including inherited members. A method must be non-generic and accept either no arguments or one `ValueDropdownContext` argument. A string itself is not a valid provider result; return a collection of strings instead.
 
-Choices are evaluated when the picker opens, so reopening it refreshes dynamic providers. A null provider result produces an empty picker. Provider errors appear in the Inspector.
+Choices are evaluated when the picker opens, so reopening it refreshes dynamic providers. To show the label of the current value, the field also evaluates the provider when it displays a value for the first time or after the value changes. If that evaluation fails, the field shows the raw value, and the error appears when you open the picker. A null provider result produces an empty picker. Provider errors appear in the Inspector.
 
 To use a static provider on another type, specify its type:
 
@@ -43,7 +43,7 @@ public class SharedDropdownExample : MonoBehaviour
 
 ## Labels, groups, and disabled choices
 
-Return `ValueDropdownItem<T>` entries to display labels separately from stored values. `ValueDropdownList<T>` provides convenient `Add` overloads for these entries.
+Return `ValueDropdownItem<T>` entries to display labels separately from stored values. The field and the picker show the label, and the field stores the value. `ValueDropdownList<T>` provides convenient `Add` overloads for these entries.
 
 ```cs
 using Alchemy.Inspector;
@@ -88,7 +88,7 @@ public class ListDropdownExample : MonoBehaviour
 | ListMode | Behavior |
 | - | - |
 | `ElementsAndAdd` | Element pickers and an add picker. This is the default. |
-| `ElementsOnly` | Element pickers with a normal `+` button instead of an add picker. |
+| `ElementsOnly` | Element pickers with a normal `+` button instead of an add picker. The `+` button appends a default value. |
 | `AddOnly` | Normal element fields with an add picker. |
 
 `ListViewSettings` can configure the list's appearance, selection, and reordering. Setting `ShowAddRemoveFooter = false` hides the add and remove controls.
@@ -136,7 +136,7 @@ For multi-object editing, providers are evaluated for each target and the picker
 | `DropdownTitle` | Custom picker title. |
 | `FlattenTreeView` | Displays labels without navigating slash-separated groups. Default: `false`. |
 
-For properties, combine `[ValueDropdown]` with `[ShowInInspector]`. A property without a setter, or a readonly field, cannot be changed through the picker. Showing a property does not make it serialized.
+For properties, combine `[ValueDropdown]` with `[ShowInInspector]`. A property without a setter, or a readonly field, cannot be reassigned, so the picker cannot change its value. The exception is a collection: if the member returns the same list or array on every read, the picker edits that collection in place, but it cannot resize an array. Showing a property does not make it serialized.
 
 For reference-type choices that need independent instances, set `ValueDropdownList<T>.ValueFactory` to a function that copies the selected value. The factory runs once per selected value and destination when committing a selection; it does not run while displaying choices. Without a factory, the selected reference is reused. The destination must support storing the value, such as a compatible `[SerializeReference]` field for managed references.
 

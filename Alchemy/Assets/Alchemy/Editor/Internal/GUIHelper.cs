@@ -55,19 +55,12 @@ namespace Alchemy.Editor
         public static ListView CreateListViewFromFieldInfo(object target, FieldInfo fieldInfo)
         {
             var settings = fieldInfo.GetCustomAttribute<ListViewSettingsAttribute>();
-            var listView = new ListView
-            {
-                reorderable = settings == null ? true : settings.Reorderable,
-                reorderMode = settings == null ? ListViewReorderMode.Animated : settings.ReorderMode,
-                showBorder = settings == null ? true : settings.ShowBorder,
-                showFoldoutHeader = settings == null ? true : settings.ShowFoldoutHeader,
-                showBoundCollectionSize = settings == null ? true : (settings.ShowFoldoutHeader && settings.ShowBoundCollectionSize),
-                selectionType = settings == null ? SelectionType.Multiple : settings.SelectionType,
-                showAddRemoveFooter = settings == null ? true : settings.ShowAddRemoveFooter,
-                fixedItemHeight = 20f,
-                virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight,
-                showAlternatingRowBackgrounds = settings == null ? AlternatingRowBackground.None : settings.ShowAlternatingRowBackgrounds,
-            };
+            var listView = new ListView();
+            ApplyListViewSettings(listView, settings);
+            listView.showBoundCollectionSize = settings == null ? true : (settings.ShowFoldoutHeader && settings.ShowBoundCollectionSize);
+            listView.showAddRemoveFooter = settings == null ? true : settings.ShowAddRemoveFooter;
+            listView.fixedItemHeight = 20f;
+            listView.virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight;
 
             var events = fieldInfo.GetCustomAttribute<OnListViewChangedAttribute>();
             if (events != null)
@@ -134,6 +127,17 @@ namespace Alchemy.Editor
             }
 
             return listView;
+        }
+
+        // Appearance, selection, and reordering options. The footer and size field depend on how the list is bound.
+        public static void ApplyListViewSettings(ListView listView, ListViewSettingsAttribute settings)
+        {
+            listView.reorderable = settings == null ? true : settings.Reorderable;
+            listView.reorderMode = settings == null ? ListViewReorderMode.Animated : settings.ReorderMode;
+            listView.showBorder = settings == null ? true : settings.ShowBorder;
+            listView.showFoldoutHeader = settings == null ? true : settings.ShowFoldoutHeader;
+            listView.selectionType = settings == null ? SelectionType.Multiple : settings.SelectionType;
+            listView.showAlternatingRowBackgrounds = settings == null ? AlternatingRowBackground.None : settings.ShowAlternatingRowBackgrounds;
         }
 
         public static PropertyField CreateObjectPropertyField(SerializedProperty property, Type type)
@@ -211,6 +215,19 @@ namespace Alchemy.Editor
                 rect.height = 1f;
                 EditorGUI.DrawRect(rect, color);
             });
+        }
+
+        // Retries until the label exists; PropertyField creates its label after construction.
+        public static void ScheduleSetLabelWidth(VisualElement element, float width)
+        {
+            var executed = false;
+            element.schedule.Execute(() =>
+            {
+                var label = element.Q<Label>();
+                if (label == null) return;
+                SetMinAndCurrentWidth(label, width);
+                executed = true;
+            }).Until(() => executed);
         }
 
         public static void SetMinAndCurrentWidth(VisualElement visualElement, float value)

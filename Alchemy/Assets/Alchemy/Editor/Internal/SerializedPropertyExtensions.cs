@@ -73,9 +73,12 @@ namespace Alchemy.Editor
         public static FieldInfo GetFieldInfo(this SerializedProperty property)
         {
             object target = property.serializedObject.targetObject;
+            if (target == null) return null;
             var splits = property.propertyPath.Split('.');
 
+            // Native properties, such as Behaviour.m_Enabled, have no managed field.
             var fieldInfo = ReflectionHelper.GetField(target.GetType(), splits[0], includingBaseNonPublic: true);
+            if (fieldInfo == null) return null;
             target = fieldInfo.GetValue(target);
 
             for (var i = 1; i < splits.Length; i++)

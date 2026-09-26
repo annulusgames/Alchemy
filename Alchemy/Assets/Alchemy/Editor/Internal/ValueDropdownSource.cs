@@ -143,14 +143,25 @@ namespace Alchemy.Editor
         readonly Func<T, T> factory;
         Dictionary<T, int> indices;
         int nullIndex = -1;
+        static readonly Dictionary<Type, MethodInfo> adapters = new();
 
         public ValueDropdownSnapshot(object source)
         {
             if (source is string || (source != null && source is not IEnumerable))
                 throw new ArgumentException("A value provider must return an enumerable, not a scalar or string.");
-            var options = source as ValueDropdownList<T>;
-            comparer = options?.Comparer ?? EqualityComparer<T>.Default;
-            factory = options?.ValueFactory;
+            if (source is ValueDropdownList<T> options)
+            {
+                comparer = options.Comparer;
+                factory = options.ValueFactory;
+            }
+            else if (source != null && GetAdapter(source.GetType()) is MethodInfo adapter)
+            {
+                var arguments = new[] { source, null, null };
+                adapter.Invoke(null, arguments);
+                comparer = (IEqualityComparer<T>)arguments[1];
+                factory = (Func<T, T>)arguments[2];
+            }
+            comparer ??= EqualityComparer<T>.Default;
             var capacity = source is ICollection collection ? collection.Count : 0;
             values = new List<T>(capacity);
             Entries.Capacity = capacity;
@@ -171,6 +182,37 @@ namespace Alchemy.Editor
                     else Add(Cast(item), null, null, true);
                 }
             }
+        }
+
+        // Options for a derived value type, such as ValueDropdownList<FireEffect> for an IEffect field.
+        static MethodInfo GetAdapter(Type sourceType)
+        {
+            if (adapters.TryGetValue(sourceType, out var adapter)) return adapter;
+            if (sourceType.IsGenericType && sourceType.GetGenericTypeDefinition() == typeof(ValueDropdownList<>))
+            {
+                var valueType = sourceType.GetGenericArguments()[0];
+                if (valueType != typeof(T) && !valueType.IsValueType && typeof(T).IsAssignableFrom(valueType))
+                    adapter = typeof(ValueDropdownSnapshot<T>).GetMethod(nameof(Adapt), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
+            }
+            adapters.Add(sourceType, adapter);
+            return adapter;
+        }
+
+        static void Adapt<TDerived>(object source, out IEqualityComparer<T> comparer, out Func<T, T> factory) where TDerived : T
+        {
+            var options = (ValueDropdownList<TDerived>)source;
+            comparer = options.Comparer == null ? null : new DerivedComparer<TDerived>(options.Comparer);
+            var create = options.ValueFactory;
+            factory = create == null ? null : value => value is TDerived derived ? create(derived) : value;
+        }
+
+        sealed class DerivedComparer<TDerived> : IEqualityComparer<T> where TDerived : T
+        {
+            readonly IEqualityComparer<TDerived> comparer;
+            public DerivedComparer(IEqualityComparer<TDerived> comparer) => this.comparer = comparer;
+
+            public bool Equals(T x, T y) => x is TDerived a && y is TDerived b ? comparer.Equals(a, b) : EqualityComparer<T>.Default.Equals(x, y);
+            public int GetHashCode(T value) => value is TDerived derived ? comparer.GetHashCode(derived) : EqualityComparer<T>.Default.GetHashCode(value);
         }
 
         T Cast(object value)
@@ -197,12 +239,14 @@ namespace Alchemy.Editor
             if (indices == null)
             {
                 indices = new Dictionary<T, int>(values.Count, comparer);
-                for (var i = 0; i < values.Count; i++)
-                {
-                    if (!Entries[i].Enabled) continue;
-                    if (values[i] is null) { if (nullIndex < 0) nullIndex = i; }
-                    else if (!indices.ContainsKey(values[i])) indices.Add(values[i], i);
-                }
+                // Prefer an enabled entry for a value, but still match a value whose only entry is disabled.
+                for (var pass = 0; pass < 2; pass++)
+                    for (var i = 0; i < values.Count; i++)
+                    {
+                        if (Entries[i].Enabled != (pass == 0)) continue;
+                        if (values[i] is null) { if (nullIndex < 0) nullIndex = i; }
+                        else if (!indices.ContainsKey(values[i])) indices.Add(values[i], i);
+                    }
             }
             var typed = Cast(value);
             if (typed is null) return nullIndex;

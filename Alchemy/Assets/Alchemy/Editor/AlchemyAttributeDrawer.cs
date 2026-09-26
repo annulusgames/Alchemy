@@ -65,12 +65,8 @@ namespace Alchemy.Editor
                 // Dropdowns create their value control before decoration. Reflected callbacks are
                 // dispatched by that control rather than the SerializedProperty-only drawer.
                 if (hasValueDropdown && property == null && attribute is OnValueChangedAttribute) continue;
-                if (hasValueDropdown && attribute is LabelWidthAttribute width)
-                {
-                    var label = memberElement.Q<Label>();
-                    if (label != null) GUIHelper.SetMinAndCurrentWidth(label, width.Width);
-                    continue;
-                }
+                // Dropdown controls apply LabelWidth to the labels they create.
+                if (hasValueDropdown && attribute is LabelWidthAttribute) continue;
                 var processorType = processorTypes.FirstOrDefault(x => x.IsSubclassOf(typeof(AlchemyAttributeDrawer)) && x.GetCustomAttribute<CustomAttributeDrawerAttribute>().targetAttributeType == attribute.GetType());
                 if (processorType == null) continue;
 

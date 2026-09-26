@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Alchemy.Editor
@@ -72,6 +73,25 @@ namespace Alchemy.Editor
         public static void SetAcceptClicksIfDisabled(Clickable clickable, bool value)
         {
             ReflectionHelper.GetProperty(typeof(Clickable), Name_AcceptClicksIfDisabled).SetValue(clickable, value);
+        }
+
+        // GUIUtility
+        // https://github.com/Unity-Technologies/UnityCsReference/blob/master/Modules/IMGUI/GUIUtility.bindings.cs
+
+        const string Name_CompositionString = "compositionString";
+
+        static Func<string> compositionStringGetter;
+
+        // IMGUI text editing reads the IME state here. Input.compositionString belongs to the legacy Input Manager,
+        // which projects may disable in favor of the Input System package.
+        public static string GetCompositionString()
+        {
+            if (compositionStringGetter == null)
+            {
+                var getter = typeof(GUIUtility).GetProperty(Name_CompositionString, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetGetMethod(true);
+                compositionStringGetter = getter == null ? () => string.Empty : (Func<string>)getter.CreateDelegate(typeof(Func<string>));
+            }
+            return compositionStringGetter();
         }
     }
 }

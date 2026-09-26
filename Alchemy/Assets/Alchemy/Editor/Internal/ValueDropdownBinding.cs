@@ -17,11 +17,15 @@ namespace Alchemy.Editor
         readonly ValueDropdownPath path;
         readonly object owner;
         readonly Func<object> read;
-        readonly Action<object> write;
+        readonly Action<object> assign;
         readonly Action beforeWrite;
+        readonly Action<object> afterWrite;
         readonly UnityEngine.Object[] targets;
-        readonly bool writable;
         readonly OnListViewChangedAttribute listEvents;
+        // Display labels by index. Survives row rebinding; each entry is valid only while its value is current.
+        readonly Dictionary<int, KeyValuePair<object, string>> labels = new();
+        uint ownChangeHash;
+        bool ownChangePending;
 
         public ValueDropdownBinding(SerializedProperty property, MemberInfo member, Type type)
         {
@@ -31,18 +35,18 @@ namespace Alchemy.Editor
             path = new ValueDropdownPath(PropertyPath);
             Member = member;
             DeclaredType = type;
-            writable = true;
             listEvents = member.GetCustomAttribute<OnListViewChangedAttribute>();
             InitializeTypes();
         }
 
-        public ValueDropdownBinding(object owner, MemberInfo member, Type type, Func<object> read, Action<object> write, Action beforeWrite, bool writable)
+        // A null assign marks a member that cannot be reassigned; its live list can still be edited in place.
+        public ValueDropdownBinding(object owner, MemberInfo member, Type type, Func<object> read, Action<object> assign, Action beforeWrite, Action<object> afterWrite)
         {
             this.owner = owner;
             this.read = read;
-            this.write = write;
+            this.assign = assign;
             this.beforeWrite = beforeWrite;
-            this.writable = writable;
+            this.afterWrite = afterWrite;
             Member = member;
             DeclaredType = type;
             listEvents = member.GetCustomAttribute<OnListViewChangedAttribute>();
@@ -71,22 +75,34 @@ namespace Alchemy.Editor
         {
             get
             {
-                if (!writable) return false;
-                if (targets == null) return owner is not UnityEngine.Object unityObject || unityObject;
+                if (targets == null)
+                {
+                    if (owner is UnityEngine.Object unityObject && !unityObject) return false;
+                    return assign != null || HasStableCollection();
+                }
                 foreach (var target in targets) if (!target) return false;
                 using var property = FindProperty();
                 return property != null && property.editable;
             }
         }
 
-        public bool IsPrefabOverride
+        // Arrays change length only by assigning a new instance.
+        public bool CanResize => CanWrite && (targets != null || assign != null || Collection(0) is { IsFixedSize: false });
+
+        // A member that cannot be reassigned is editable only through a list it keeps. A getter that builds
+        // a new list on each read would silently drop the edits.
+        bool HasStableCollection()
         {
-            get
-            {
-                if (SerializedObject == null) return false;
-                using var property = FindProperty();
-                return property != null && property.prefabOverride;
-            }
+            if (!IsCollection) return false;
+            var collection = Collection(0);
+            return collection is { IsReadOnly: false } && ReferenceEquals(collection, Collection(0));
+        }
+
+        public bool IsPrefabOverride(int index)
+        {
+            if (SerializedObject == null) return false;
+            using var property = FindProperty(index);
+            return property != null && property.prefabOverride;
         }
 
         public SerializedProperty FindProperty(int index = -1)
@@ -118,10 +134,52 @@ namespace Alchemy.Editor
 
         public bool IsMixed(int index)
         {
+            if (TargetCount == 1) return false;
+            using (var property = FindProperty(index))
+            {
+                // Compares serialized content, so equal class and managed-reference values are not mixed.
+                if (property != null) return HasMultipleDifferentValues(property);
+            }
             var first = Read(0, index);
             for (var i = 1; i < TargetCount; i++) if (!Equals(first, Read(i, index))) return true;
             return false;
         }
+
+        // A parent's own flag does not report differences in its children.
+        static bool HasMultipleDifferentValues(SerializedProperty property)
+        {
+            if (property.hasMultipleDifferentValues) return true;
+            if (property.propertyType != SerializedPropertyType.Generic && property.propertyType != SerializedPropertyType.ManagedReference) return false;
+            using var child = property.Copy();
+            using var end = property.GetEndProperty();
+            while (child.Next(true) && !SerializedProperty.EqualContents(child, end))
+                if (child.hasMultipleDifferentValues) return true;
+            return false;
+        }
+
+        public string DisplayText(int index, ValueDropdownAttribute attribute)
+        {
+            if (IsMixed(index)) return "—";
+            var value = Read(0, index);
+            if (labels.TryGetValue(index, out var label) && Equals(label.Key, value)) return label.Value;
+            string text;
+            try
+            {
+                // Evaluated once per displayed value, not per repaint.
+                var snapshot = ValueDropdownSource.Get(attribute, ValueType, Context(0, index, false));
+                var found = snapshot.Find(value);
+                text = found >= 0 ? snapshot.Entries[found].Text : ValueDropdownSnapshot.Format(value);
+            }
+            catch (Exception)
+            {
+                // Showing the raw value is enough here; opening the picker reports provider errors.
+                text = ValueDropdownSnapshot.Format(value);
+            }
+            labels[index] = new KeyValuePair<object, string>(value, text);
+            return text;
+        }
+
+        public void RememberLabel(int index, string text) => labels[index] = new KeyValuePair<object, string>(Read(0, index), text);
 
         public ValueDropdownContext Context(int target, int index, bool adding) =>
             new(Root(target), Owner(target), adding ? null : Read(target, index), adding ? -1 : index, adding);
@@ -131,7 +189,13 @@ namespace Alchemy.Editor
             if (SerializedObject != null)
             {
                 var property = FindProperty();
-                if (property != null) host.TrackPropertyValue(property, _ => NotifyChanged());
+                if (property != null) host.TrackPropertyValue(property, changed =>
+                {
+                    // The tracker also reports edits made through this binding, which were already announced.
+                    var own = ownChangePending && changed.contentHash == ownChangeHash;
+                    ownChangePending = false;
+                    if (!own) NotifyChanged();
+                });
             }
         }
 
@@ -149,11 +213,22 @@ namespace Alchemy.Editor
             Changed?.Invoke();
         }
 
-        public void Set(int index, object[] values)
+        void NotifyOwnChange()
+        {
+            using (var property = FindProperty())
+            {
+                ownChangePending = property != null;
+                ownChangeHash = property?.contentHash ?? 0;
+            }
+            NotifyChanged();
+        }
+
+        public void Set(int index, object[] values, string label = null)
         {
             if (values.Length != TargetCount || IsCollection && (index < 0 || index >= Count) || !IsCollection && index != -1)
                 throw new InvalidOperationException("The editing position is no longer valid.");
             for (var i = 0; i < values.Length; i++) ValidateValue(values[i], i);
+            if (label != null) labels[index] = new KeyValuePair<object, string>(values[0], label);
             Mutate((property, target) =>
             {
                 if (index >= 0)
@@ -175,7 +250,7 @@ namespace Alchemy.Editor
                     ReflectionHelper.Invoke(Owner(t), listEvents.OnItemChanged, new object[] { index, values[t] });
         }
 
-        public void Append(object[][] values)
+        public void Append(object[][] values, string[] labels = null)
         {
             if (!IsCollection || values.Length != TargetCount) throw new InvalidOperationException("Invalid list destination.");
             var starts = new int[TargetCount];
@@ -184,6 +259,9 @@ namespace Alchemy.Editor
                 starts[t] = Collection(t)?.Count ?? 0;
                 foreach (var value in values[t]) ValidateValue(value, t);
             }
+            if (labels != null)
+                for (var i = 0; i < labels.Length; i++)
+                    this.labels[starts[0] + i] = new KeyValuePair<object, string>(values[0][i], labels[i]);
             Mutate((property, target) =>
             {
                 var start = property.arraySize;
@@ -213,7 +291,13 @@ namespace Alchemy.Editor
             if (!IsCollection) throw new InvalidOperationException("Invalid list destination.");
             var starts = new int[TargetCount];
             for (var t = 0; t < TargetCount; t++) starts[t] = Collection(t)?.Count ?? 0;
-            Mutate((property, _) => property.arraySize++, () => CopyCollection(Collection(0), starts[0] + 1));
+            Mutate((property, _) =>
+            {
+                property.arraySize++;
+                // Growing a serialized array copies the last element. Start from a default value, as reflected lists do.
+                using var element = property.GetArrayElementAtIndex(property.arraySize - 1);
+                ValueDropdownWriter.Reset(element);
+            }, () => CopyCollection(Collection(0), starts[0] + 1));
             if (listEvents?.OnItemsAdded != null)
                 for (var t = 0; t < TargetCount; t++)
                     ReflectionHelper.Invoke(Owner(t), listEvents.OnItemsAdded, new object[] { new[] { starts[t] } });
@@ -224,6 +308,7 @@ namespace Alchemy.Editor
             if (indices.Length == 0) return;
             Array.Sort(indices);
             if (indices[0] < 0 || indices[indices.Length - 1] >= Count) throw new InvalidOperationException("The list changed before removal.");
+            labels.Clear();
             Mutate((property, _) =>
             {
                 for (var i = indices.Length - 1; i >= 0; i--)
@@ -251,6 +336,7 @@ namespace Alchemy.Editor
         {
             if (from == to) return;
             if (from < 0 || to < 0 || from >= Count || to >= Count) throw new InvalidOperationException("The list changed before reordering.");
+            labels.Clear();
             Mutate((property, _) => property.MoveArrayElement(from, to), () =>
             {
                 var list = CopyCollection(Collection(0), Collection(0).Count);
@@ -263,19 +349,21 @@ namespace Alchemy.Editor
             InvokeForTargets(listEvents?.OnItemIndexChanged, new object[] { from, to });
         }
 
-        public void Revert()
+        public void Revert(int index)
         {
             if (SerializedObject == null || !CanWrite) return;
             Flush();
+            var path = index < 0 ? PropertyPath : PropertyPath + ".Array.data[" + index.ToString(CultureInfo.InvariantCulture) + "]";
             for (var i = 0; i < TargetCount; i++)
             {
                 using var stream = new SerializedObject(targets[i], SerializedObject.context);
-                using var property = stream.FindProperty(PropertyPath);
+                using var property = stream.FindProperty(path);
                 if (property != null && property.prefabOverride)
                     PrefabUtility.RevertPropertyOverride(property, InteractionMode.UserAction);
             }
             SerializedObject.Update();
-            NotifyChanged();
+            labels.Clear();
+            NotifyOwnChange();
         }
 
         void ValidateValue(object value, int target)
@@ -311,9 +399,19 @@ namespace Alchemy.Editor
             if (SerializedObject == null)
             {
                 var value = reflectedValue();
+                // Update a live list in place so readonly members and other holders of the list see the change.
+                var live = IsCollection ? Collection(0) : null;
+                var inPlace = live != null && value is IList items && !live.IsReadOnly && (!live.IsFixedSize || live.Count == items.Count);
+                if (!inPlace && assign == null) throw new InvalidOperationException("This array cannot be resized because its member cannot be assigned.");
                 beforeWrite?.Invoke();
-                write(value);
-                NotifyChanged();
+                if (inPlace)
+                {
+                    CopyInto(live, (IList)value);
+                    value = live;
+                }
+                assign?.Invoke(value);
+                try { afterWrite?.Invoke(value); }
+                finally { NotifyChanged(); }
                 return;
             }
             Flush();
@@ -336,7 +434,17 @@ namespace Alchemy.Editor
                 SerializedObject.Update();
             }
             finally { foreach (var stream in streams) stream?.Dispose(); }
-            NotifyChanged();
+            NotifyOwnChange();
+        }
+
+        static void CopyInto(IList destination, IList items)
+        {
+            while (destination.Count > items.Count) destination.RemoveAt(destination.Count - 1);
+            for (var i = 0; i < items.Count; i++)
+            {
+                if (i < destination.Count) destination[i] = items[i];
+                else destination.Add(items[i]);
+            }
         }
 
         void InvokeForTargets(string method, object[] arguments)
@@ -357,7 +465,6 @@ namespace Alchemy.Editor
 
         readonly Part[] parts;
         readonly int ownerLength;
-        static readonly Dictionary<(Type, string), FieldInfo> fields = new();
 
         public ValueDropdownPath(string path)
         {
@@ -385,17 +492,9 @@ namespace Alchemy.Editor
             return value;
         }
 
-        public static FieldInfo Field(Type type, string name)
-        {
-            var key = (type, name);
-            if (fields.TryGetValue(key, out var field)) return field;
-            for (var current = type; current != null; current = current.BaseType)
-            {
-                field = current.GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-                if (field != null) { fields.Add(key, field); return field; }
-            }
-            throw new MissingFieldException(type.FullName, name);
-        }
+        public static FieldInfo Field(Type type, string name) =>
+            ReflectionHelper.GetField(type, name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, includingBaseNonPublic: true)
+            ?? throw new MissingFieldException(type.FullName, name);
     }
 
     internal static class ValueDropdownWriter
@@ -413,6 +512,53 @@ namespace Alchemy.Editor
                 gradientSetter = (Action<SerializedProperty, Gradient>)setter.CreateDelegate(typeof(Action<SerializedProperty, Gradient>));
             }
             gradientSetter(property, value);
+        }
+
+        public static void Reset(SerializedProperty property)
+        {
+            switch (property.propertyType)
+            {
+                case SerializedPropertyType.Integer:
+                case SerializedPropertyType.Enum: property.longValue = 0; return;
+                case SerializedPropertyType.Character:
+                case SerializedPropertyType.LayerMask: property.intValue = 0; return;
+                case SerializedPropertyType.Boolean: property.boolValue = false; return;
+                case SerializedPropertyType.Float: property.doubleValue = 0; return;
+                case SerializedPropertyType.String: property.stringValue = string.Empty; return;
+                case SerializedPropertyType.Color: property.colorValue = default; return;
+                case SerializedPropertyType.ObjectReference: property.objectReferenceValue = null; return;
+                case SerializedPropertyType.ExposedReference: property.exposedReferenceValue = null; return;
+                case SerializedPropertyType.Vector2: property.vector2Value = default; return;
+                case SerializedPropertyType.Vector3: property.vector3Value = default; return;
+                case SerializedPropertyType.Vector4: property.vector4Value = default; return;
+                case SerializedPropertyType.Vector2Int: property.vector2IntValue = default; return;
+                case SerializedPropertyType.Vector3Int: property.vector3IntValue = default; return;
+                case SerializedPropertyType.Rect: property.rectValue = default; return;
+                case SerializedPropertyType.RectInt: property.rectIntValue = default; return;
+                case SerializedPropertyType.Bounds: property.boundsValue = default; return;
+                case SerializedPropertyType.BoundsInt: property.boundsIntValue = default; return;
+                case SerializedPropertyType.Quaternion: property.quaternionValue = default; return;
+                case SerializedPropertyType.AnimationCurve: property.animationCurveValue = new AnimationCurve(); return;
+                case SerializedPropertyType.Gradient: SetGradient(property, new Gradient()); return;
+                case SerializedPropertyType.Hash128: property.hash128Value = default; return;
+                case SerializedPropertyType.ManagedReference: property.managedReferenceValue = null; return;
+                case SerializedPropertyType.Generic:
+                    if (property.isArray)
+                    {
+                        property.arraySize = 0;
+                        return;
+                    }
+                    using (var child = property.Copy())
+                    {
+                        if (!child.Next(true)) return;
+                        do
+                        {
+                            if (child.depth <= property.depth) break;
+                            Reset(child);
+                        } while (child.Next(false));
+                    }
+                    return;
+            }
         }
 
         public static void Write(SerializedProperty property, object value, Type type)

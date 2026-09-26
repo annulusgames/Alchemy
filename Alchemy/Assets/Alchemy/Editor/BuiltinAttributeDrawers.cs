@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using Alchemy.Editor.Elements;
 using Alchemy.Inspector;
 using UnityEditor;
@@ -125,15 +126,7 @@ namespace Alchemy.Editor.Drawers
 
             if (TargetElement is AlchemyPropertyField field && field.FieldElement is PropertyField)
             {
-                var executed = false;
-                field.schedule.Execute(() =>
-                {
-                    var label = field.Q<Label>();
-                    if (label == null) return;
-                    GUIHelper.SetMinAndCurrentWidth(label, width);
-                    executed = true;
-                }).Until(() => executed);
-
+                GUIHelper.ScheduleSetLabelWidth(field, width);
                 return;
             }
 
@@ -634,25 +627,37 @@ namespace Alchemy.Editor.Drawers
             TargetElement.TrackPropertyValue(SerializedProperty, property =>
             {
                 var methodName = ((OnValueChangedAttribute)Attribute).MethodName;
-
-                var methods = ReflectionHelper.GetAllMethodsIncludingBaseNonPublic(Target.GetType())
-                    .Where(x => x.Name == methodName);
-
-                foreach (var methodInfo in methods)
-                {
-                    if (methodInfo.Name != methodName) continue;
-
-                    var parameters = methodInfo.GetParameters();
-                    if (parameters.Length == 1 && parameters[0].ParameterType.IsAssignableFrom(property.GetPropertyType()))
-                    {
-                        methodInfo.Invoke(Target, new object[] { property.GetValue<object>() });
-                    }
-                    else if (parameters.Length == 0)
-                    {
-                        methodInfo.Invoke(Target, null);
-                    }
-                }
+                var callbacks = FindCallbacks(Target.GetType(), methodName, property.GetPropertyType());
+                InvokeCallbacks(Target, callbacks, () => property.GetValue<object>());
             });
+        }
+
+        // Methods named methodName that take no arguments or one argument accepting valueType.
+        internal static MethodInfo[] FindCallbacks(Type targetType, string methodName, Type valueType)
+        {
+            return ReflectionHelper.GetAllMethodsIncludingBaseNonPublic(targetType)
+                .Where(x => x.Name == methodName && !x.ContainsGenericParameters)
+                .Where(x =>
+                {
+                    var parameters = x.GetParameters();
+                    return parameters.Length == 0 || (parameters.Length == 1 && parameters[0].ParameterType.IsAssignableFrom(valueType));
+                })
+                .ToArray();
+        }
+
+        internal static void InvokeCallbacks(object target, MethodInfo[] callbacks, Func<object> getValue)
+        {
+            object[] arguments = null;
+            foreach (var methodInfo in callbacks)
+            {
+                if (methodInfo.GetParameters().Length == 0)
+                {
+                    methodInfo.Invoke(methodInfo.IsStatic ? null : target, null);
+                    continue;
+                }
+                arguments ??= new[] { getValue() };
+                methodInfo.Invoke(methodInfo.IsStatic ? null : target, arguments);
+            }
         }
     }
 }

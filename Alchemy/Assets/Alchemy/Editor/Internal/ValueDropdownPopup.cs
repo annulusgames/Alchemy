@@ -62,7 +62,13 @@ namespace Alchemy.Editor
                 var enabled = primary.Entries[i].Enabled;
                 for (var t = 0; t < snapshots.Length; t++)
                 {
-                    if (t != 0 && snapshots[t].Find(value) < 0) { common = false; break; }
+                    if (t != 0)
+                    {
+                        var local = snapshots[t].Find(value);
+                        if (local < 0) { common = false; break; }
+                        // Disabled for any target: keep it visible but unselectable.
+                        if (!snapshots[t].Entries[local].Enabled) enabled = false;
+                    }
                     if (existing[t] != null && existing[t](value)) enabled = false;
                 }
                 if (!common) continue;
@@ -75,7 +81,19 @@ namespace Alchemy.Editor
         public readonly List<int> Choices = new();
         public readonly bool[] Enabled;
         public bool Multiple => adding;
-        public int CurrentChoice => adding || binding.IsMixed(index) ? -1 : Snapshot.Find(originalValues[0]);
+
+        public int CurrentChoice
+        {
+            get
+            {
+                if (adding) return -1;
+                // Values that differ only under the provider's comparer are still one choice.
+                if (binding.IsMixed(index))
+                    for (var t = 1; t < originalValues.Length; t++)
+                        if (!Snapshot.Equal(originalValues[0], originalValues[t])) return -1;
+                return Snapshot.Find(originalValues[0]);
+            }
+        }
 
         public void Validate()
         {
@@ -115,12 +133,14 @@ namespace Alchemy.Editor
             }
             // Factories may execute user code; check that they did not invalidate the editing position.
             Validate();
-            if (adding) binding.Append(values);
+            var labels = new string[selected.Count];
+            for (var i = 0; i < labels.Length; i++) labels[i] = Snapshot.Entries[selected[i]].Text;
+            if (adding) binding.Append(values, labels);
             else
             {
                 var scalar = new object[values.Length];
                 for (var t = 0; t < scalar.Length; t++) scalar[t] = values[t][0];
-                binding.Set(index, scalar);
+                binding.Set(index, scalar, labels[0]);
             }
         }
     }
@@ -161,7 +181,6 @@ namespace Alchemy.Editor
         readonly ValueDropdownSession session;
         readonly ValueDropdownAttribute attribute;
         readonly Action<Exception> onError;
-        readonly Action<int> onSelected;
         readonly Action onClosed;
         readonly int currentChoice;
         readonly List<Node> visible = new();
@@ -177,12 +196,11 @@ namespace Alchemy.Editor
         string query = string.Empty;
         bool closed;
 
-        public ValueDropdownPopup(VisualElement anchor, ValueDropdownSession session, ValueDropdownAttribute attribute, Action<int> onSelected, Action<Exception> onError, Action onClosed)
+        public ValueDropdownPopup(VisualElement anchor, ValueDropdownSession session, ValueDropdownAttribute attribute, Action<Exception> onError, Action onClosed)
         {
             this.anchor = anchor;
             this.session = session;
             this.attribute = attribute;
-            this.onSelected = onSelected;
             this.onError = onError;
             this.onClosed = onClosed;
             currentChoice = session.CurrentChoice;
@@ -324,7 +342,7 @@ namespace Alchemy.Editor
 
         void OnKeyDown(KeyDownEvent evt)
         {
-            if (!string.IsNullOrEmpty(Input.compositionString)) return;
+            if (!string.IsNullOrEmpty(InternalAPIHelper.GetCompositionString())) return;
             if (evt.keyCode == KeyCode.Escape) { Close(); evt.StopPropagation(); }
             else if (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter)
             {
@@ -352,11 +370,7 @@ namespace Alchemy.Editor
         void Commit(List<int> choices)
         {
             if (!anchor.enabledInHierarchy) { Close(); return; }
-            try
-            {
-                session.Commit(choices);
-                if (!session.Multiple && choices.Count != 0) onSelected?.Invoke(choices[0]);
-            }
+            try { session.Commit(choices); }
             catch (Exception exception) { onError?.Invoke(exception); }
             finally { Close(); }
         }

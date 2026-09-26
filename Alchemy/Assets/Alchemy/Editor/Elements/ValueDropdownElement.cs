@@ -34,40 +34,32 @@ namespace Alchemy.Editor.Elements
             if (attribute == null || member.IsDefined(typeof(DisableAlchemyEditorAttribute), true)) return false;
             Type type;
             Func<object> read;
-            Action<object> write;
-            bool writable;
+            Action<object> assign = null;
             if (member is FieldInfo field)
             {
                 type = field.FieldType;
                 read = () => field.GetValue(field.IsStatic ? null : target);
-                write = value => field.SetValue(field.IsStatic ? null : target, value);
-                writable = !field.IsInitOnly && !field.IsLiteral && (field.IsStatic || target != null);
+                if (!field.IsInitOnly && !field.IsLiteral && (field.IsStatic || target != null))
+                    assign = value => field.SetValue(field.IsStatic ? null : target, value);
             }
             else if (member is PropertyInfo property && property.CanRead && property.GetIndexParameters().Length == 0 && property.IsDefined(typeof(ShowInInspectorAttribute), true))
             {
                 type = property.PropertyType;
                 read = () => property.GetValue(property.GetGetMethod(true).IsStatic ? null : target);
-                write = value => property.SetValue(property.GetSetMethod(true).IsStatic ? null : target, value);
-                writable = property.CanWrite && (property.GetGetMethod(true).IsStatic || target != null);
+                if (property.CanWrite && (property.GetGetMethod(true).IsStatic || target != null))
+                    assign = value => property.SetValue(property.GetSetMethod(true).IsStatic ? null : target, value);
             }
             else return false;
             var callback = member.GetCustomAttribute<OnValueChangedAttribute>();
-            var callbacks = new List<MethodInfo>();
-            if (callback != null && target != null)
-                foreach (var method in ReflectionHelper.GetAllMethodsIncludingBaseNonPublic(target.GetType()))
-                {
-                    if (method.Name != callback.MethodName || method.ContainsGenericParameters) continue;
-                    var parameters = method.GetParameters();
-                    if (parameters.Length == 0 || parameters.Length == 1 && parameters[0].ParameterType.IsAssignableFrom(type)) callbacks.Add(method);
-                }
-            var binding = new ValueDropdownBinding(target, member, type, read, value =>
+            var callbacks = callback != null && target != null
+                ? Drawers.OnValueChangedDrawer.FindCallbacks(target.GetType(), callback.MethodName, type)
+                : Array.Empty<MethodInfo>();
+            var binding = new ValueDropdownBinding(target, member, type, read, assign, beforeWrite, value =>
             {
-                write(value);
                 if (target is ISerializationCallbackReceiver receiver) receiver.OnBeforeSerialize();
                 afterWrite?.Invoke();
-                foreach (var method in callbacks)
-                    method.Invoke(method.IsStatic ? null : target, method.GetParameters().Length == 0 ? null : new[] { value });
-            }, beforeWrite, writable);
+                Drawers.OnValueChangedDrawer.InvokeCallbacks(target, callbacks, () => value);
+            });
             element = Create(binding, attribute, ObjectNames.NicifyVariableName(member.Name));
             return true;
         }
@@ -80,7 +72,8 @@ namespace Alchemy.Editor.Elements
             return field;
         }
 
-        public static VisualElement DefaultField(ValueDropdownBinding binding, int index, string label)
+        // edited receives a reflected field's own edits before they are written.
+        public static VisualElement DefaultField(ValueDropdownBinding binding, int index, string label, Action<object> edited = null)
         {
             if (binding.SerializedObject != null)
             {
@@ -93,7 +86,11 @@ namespace Alchemy.Editor.Elements
                 return field;
             }
             var reflected = new GenericField(binding.Read(0, index), binding.ValueType, label, true);
-            reflected.OnValueChanged += value => binding.Set(index, new[] { value });
+            reflected.OnValueChanged += value =>
+            {
+                edited?.Invoke(value);
+                binding.Set(index, new[] { value });
+            };
             return reflected;
         }
 
@@ -122,17 +119,16 @@ namespace Alchemy.Editor.Elements
         readonly Func<int> index;
         readonly Button button;
         readonly DisplayField display;
-        readonly VisualElement original;
+        VisualElement original;
+        object originalValue;
         HelpBox error;
         readonly Action<Exception> reportError;
         readonly bool adding;
         ValueDropdownPopup popup;
         string label;
-        object displayedValue;
-        string selectedText;
-        bool hasSelectedText;
         bool subscribed;
 
+        // Collection rows pass reportError. Their collection shows their errors and refreshes them, so they do not subscribe to changes.
         public ValueDropdownElement(ValueDropdownBinding binding, ValueDropdownAttribute attribute, Func<int> index, string label, bool adding = false, Action<Exception> reportError = null)
         {
             this.binding = binding;
@@ -158,34 +154,47 @@ namespace Alchemy.Editor.Elements
             {
                 var row = new VisualElement();
                 row.style.flexDirection = FlexDirection.Row;
-                original = ValueDropdownGUI.DefaultField(binding, index(), label);
-                original.style.flexGrow = 1;
-                original.SetEnabled(binding.CanWrite && attribute.Mode != ValueDropdownMode.AppendReadOnly);
+                original = CreateOriginal();
                 row.Add(original);
                 button.text = "▾";
                 button.tooltip = "Select from available values";
                 button.style.width = 24;
                 row.Add(button);
                 Add(row);
+                // PropertyField creates its label after construction. Reflected fields do not support LabelWidth.
+                var width = binding.Member.GetCustomAttribute<LabelWidthAttribute>();
+                if (width != null && binding.SerializedObject != null) GUIHelper.ScheduleSetLabelWidth(original, width.Width);
             }
             RegisterCallback<AttachToPanelEvent>(_ =>
             {
-                if (!subscribed) { binding.Changed += OnChanged; subscribed = true; }
+                if (!subscribed && reportError == null) { binding.Changed += OnChanged; subscribed = true; }
                 Refresh();
             });
             RegisterCallback<DetachFromPanelEvent>(_ =>
             {
                 popup?.Close();
                 if (subscribed) { binding.Changed -= OnChanged; subscribed = false; }
-                hasSelectedText = false;
-                displayedValue = null;
-                selectedText = null;
             });
             this.AddManipulator(new ContextualMenuManipulator(evt =>
             {
-                if (binding.SerializedObject != null && binding.IsPrefabOverride)
-                    evt.menu.AppendAction("Revert", _ => binding.Revert(), binding.CanWrite && enabledInHierarchy ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+                var i = index();
+                if (i >= -1 && binding.SerializedObject != null && binding.IsPrefabOverride(i))
+                    evt.menu.AppendAction("Revert", _ =>
+                    {
+                        try { binding.Revert(i); }
+                        catch (Exception exception) { ShowError(exception); }
+                    }, binding.CanWrite && enabledInHierarchy ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
             }));
+        }
+
+        VisualElement CreateOriginal()
+        {
+            var i = index();
+            var field = ValueDropdownGUI.DefaultField(binding, i, label, value => originalValue = value);
+            if (binding.SerializedObject == null) originalValue = binding.Read(0, i);
+            field.style.flexGrow = 1;
+            field.SetEnabled(binding.CanWrite && attribute.Mode != ValueDropdownMode.AppendReadOnly);
+            return field;
         }
 
         public string Label
@@ -210,57 +219,57 @@ namespace Alchemy.Editor.Elements
         public void ResetBinding()
         {
             popup?.Close();
-            hasSelectedText = false;
-            displayedValue = null;
-            selectedText = null;
             if (error != null) error.style.display = DisplayStyle.None;
         }
 
         public void Refresh()
         {
-            if (index() < -1) return;
+            var i = index();
+            if (i < -1) return;
             try
             {
-                button.SetEnabled(binding.CanWrite);
-                if (original != null) original.SetEnabled(binding.CanWrite && attribute.Mode != ValueDropdownMode.AppendReadOnly);
-                if (adding || display == null) return;
-                var current = binding.Read(0, index());
-                if (!Equals(displayedValue, current)) hasSelectedText = false;
-                displayedValue = current;
-                button.text = (binding.IsMixed(index()) ? "—" : hasSelectedText ? selectedText : ValueDropdownSnapshot.Format(current)) + "  ▾";
-                display.labelElement.style.unityFontStyleAndWeight = binding.IsPrefabOverride ? FontStyle.Bold : FontStyle.Normal;
+                var canWrite = binding.CanWrite;
+                button.SetEnabled(adding ? binding.CanResize : canWrite);
+                if (original != null)
+                {
+                    // Reflected fields are not bound. Rebuild one when its value changed elsewhere, such as in the picker.
+                    if (binding.SerializedObject == null && !Equals(originalValue, binding.Read(0, i)))
+                    {
+                        var replacement = CreateOriginal();
+                        original.parent.Insert(original.parent.IndexOf(original), replacement);
+                        original.RemoveFromHierarchy();
+                        original = replacement;
+                    }
+                    original.SetEnabled(canWrite && attribute.Mode != ValueDropdownMode.AppendReadOnly);
+                }
+                if (display != null)
+                {
+                    button.text = binding.DisplayText(i, attribute) + "  ▾";
+                    display.labelElement.style.unityFontStyleAndWeight = binding.IsPrefabOverride(i) ? FontStyle.Bold : FontStyle.Normal;
+                }
+                if (error != null) error.style.display = DisplayStyle.None;
             }
             catch (Exception exception) { ShowError(exception); }
         }
 
         void Open()
         {
-            if (index() < -1 || !enabledInHierarchy || !button.enabledInHierarchy) return;
+            var i = index();
+            if (i < -1 || !enabledInHierarchy || !button.enabledInHierarchy) return;
             try
             {
                 popup?.Close();
                 popup = null;
                 if (error != null) error.style.display = DisplayStyle.None;
-                var session = new ValueDropdownSession(binding, attribute, index(), adding);
-                // Lazy providers: inspector construction, repaint, and scrolling never enumerate choices.
-                if (!adding && display != null && !binding.IsMixed(index()))
+                var session = new ValueDropdownSession(binding, attribute, i, adding);
+                // The session evaluated the provider again, so refresh the label shown for the current value.
+                var current = session.CurrentChoice;
+                if (!adding && display != null && current >= 0)
                 {
-                    var found = session.Snapshot.Find(binding.Read(0, index()));
-                    if (found >= 0)
-                    {
-                        displayedValue = binding.Read(0, index());
-                        selectedText = session.Snapshot.Entries[found].Text;
-                        hasSelectedText = true;
-                        Refresh();
-                    }
-                }
-                popup = new ValueDropdownPopup(button, session, attribute, choice =>
-                {
-                    displayedValue = binding.Read(0, index());
-                    selectedText = session.Snapshot.Entries[choice].Text;
-                    hasSelectedText = true;
+                    binding.RememberLabel(i, session.Snapshot.Entries[current].Text);
                     Refresh();
-                }, ShowError, () => popup = null);
+                }
+                popup = new ValueDropdownPopup(button, session, attribute, ShowError, () => popup = null);
                 UnityEditor.PopupWindow.Show(button.worldBound, popup);
             }
             catch (Exception exception)
@@ -292,6 +301,7 @@ namespace Alchemy.Editor.Elements
         readonly ValueDropdownAttribute attribute;
         readonly ListView list;
         readonly List<int> indices = new();
+        readonly VisualElement footer;
         readonly HelpBox error;
         bool subscribed;
         bool refreshQueued;
@@ -302,14 +312,10 @@ namespace Alchemy.Editor.Elements
             this.attribute = attribute;
             var settings = binding.Member.GetCustomAttribute<ListViewSettingsAttribute>();
             list = GUIHelper.CreateDefaultListView(label);
+            // The items are local indices, not a bound collection, so the size field and default footer stay hidden.
             list.showBoundCollectionSize = false;
             list.showAddRemoveFooter = false;
-            list.selectionType = settings?.SelectionType ?? SelectionType.Multiple;
-            list.reorderable = settings?.Reorderable ?? true;
-            list.reorderMode = settings?.ReorderMode ?? ListViewReorderMode.Animated;
-            list.showBorder = settings?.ShowBorder ?? true;
-            list.showFoldoutHeader = settings?.ShowFoldoutHeader ?? true;
-            list.showAlternatingRowBackgrounds = settings?.ShowAlternatingRowBackgrounds ?? AlternatingRowBackground.None;
+            GUIHelper.ApplyListViewSettings(list, settings);
             list.viewDataKey = "alchemy-value-dropdown-" + binding.Key;
             list.virtualizationMethod = attribute.Mode == ValueDropdownMode.Replace && attribute.ListMode != ValueDropdownListMode.AddOnly
                 ? CollectionVirtualizationMethod.FixedHeight : CollectionVirtualizationMethod.DynamicHeight;
@@ -334,7 +340,7 @@ namespace Alchemy.Editor.Elements
             Add(list);
             if (settings == null || settings.ShowAddRemoveFooter)
             {
-                var footer = new VisualElement();
+                footer = new VisualElement();
                 footer.style.flexDirection = FlexDirection.Row;
                 if (attribute.ListMode != ValueDropdownListMode.ElementsOnly)
                 {
@@ -348,7 +354,10 @@ namespace Alchemy.Editor.Elements
                 footer.Add(new Button(() => Execute(() =>
                 {
                     var selected = new List<int>(list.selectedIndices);
-                    if (selected.Count != 0) binding.Remove(selected.ToArray());
+                    if (selected.Count == 0) return;
+                    binding.Remove(selected.ToArray());
+                    // Selection is by index; do not let it move onto the elements that shift into place.
+                    list.ClearSelection();
                 })) { text = "Remove selected" });
                 Add(footer);
             }
@@ -409,6 +418,7 @@ namespace Alchemy.Editor.Elements
                     for (var i = 0; i < count; i++) indices.Add(i);
                 }
                 list.SetEnabled(binding.CanWrite);
+                footer?.SetEnabled(binding.CanResize);
                 list.RefreshItems();
             });
         }
@@ -421,7 +431,9 @@ namespace Alchemy.Editor.Elements
 
         void Execute(Action action)
         {
-            try { action(); error.style.display = DisplayStyle.None; }
+            // Clear first: rows refreshed by the action report their errors here.
+            error.style.display = DisplayStyle.None;
+            try { action(); }
             catch (Exception exception) { ShowError(exception); }
         }
     }
