@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using Alchemy.Inspector;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -12,8 +13,18 @@ namespace Alchemy.Editor.Elements
     public sealed class AlchemyPropertyField : BindableElement
     {
         public AlchemyPropertyField(SerializedProperty property, Type type, bool isArrayElement = false)
+            : this(property, type, isArrayElement, false) { }
+
+        internal AlchemyPropertyField(SerializedProperty property, Type type, bool isArrayElement, bool ignoreValueDropdown, MemberInfo memberInfo = null)
         {
             var labelText = ObjectNames.NicifyVariableName(property.displayName);
+
+            if (!ignoreValueDropdown && ValueDropdownGUI.TryCreateSerialized(property, type, memberInfo, out var dropdown))
+            {
+                element = dropdown;
+                Add(element);
+                return;
+            }
 
             switch (property.propertyType)
             {
@@ -81,6 +92,7 @@ namespace Alchemy.Editor.Elements
             {
                 return element switch
                 {
+                    IValueDropdownLabel dropdown => dropdown.Label,
                     Foldout foldout => foldout.text,
                     PropertyField propertyField => propertyField.label,
                     SerializeReferenceField serializeReferenceField => serializeReferenceField.foldout.text,
@@ -93,6 +105,9 @@ namespace Alchemy.Editor.Elements
             {
                 switch (element)
                 {
+                    case IValueDropdownLabel dropdown:
+                        dropdown.Label = value;
+                        break;
                     case Foldout foldout:
                         foldout.text = value;
                         break;
