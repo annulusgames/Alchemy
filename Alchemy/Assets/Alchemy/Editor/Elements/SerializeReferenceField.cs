@@ -42,6 +42,9 @@ namespace Alchemy.Editor.Elements
                 {
                     if (property != null)
                     {
+                        // Disposed properties throw when read. Skip the label until the field is gone.
+                        if (property.serializedObject == null) return;
+
                         buttonLabel.text = (property.managedReferenceValue == null ? "Null" : property.managedReferenceValue.GetType().Name) +
                             $" ({property.GetManagedReferenceFieldTypeName()})";
                     }
@@ -49,6 +52,11 @@ namespace Alchemy.Editor.Elements
                 catch (InvalidOperationException)
                 {
                     // Ignoring exceptions when disposed (bad solution)
+                    return;
+                }
+                catch (NullReferenceException)
+                {
+                    // Unity 6: "SerializedObject of SerializedProperty has been Disposed."
                     return;
                 }
 
@@ -83,17 +91,46 @@ namespace Alchemy.Editor.Elements
                 }
             });
 
-            schedule.Execute(() =>
+            EventCallback<GeometryChangedEvent> onGeometryChanged = null;
+            VisualElement registeredTree = null;
+
+            void AdjustWidth(VisualElement visualTree)
             {
-                var visualTree = panel.visualTree;
-                visualTree.RegisterCallback<GeometryChangedEvent>(x =>
-                {
-                    buttonContainer.style.width = GUIHelper.CalculateFieldWidth(buttonContainer, visualTree) -
-                        (buttonContainer.GetFirstAncestorOfType<Foldout>() != null ? 18f : 0f);
-                });
                 buttonContainer.style.width = GUIHelper.CalculateFieldWidth(buttonContainer, visualTree) -
                     (buttonContainer.GetFirstAncestorOfType<Foldout>() != null ? 18f : 0f);
-            });
+            }
+
+            void UnregisterWidth()
+            {
+                if (registeredTree != null && onGeometryChanged != null)
+                {
+                    registeredTree.UnregisterCallback(onGeometryChanged);
+                }
+
+                registeredTree = null;
+                onGeometryChanged = null;
+            }
+
+            void RegisterWidth(IPanel targetPanel)
+            {
+                var visualTree = targetPanel?.visualTree;
+                if (visualTree == null) return;
+                if (registeredTree == visualTree) return;
+
+                UnregisterWidth();
+                registeredTree = visualTree;
+                onGeometryChanged = _ => AdjustWidth(visualTree);
+                visualTree.RegisterCallback(onGeometryChanged);
+                AdjustWidth(visualTree);
+            }
+
+            RegisterCallback<AttachToPanelEvent>(evt => RegisterWidth(evt.destinationPanel));
+            RegisterCallback<DetachFromPanelEvent>(_ => UnregisterWidth());
+
+            if (panel != null)
+            {
+                RegisterWidth(panel);
+            }
 
             buttonContainer.style.position = Position.Absolute;
             buttonContainer.style.top = EditorGUIUtility.standardVerticalSpacing * 0.5f;
