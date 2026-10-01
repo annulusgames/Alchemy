@@ -1,5 +1,6 @@
+using System;
+using System.Collections.Generic;
 using System.Reflection;
-using System.Linq;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -24,12 +25,14 @@ namespace Alchemy.Editor
         const string AlchemySerializationWarning = "In the current version, fields with the [AlchemySerializedField] attribute do not support editing multiple objects.";
 #endif
 
+        // One reflection walk per concrete type. Later selection changes only invoke these lists.
+        static readonly Dictionary<Type, InspectorCallbackMethods> inspectorCallbackMethods = new();
+
         void OnEnable()
         {
             foreach (var target in targets)
             {
-                foreach (var method in ReflectionHelper.GetAllMethodsIncludingBaseNonPublic(target.GetType())
-                    .Where(x => x.HasCustomAttribute<OnInspectorEnableAttribute>()))
+                foreach (var method in GetInspectorCallbackMethods(target.GetType()).Enable)
                 {
                     method.Invoke(target, null);
                 }
@@ -40,8 +43,7 @@ namespace Alchemy.Editor
         {
             foreach (var target in targets)
             {
-                foreach (var method in ReflectionHelper.GetAllMethodsIncludingBaseNonPublic(target.GetType())
-                    .Where(x => x.HasCustomAttribute<OnInspectorDisableAttribute>()))
+                foreach (var method in GetInspectorCallbackMethods(target.GetType()).Disable)
                 {
                     method.Invoke(target, null);
                 }
@@ -52,11 +54,56 @@ namespace Alchemy.Editor
         {
             foreach (var target in targets)
             {
-                foreach (var method in ReflectionHelper.GetAllMethodsIncludingBaseNonPublic(target.GetType())
-                    .Where(x => x.HasCustomAttribute<OnInspectorDestroyAttribute>()))
+                foreach (var method in GetInspectorCallbackMethods(target.GetType()).Destroy)
                 {
                     method.Invoke(target, null);
                 }
+            }
+        }
+
+        static InspectorCallbackMethods GetInspectorCallbackMethods(Type type)
+        {
+            if (!inspectorCallbackMethods.TryGetValue(type, out var callbacks))
+            {
+                var enable = new List<MethodInfo>();
+                var disable = new List<MethodInfo>();
+                var destroy = new List<MethodInfo>();
+                foreach (var method in ReflectionHelper.GetAllMethodsIncludingBaseNonPublic(type))
+                {
+                    if (method.HasCustomAttribute<OnInspectorEnableAttribute>())
+                    {
+                        enable.Add(method);
+                    }
+
+                    if (method.HasCustomAttribute<OnInspectorDisableAttribute>())
+                    {
+                        disable.Add(method);
+                    }
+
+                    if (method.HasCustomAttribute<OnInspectorDestroyAttribute>())
+                    {
+                        destroy.Add(method);
+                    }
+                }
+
+                callbacks = new InspectorCallbackMethods(enable.ToArray(), disable.ToArray(), destroy.ToArray());
+                inspectorCallbackMethods.Add(type, callbacks);
+            }
+
+            return callbacks;
+        }
+
+        readonly struct InspectorCallbackMethods
+        {
+            public readonly MethodInfo[] Enable;
+            public readonly MethodInfo[] Disable;
+            public readonly MethodInfo[] Destroy;
+
+            public InspectorCallbackMethods(MethodInfo[] enable, MethodInfo[] disable, MethodInfo[] destroy)
+            {
+                Enable = enable;
+                Disable = disable;
+                Destroy = destroy;
             }
         }
 
