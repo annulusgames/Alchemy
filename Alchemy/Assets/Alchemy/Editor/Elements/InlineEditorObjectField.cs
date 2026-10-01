@@ -15,6 +15,7 @@ namespace Alchemy.Editor.Elements
         public InlineEditorObjectField(SerializedProperty property, Type type)
         {
             Assert.IsTrue(property.propertyType == SerializedPropertyType.ObjectReference);
+            boundProperty = property;
 
             style.minHeight = EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
 
@@ -41,6 +42,9 @@ namespace Alchemy.Editor.Elements
             field.style.width = Length.Percent(100f);
             GUIHelper.ScheduleAdjustLabelWidth(field);
 
+            RegisterCallback<AttachToPanelEvent>(OnAttachToPanel);
+            RegisterCallback<DetachFromPanelEvent>(OnDetachFromPanel);
+
             OnPropertyChanged(property);
             field.RegisterValueChangedCallback(x =>
             {
@@ -53,9 +57,11 @@ namespace Alchemy.Editor.Elements
             Add(field);
         }
 
+        readonly SerializedProperty boundProperty;
         readonly Foldout foldout;
         readonly VisualElement inspectorContainer;
         readonly ObjectField field;
+        SerializedObject inlineSerializedObject;
         bool isNull;
 
         public bool IsObjectNull => isNull;
@@ -90,23 +96,50 @@ namespace Alchemy.Editor.Elements
             Build(property);
         }
 
+        void OnAttachToPanel(AttachToPanelEvent _)
+        {
+            if (inlineSerializedObject != null) return;
+            Build(boundProperty);
+        }
+
+        // DetachFromPanelEvent reaches this element before its children, so drop the
+        // inline inspector here. The next attach builds a new one.
+        void OnDetachFromPanel(DetachFromPanelEvent _) => DisposeInlineSerializedObject();
+
         void Build(SerializedProperty property)
         {
-            inspectorContainer.Unbind();
-            inspectorContainer.Clear();
-            foldout.Clear();
+            var reference = property.objectReferenceValue;
+            if (reference != null && inlineSerializedObject != null && inlineSerializedObject.targetObject == reference)
+                return;
+
+            DisposeInlineSerializedObject();
+
             var toggle = foldout.Q<Toggle>();
 
-            isNull = property.objectReferenceValue == null;
+            isNull = reference == null;
             toggle.style.display = isNull ? DisplayStyle.None : DisplayStyle.Flex;
             if (!isNull)
             {
                 foldout.Add(new VisualElement() { style = { height = EditorGUIUtility.standardVerticalSpacing } });
-                var so = new SerializedObject(property.objectReferenceValue);
+                var so = new SerializedObject(reference);
+                inlineSerializedObject = so;
                 InspectorHelper.BuildElements(so, inspectorContainer, so.targetObject, name => so.FindProperty(name));
                 inspectorContainer.Bind(so);
                 foldout.Add(inspectorContainer);
             }
+        }
+
+        void DisposeInlineSerializedObject()
+        {
+            if (inlineSerializedObject == null) return;
+
+            // Unbind and remove children before Dispose. Parent detach is delivered
+            // first; child detach callbacks must still see a live SerializedObject.
+            inspectorContainer.Unbind();
+            inspectorContainer.Clear();
+            foldout.Clear();
+            inlineSerializedObject.Dispose();
+            inlineSerializedObject = null;
         }
     }
 }
