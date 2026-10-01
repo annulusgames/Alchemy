@@ -20,7 +20,10 @@ namespace Alchemy.Tests.EditorUI.EditMode
             ChildObjectsOnlyValidation.DefaultErrorMessage("Child", true);
 
         [TearDown]
-        public void TearDown() => helper.Dispose();
+        public void TearDown()
+        {
+            helper.Dispose();
+        }
 
         [Test]
         public void Attribute_ExposesMessageAndIncludeSelfDefaults()
@@ -455,6 +458,89 @@ namespace Alchemy.Tests.EditorUI.EditMode
 
             helper.CloseInspector();
             Assert.DoesNotThrow(() => moving.transform.SetParent(siblingRoot.transform));
+        }
+
+        [UnityTest]
+        public IEnumerator Drawer_ThrottlesExternalChangesToOneRefresh()
+        {
+            var host = CreateHost();
+            var siblingRoot = helper.Create("SiblingRoot");
+            var moving = helper.Create("Moving");
+            moving.transform.SetParent(siblingRoot.transform);
+            host.child = moving;
+            helper.ShowInspector(host);
+            yield return null;
+
+            var helpBox = helper.FindHelpBox(ChildErrorMessage);
+            foreach (var wait in ObjectReferenceValidationTestHelper.WaitUntilDisplay(helpBox, DisplayStyle.Flex))
+                yield return wait;
+
+            // Setup can raise a deferred hierarchyChanged. Let that trailing refresh finish.
+            foreach (var wait in WaitForEditorSeconds(0.25))
+                yield return wait;
+            Assert.That(helpBox.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            var displayChanges = 0;
+            var lastDisplay = helpBox.style.display.value;
+
+            // Record several undoable reparents, then undo and redo them in this tick.
+            // PerformUndo/PerformRedo raise undoRedoPerformed synchronously; the help box stays stale.
+            RecordParent(host.transform);
+            RecordParent(siblingRoot.transform);
+            RecordParent(host.transform);
+            Undo.FlushUndoRecordObjects();
+            Undo.IncrementCurrentGroup();
+
+            Undo.PerformUndo();
+            Undo.PerformRedo();
+            Undo.PerformUndo();
+            Undo.PerformRedo();
+            NoteDisplay();
+
+            Assert.That(moving.transform.parent, Is.SameAs(host.transform));
+            Assert.That(displayChanges, Is.Zero);
+            Assert.That(helpBox.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            var deadline = EditorApplication.timeSinceStartup + 2.0;
+            while (displayChanges == 0 && EditorApplication.timeSinceStartup < deadline)
+            {
+                yield return null;
+                NoteDisplay();
+            }
+
+            Assert.That(helpBox.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(displayChanges, Is.EqualTo(1));
+
+            foreach (var wait in WaitForEditorSeconds(0.25))
+            {
+                yield return wait;
+                NoteDisplay();
+            }
+
+            Assert.That(displayChanges, Is.EqualTo(1));
+            Assert.That(moving.transform.parent, Is.SameAs(host.transform));
+            LogAssert.NoUnexpectedReceived();
+
+            void RecordParent(Transform parent)
+            {
+                Undo.IncrementCurrentGroup();
+                Undo.SetTransformParent(moving.transform, parent, "ChildObjectsOnly reparent");
+            }
+
+            void NoteDisplay()
+            {
+                var current = helpBox.style.display.value;
+                if (current == lastDisplay) return;
+                displayChanges++;
+                lastDisplay = current;
+            }
+
+            static IEnumerable WaitForEditorSeconds(double seconds)
+            {
+                var end = EditorApplication.timeSinceStartup + seconds;
+                while (EditorApplication.timeSinceStartup < end)
+                    yield return null;
+            }
         }
 
         [Test]
