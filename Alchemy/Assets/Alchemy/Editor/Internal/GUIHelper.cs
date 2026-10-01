@@ -217,17 +217,118 @@ namespace Alchemy.Editor
             });
         }
 
-        // Retries until the label exists; PropertyField creates its label after construction.
+        // Unity 6000.0 can add a PropertyField label without a later GeometryChangedEvent.
+        // Every() repeats once per scheduler update and Pause() stops it. Until() alone
+        // replaces the run-once stop and would poll forever when no label appears.
+        internal const int LabelWidthRetryLimit = 60;
+
         public static void ScheduleSetLabelWidth(VisualElement element, float width)
         {
-            var executed = false;
-            element.schedule.Execute(() =>
+            if (TrySet()) return;
+
+            EventCallback<GeometryChangedEvent> onGeometryChanged = null;
+            EventCallback<AttachToPanelEvent> onAttach = null;
+            EventCallback<DetachFromPanelEvent> onDetach = null;
+            IVisualElementScheduledItem retry = null;
+            var attempts = 0;
+
+            void StopRetry()
+            {
+                retry?.Pause();
+            }
+
+            void Unregister()
+            {
+                StopRetry();
+                retry = null;
+
+                if (onGeometryChanged != null)
+                {
+                    element.UnregisterCallback(onGeometryChanged);
+                    onGeometryChanged = null;
+                }
+
+                if (onAttach != null)
+                {
+                    element.UnregisterCallback(onAttach);
+                    onAttach = null;
+                }
+
+                if (onDetach != null)
+                {
+                    element.UnregisterCallback(onDetach);
+                    onDetach = null;
+                }
+            }
+
+            void RegisterGeometry()
+            {
+                if (onGeometryChanged != null) return;
+
+                onGeometryChanged = _ =>
+                {
+                    if (TrySet()) Unregister();
+                };
+                element.RegisterCallback(onGeometryChanged);
+            }
+
+            void StartRetry()
+            {
+                if (element.panel == null) return;
+                if (retry != null && retry.isActive) return;
+
+                attempts = 0;
+                if (retry == null)
+                {
+                    retry = element.schedule.Execute(() =>
+                    {
+                        if (element.panel == null) return;
+
+                        if (TrySet())
+                        {
+                            Unregister();
+                            return;
+                        }
+
+                        if (++attempts >= LabelWidthRetryLimit) StopRetry();
+                    }).Every(0);
+                    return;
+                }
+
+                retry.Resume();
+            }
+
+            onAttach = _ =>
+            {
+                if (TrySet())
+                {
+                    Unregister();
+                    return;
+                }
+
+                RegisterGeometry();
+                StartRetry();
+            };
+            onDetach = _ =>
+            {
+                StopRetry();
+                if (onGeometryChanged == null) return;
+                element.UnregisterCallback(onGeometryChanged);
+                onGeometryChanged = null;
+            };
+
+            element.RegisterCallback(onAttach);
+            element.RegisterCallback(onDetach);
+            RegisterGeometry();
+            StartRetry();
+
+            bool TrySet()
             {
                 var label = element.Q<Label>();
-                if (label == null) return;
+                if (label == null) return false;
                 SetMinAndCurrentWidth(label, width);
-                executed = true;
-            }).Until(() => executed);
+                return true;
+            }
         }
 
         public static void SetMinAndCurrentWidth(VisualElement visualElement, float value)
