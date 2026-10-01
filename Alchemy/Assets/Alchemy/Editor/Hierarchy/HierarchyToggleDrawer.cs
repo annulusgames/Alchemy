@@ -1,4 +1,6 @@
-using System.Linq;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 using Alchemy.Hierarchy;
 using UnityEditor;
 using UnityEngine;
@@ -7,6 +9,10 @@ namespace Alchemy.Editor
 {
     public sealed class HierarchyToggleDrawer : HierarchyDrawer
     {
+        static readonly List<Component> componentBuffer = new();
+        static readonly Dictionary<Type, PropertyInfo> enabledPropertyCache = new();
+        static readonly Color disabledIconColor = new(1f, 1f, 1f, 0.5f);
+
 #if UNITY_6000_4_OR_NEWER
         public override void OnGUI(EntityId instanceID, Rect selectionRect)
 #else
@@ -22,6 +28,9 @@ namespace Alchemy.Editor
             if (gameObject.TryGetComponent<HierarchyObject>(out _)) return;
 
             var settings = AlchemySettings.GetOrCreateSettings();
+            var isPrefab = false;
+            if ((settings.ShowHierarchyToggles || settings.ShowComponentIcons) && IsNewPrefabWorkflow())
+                isPrefab = IsPrefab(gameObject);
 
             if (settings.ShowHierarchyToggles)
             {
@@ -29,7 +38,7 @@ namespace Alchemy.Editor
                 rect.x = rect.xMax - 2.7f;
                 rect.width = 16f;
 
-                if (IsNewPrefabWorkflow() && IsPrefab(gameObject))
+                if (isPrefab)
                     rect.x -= 16.7f;
 
                 var active = GUI.Toggle(rect, gameObject.activeSelf, string.Empty);
@@ -46,31 +55,35 @@ namespace Alchemy.Editor
                 var rect = selectionRect;
                 rect.x = rect.xMax - (settings.ShowHierarchyToggles ? 18.7f : 2.7f);
 
-                if (IsNewPrefabWorkflow() && IsPrefab(gameObject))
+                if (isPrefab)
                     rect.x -= 16.7f;
 
                 rect.y += 1f;
                 rect.width = 14f;
                 rect.height = 14f;
 
-                var components = gameObject
-                    .GetComponents<Component>()
-                    .AsEnumerable()
-                    .Reverse();
-
-                var existsScriptIcon = false;
-                foreach (var component in components)
+                gameObject.GetComponents(componentBuffer);
+                try
                 {
-                    var image = AssetPreview.GetMiniThumbnail(component);
-                    if (image == null) continue;
-
-                    if (image == EditorIcons.CsScriptIcon.image)
+                    var existsScriptIcon = false;
+                    for (var i = componentBuffer.Count - 1; i >= 0; i--)
                     {
-                        if (existsScriptIcon) continue;
-                        existsScriptIcon = true;
-                    }
+                        var component = componentBuffer[i];
+                        var image = AssetPreview.GetMiniThumbnail(component);
+                        if (image == null) continue;
 
-                    DrawIcon(ref rect, image, IsEnabled(component) ? Color.white : new(1f, 1f, 1f, 0.5f));
+                        if (image == EditorIcons.CsScriptIcon.image)
+                        {
+                            if (existsScriptIcon) continue;
+                            existsScriptIcon = true;
+                        }
+
+                        DrawIcon(ref rect, image, IsEnabled(component) ? Color.white : disabledIconColor);
+                    }
+                }
+                finally
+                {
+                    componentBuffer.Clear();
                 }
             }
         }
@@ -86,9 +99,18 @@ namespace Alchemy.Editor
             GUI.color = defaultColor;
         }
 
-        static bool IsEnabled(Component component)
+        internal static bool IsEnabled(Component component)
         {
-            var property = component.GetType().GetProperty("enabled", typeof(bool));
+            if (component is Behaviour behaviour) return behaviour.enabled;
+            if (component is Renderer renderer) return renderer.enabled;
+
+            var type = component.GetType();
+            if (!enabledPropertyCache.TryGetValue(type, out var property))
+            {
+                property = type.GetProperty("enabled", typeof(bool));
+                enabledPropertyCache.Add(type, property);
+            }
+
             return (bool)(property?.GetValue(component, null) ?? true);
         }
         private static bool IsPrefab(GameObject gameObj)
