@@ -47,4 +47,53 @@ namespace Alchemy.Editor
             EditorGUI.DrawRect(backgroundRect, backgroundColor);
         }
     }
+
+    // Header and separator caches drop on the same notifications, so one Hierarchy repaint is queued per tick.
+    internal static class HierarchyCacheRefresh
+    {
+        static bool repaintQueued;
+
+        internal static void RequestRepaint()
+        {
+            if (repaintQueued) return;
+            repaintQueued = true;
+            EditorApplication.delayCall += FlushRepaint;
+        }
+
+        static void FlushRepaint()
+        {
+            repaintQueued = false;
+            EditorApplication.RepaintHierarchyWindow();
+        }
+
+        // Property edits and asset events do not add or remove HierarchyHeader / HierarchySeparator.
+        internal static bool ContainsStructuralChange(ref ObjectChangeEventStream stream)
+        {
+            if (!stream.isCreated) return false;
+
+            for (var i = 0; i < stream.length; i++)
+            {
+                if (IsStructuralChange(stream.GetEventType(i))) return true;
+            }
+
+            return false;
+        }
+
+        internal static bool IsStructuralChange(ObjectChangeKind kind)
+        {
+            switch (kind)
+            {
+                case ObjectChangeKind.ChangeScene:
+                case ObjectChangeKind.CreateGameObjectHierarchy:
+                case ObjectChangeKind.ChangeGameObjectStructureHierarchy:
+                case ObjectChangeKind.ChangeGameObjectStructure:
+                case ObjectChangeKind.ChangeGameObjectParent:
+                case ObjectChangeKind.DestroyGameObjectHierarchy:
+                case ObjectChangeKind.UpdatePrefabInstances:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+    }
 }
