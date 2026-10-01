@@ -96,5 +96,138 @@ namespace Alchemy.Tests.EditorUI.EditMode
             field.RemoveFromHierarchy();
             return new WeakReference(field);
         }
+
+        [Test]
+        public void ScheduleSetLabelWidth_SetsExistingLabelImmediately()
+        {
+            var field = new IntegerField("Value");
+            var label = field.Q<Label>();
+            Assert.That(label, Is.Not.Null);
+
+            GUIHelper.ScheduleSetLabelWidth(field, 64f);
+
+            Assert.That(label.style.width.value.value, Is.EqualTo(64f));
+            Assert.That(label.style.minWidth.value.value, Is.EqualTo(64f));
+        }
+
+        [UnityTest]
+        public IEnumerator ScheduleSetLabelWidth_AppliesWhenLabelAppears()
+        {
+            var element = new VisualElement();
+            GUIHelper.ScheduleSetLabelWidth(element, 80f);
+            var window = EditModeEditorTestUtility.ShowInWindow(element);
+            try
+            {
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => element.resolvedStyle.width > 0f))
+                    yield return wait;
+
+                var label = new Label("Name");
+                element.Add(label);
+                element.style.width = 300f;
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+                    label.style.width.value.value == 80f && label.style.minWidth.value.value == 80f))
+                    yield return wait;
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ScheduleSetLabelWidth_AppliesLabelAddedWithoutSizeChange()
+        {
+            var element = new VisualElement();
+            element.style.width = 300f;
+            element.style.height = 20f;
+            var window = EditModeEditorTestUtility.ShowInWindow(element);
+            try
+            {
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => element.resolvedStyle.width > 0f))
+                    yield return wait;
+
+                // Geometry would also apply the width. Block it so this covers the bounded retry.
+                element.RegisterCallback<GeometryChangedEvent>(evt => evt.StopImmediatePropagation());
+                GUIHelper.ScheduleSetLabelWidth(element, 80f);
+                var label = new Label("Name");
+                element.Add(label);
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+                    label.style.width.value.value == 80f && label.style.minWidth.value.value == 80f))
+                    yield return wait;
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ScheduleSetLabelWidth_StopsRetryWhenNoLabelAppears()
+        {
+            var element = new VisualElement();
+            element.style.width = 300f;
+            element.style.height = 20f;
+            var window = EditModeEditorTestUtility.ShowInWindow(element);
+            try
+            {
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => element.resolvedStyle.width > 0f))
+                    yield return wait;
+
+                var ticks = 0;
+                element.schedule.Execute(() => ticks++).Every(0);
+                element.RegisterCallback<GeometryChangedEvent>(evt => evt.StopImmediatePropagation());
+                GUIHelper.ScheduleSetLabelWidth(element, 80f);
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(
+                    () => ticks >= GUIHelper.LabelWidthRetryLimit + 2, 10f))
+                    yield return wait;
+
+                var label = new Label("Name");
+                element.Add(label);
+                var seen = ticks;
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => ticks >= seen + 3, 10f))
+                    yield return wait;
+
+                Assert.That(label.style.width.value.value, Is.Not.EqualTo(80f));
+                Assert.That(label.style.minWidth.value.value, Is.Not.EqualTo(80f));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ScheduleSetLabelWidth_DoesNotKeepDetachedElementAlive()
+        {
+            var window = EditModeEditorTestUtility.ShowInWindow(new VisualElement());
+            try
+            {
+                var weak = CreateDetachedLabelWidthTarget(window.rootVisualElement);
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+                {
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    GC.Collect();
+                    return !weak.IsAlive;
+                }))
+                    yield return wait;
+
+                Assert.That(weak.IsAlive, Is.False);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        static WeakReference CreateDetachedLabelWidthTarget(VisualElement root)
+        {
+            var element = new VisualElement();
+            root.Add(element);
+            GUIHelper.ScheduleSetLabelWidth(element, 80f);
+            element.RemoveFromHierarchy();
+            return new WeakReference(element);
+        }
     }
 }
