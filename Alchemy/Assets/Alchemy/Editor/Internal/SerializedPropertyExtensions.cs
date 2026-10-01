@@ -70,6 +70,21 @@ namespace Alchemy.Editor
 
         static readonly Regex IndexerRegex = new(@"[^0-9]+");
 
+        // Misses are cached so a repeated walk does not run GetField/GetProperty or the base-type LINQ query again.
+        static readonly Dictionary<(Type type, string name, bool includeAllBases, BindingFlags bindings), CachedMember> cacheMemberAccess = new();
+
+        readonly struct CachedMember
+        {
+            public CachedMember(FieldInfo field, PropertyInfo property)
+            {
+                Field = field;
+                Property = property;
+            }
+
+            public readonly FieldInfo Field;
+            public readonly PropertyInfo Property;
+        }
+
         public static FieldInfo GetFieldInfo(this SerializedProperty property)
         {
             object target = property.serializedObject.targetObject;
@@ -168,9 +183,8 @@ namespace Alchemy.Editor
 
                 if (part == "Array")
                 {
-                    var regex = new Regex(@"[^0-9]");
-                    var countText = regex.Replace(parts[i + 1], "");
-                    if (!int.TryParse(countText, out var index))
+                    // Same digits as Regex([^0-9]).Replace, without allocating a Regex or a new string.
+                    if (!TryParseIndex(parts[i + 1], out var index))
                     {
                         index = -1;
                     }
@@ -257,64 +271,99 @@ namespace Alchemy.Editor
             return obj;
         }
 
-        static T GetFieldOrPropertyValue<T>(string fieldName, object obj, bool includeAllBases = false, BindingFlags bindings = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+        static bool TryParseIndex(string text, out int index)
         {
-            var field = obj.GetType().GetField(fieldName, bindings);
-            if (field != null) return (T)field.GetValue(obj);
+            var any = false;
+            var value = 0;
+            for (var i = 0; i < text.Length; i++)
+            {
+                var digit = text[i] - '0';
+                if ((uint)digit > 9) continue;
 
-            var property = obj.GetType().GetProperty(fieldName, bindings);
-            if (property != null) return (T)property.GetValue(obj, null);
+                any = true;
+                if (value > (int.MaxValue - digit) / 10)
+                {
+                    index = 0;
+                    return false;
+                }
+
+                value = value * 10 + digit;
+            }
+
+            index = value;
+            return any;
+        }
+
+        static CachedMember GetCachedMember(Type type, string name, bool includeAllBases, BindingFlags bindings)
+        {
+            var key = (type, name, includeAllBases, bindings);
+            if (cacheMemberAccess.TryGetValue(key, out var cached)) return cached;
+
+            var field = type.GetField(name, bindings);
+            if (field != null)
+            {
+                cached = new CachedMember(field, null);
+                cacheMemberAccess.Add(key, cached);
+                return cached;
+            }
+
+            var property = type.GetProperty(name, bindings);
+            if (property != null)
+            {
+                cached = new CachedMember(null, property);
+                cacheMemberAccess.Add(key, cached);
+                return cached;
+            }
 
             if (includeAllBases)
             {
-                foreach (var type in TypeHelper.GetBaseClassesAndInterfaces(obj.GetType()))
+                foreach (var baseType in TypeHelper.GetBaseClassesAndInterfaces(type))
                 {
-                    field = type.GetField(fieldName, bindings);
-                    if (field != null) return (T)field.GetValue(obj);
+                    field = baseType.GetField(name, bindings);
+                    if (field != null)
+                    {
+                        cached = new CachedMember(field, null);
+                        cacheMemberAccess.Add(key, cached);
+                        return cached;
+                    }
 
-                    property = type.GetProperty(fieldName, bindings);
-                    if (property != null) return (T)property.GetValue(obj, null);
+                    property = baseType.GetProperty(name, bindings);
+                    if (property != null)
+                    {
+                        cached = new CachedMember(null, property);
+                        cacheMemberAccess.Add(key, cached);
+                        return cached;
+                    }
                 }
             }
 
+            cacheMemberAccess.Add(key, default);
+            return default;
+        }
+
+        static T GetFieldOrPropertyValue<T>(string fieldName, object obj, bool includeAllBases = false, BindingFlags bindings = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+        {
+            var member = GetCachedMember(obj.GetType(), fieldName, includeAllBases, bindings);
+            if (member.Field != null) return (T)member.Field.GetValue(obj);
+            if (member.Property != null) return (T)member.Property.GetValue(obj, null);
             return default;
         }
 
         static bool SetFieldOrPropertyValue(string fieldName, object obj, object value, bool includeAllBases = false, BindingFlags bindings = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
         {
-            var field = obj.GetType().GetField(fieldName, bindings);
-            if (field != null)
+            var member = GetCachedMember(obj.GetType(), fieldName, includeAllBases, bindings);
+            if (member.Field != null)
             {
-                field.SetValue(obj, value);
+                member.Field.SetValue(obj, value);
                 return true;
             }
 
-            var property = obj.GetType().GetProperty(fieldName, bindings);
-            if (property != null)
+            if (member.Property != null)
             {
-                property.SetValue(obj, value, null);
+                member.Property.SetValue(obj, value, null);
                 return true;
             }
 
-            if (includeAllBases)
-            {
-                foreach (var type in TypeHelper.GetBaseClassesAndInterfaces(obj.GetType()))
-                {
-                    field = type.GetField(fieldName, bindings);
-                    if (field != null)
-                    {
-                        field.SetValue(obj, value);
-                        return true;
-                    }
-
-                    property = type.GetProperty(fieldName, bindings);
-                    if (property != null)
-                    {
-                        property.SetValue(obj, value, null);
-                        return true;
-                    }
-                }
-            }
             return false;
         }
 
