@@ -16,6 +16,8 @@ namespace Alchemy.Editor.Elements
         readonly PrefabKind? enableIn;
         readonly PrefabKind disableIn;
         bool subscribed;
+        bool updateQueued;
+        internal int AppliedUpdateCount { get; private set; }
 
         PrefabConditionalElement(UnityEngine.Object[] targets, PrefabKind? showIn, PrefabKind hideIn, PrefabKind? enableIn, PrefabKind disableIn)
         {
@@ -118,10 +120,10 @@ namespace Alchemy.Editor.Elements
         {
             if (!subscribed)
             {
-                EditorApplication.hierarchyChanged += UpdateState;
-                EditorApplication.projectChanged += UpdateState;
+                EditorApplication.hierarchyChanged += QueueUpdate;
+                EditorApplication.projectChanged += QueueUpdate;
                 EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-                Undo.undoRedoPerformed += UpdateState;
+                Undo.undoRedoPerformed += QueueUpdate;
                 PrefabUtility.prefabInstanceUpdated += OnPrefabInstanceUpdated;
 #if UNITY_2022_2_OR_NEWER
                 PrefabUtility.prefabInstanceUnpacked += OnPrefabInstanceUnpacked;
@@ -135,23 +137,45 @@ namespace Alchemy.Editor.Elements
         void OnDetachFromPanel(DetachFromPanelEvent evt)
         {
             if (!subscribed) return;
-            EditorApplication.hierarchyChanged -= UpdateState;
-            EditorApplication.projectChanged -= UpdateState;
+            EditorApplication.hierarchyChanged -= QueueUpdate;
+            EditorApplication.projectChanged -= QueueUpdate;
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-            Undo.undoRedoPerformed -= UpdateState;
+            Undo.undoRedoPerformed -= QueueUpdate;
             PrefabUtility.prefabInstanceUpdated -= OnPrefabInstanceUpdated;
 #if UNITY_2022_2_OR_NEWER
             PrefabUtility.prefabInstanceUnpacked -= OnPrefabInstanceUnpacked;
 #endif
             subscribed = false;
+            updateQueued = false;
         }
 
-        void OnPlayModeStateChanged(PlayModeStateChange state) => UpdateState();
+        // hierarchyChanged is at most once per editor update, which is still every frame in play mode.
+        // One trailing refresh covers the burst and applies whatever the final prefab kind is.
+        internal void QueueUpdate() => ScheduleUpdate(100);
 
-        void OnPrefabInstanceUpdated(UnityEngine.GameObject instance) => UpdateState();
+        void OnPlayModeStateChanged(PlayModeStateChange state) => ScheduleUpdate(0);
+
+        void ScheduleUpdate(long delayMs)
+        {
+            PrefabKindUtility.InvalidatePrefabKindCache();
+            if (updateQueued || panel == null) return;
+            updateQueued = true;
+            var update = schedule.Execute(ApplyQueuedUpdate);
+            if (delayMs > 0) update.StartingIn(delayMs);
+        }
+
+        void ApplyQueuedUpdate()
+        {
+            updateQueued = false;
+            if (panel == null) return;
+            AppliedUpdateCount++;
+            UpdateState();
+        }
+
+        void OnPrefabInstanceUpdated(UnityEngine.GameObject instance) => QueueUpdate();
 
 #if UNITY_2022_2_OR_NEWER
-        void OnPrefabInstanceUnpacked(UnityEngine.GameObject instance, PrefabUnpackMode unpackMode) => UpdateState();
+        void OnPrefabInstanceUnpacked(UnityEngine.GameObject instance, PrefabUnpackMode unpackMode) => QueueUpdate();
 #endif
     }
 }
