@@ -17,6 +17,7 @@ namespace Alchemy.Editor
         IVisualElementScheduledItem job;
         UnityEngine.Object target;
         int attempts;
+        bool exhaustedWithoutPreview;
 
         public PreviewImageUpdater(
             VisualElement scheduler,
@@ -42,6 +43,7 @@ namespace Alchemy.Editor
                 image.image = null;
                 target = null;
                 attempts = 0;
+                exhaustedWithoutPreview = false;
                 return;
             }
 
@@ -51,9 +53,13 @@ namespace Alchemy.Editor
                 image.image = null;
                 target = reference;
                 attempts = 0;
+                exhaustedWithoutPreview = false;
             }
-
-            if (job != null) return;
+            else if (job != null || exhaustedWithoutPreview)
+            {
+                // Already polling, or the last job spent its budget without a texture.
+                return;
+            }
 
             // Bound each job, but let later Inspector notifications retry or refresh
             // the same reference. Keep its current image until a replacement is ready.
@@ -80,6 +86,7 @@ namespace Alchemy.Editor
                 completed = preview != null || attempts >= maxAttempts;
                 if (completed)
                 {
+                    exhaustedWithoutPreview = preview == null;
                     job = null;
                 }
             }).Until(() =>
