@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -19,39 +20,76 @@ namespace Alchemy.Editor
 
         const string Name_ScriptAttributeUtility = "UnityEditor.ScriptAttributeUtility";
 
+        // Null is cached: most field types have no PropertyDrawer, and Unity's own lookup does not remember a miss.
+        static readonly Dictionary<(Type, bool), Type> drawerTypeForTypeCache = new();
+        static MethodInfo drawerTypeForTypeMethod;
+        static DrawerTypeForTypeArguments drawerTypeForTypeArguments;
+        static bool drawerTypeForTypeResolved;
+
+        enum DrawerTypeForTypeArguments
+        {
+            TypeOnly,
+            TypeAndManagedReference,
+            TypeNullAndManagedReference,
+        }
+
         public static Type GetDrawerTypeForType(Type classType, bool isManagedReferenceProperty)
         {
-            var instance = EditorAssembly.CreateInstance(Name_ScriptAttributeUtility);
-            var utilityType = instance.GetType();
+            var key = (classType, isManagedReferenceProperty);
+            if (drawerTypeForTypeCache.TryGetValue(key, out var cached)) return cached;
 
-            var bindingFlags = BindingFlags.NonPublic | BindingFlags.Static;
-            var methodInfo = utilityType.GetMethod(nameof(GetDrawerTypeForType), bindingFlags);
+            var drawerType = InvokeDrawerTypeForType(classType, isManagedReferenceProperty);
+            drawerTypeForTypeCache[key] = drawerType;
+            return drawerType;
+        }
+
+        static Type InvokeDrawerTypeForType(Type classType, bool isManagedReferenceProperty)
+        {
+            if (!drawerTypeForTypeResolved) ResolveDrawerTypeForType();
+
+#if UNITY_2022_3_OR_NEWER && !UNITY_2023_2_OR_NEWER
+            // 2022.3 and 2023.1 returned null when the internal method was missing.
+            if (drawerTypeForTypeMethod == null) return null;
+#endif
+            return (Type)drawerTypeForTypeMethod.Invoke(null, CreateDrawerTypeArguments(classType, isManagedReferenceProperty));
+        }
+
+        static void ResolveDrawerTypeForType()
+        {
+            var utilityType = EditorAssembly.GetType(Name_ScriptAttributeUtility);
+            drawerTypeForTypeMethod = utilityType.GetMethod(nameof(GetDrawerTypeForType), BindingFlags.NonPublic | BindingFlags.Static);
 
 #if UNITY_2023_3_OR_NEWER
-            return (Type)methodInfo.Invoke(instance, new object[] { classType, null, isManagedReferenceProperty });
+            drawerTypeForTypeArguments = DrawerTypeForTypeArguments.TypeNullAndManagedReference;
 #elif UNITY_2023_2_OR_NEWER
             // Unity 2023.2.15f1 added a new parameter to the method
             var version = UnityEditorInternal.InternalEditorUtility.GetUnityVersion();
-            if (version.Build >= 15)
-            {
-                return (Type)methodInfo.Invoke(instance, new object[] { classType, isManagedReferenceProperty });
-            }
-            else
-            {
-                return (Type)methodInfo.Invoke(instance, new object[] { classType });
-            }
+            drawerTypeForTypeArguments = version.Build >= 15
+                ? DrawerTypeForTypeArguments.TypeAndManagedReference
+                : DrawerTypeForTypeArguments.TypeOnly;
 #elif UNITY_2022_3_OR_NEWER
             // Unity 2022.3.23f1 added a new parameter to the method
             var version = UnityEditorInternal.InternalEditorUtility.GetUnityVersion();
-            if (version.Build >= 23)
-            {
-                return (Type)methodInfo?.Invoke(instance, new object[] { classType, isManagedReferenceProperty });
-            }
-            return (Type)methodInfo?.Invoke(instance, new object[] { classType });
+            drawerTypeForTypeArguments = version.Build >= 23
+                ? DrawerTypeForTypeArguments.TypeAndManagedReference
+                : DrawerTypeForTypeArguments.TypeOnly;
 #else
-            _ = isManagedReferenceProperty; // discard
-            return (Type)methodInfo.Invoke(instance, new object[] { classType });
+            drawerTypeForTypeArguments = DrawerTypeForTypeArguments.TypeOnly;
 #endif
+            drawerTypeForTypeResolved = true;
+        }
+
+        static object[] CreateDrawerTypeArguments(Type classType, bool isManagedReferenceProperty)
+        {
+            switch (drawerTypeForTypeArguments)
+            {
+                case DrawerTypeForTypeArguments.TypeAndManagedReference:
+                    return new object[] { classType, isManagedReferenceProperty };
+                case DrawerTypeForTypeArguments.TypeNullAndManagedReference:
+                    return new object[] { classType, null, isManagedReferenceProperty };
+                default:
+                    return new object[] { classType };
+            }
         }
 
         const string Name_M_Clickable = "m_Clickable";
