@@ -39,6 +39,25 @@ namespace Alchemy.Tests.EditorUI.EditMode
         }
 
         [Test]
+        public void GetPrefabKind_RecomputesAfterSceneObjectIsConnectedToPrefab()
+        {
+            var scene = helper.Create("Scene");
+            AssertKind(scene, PrefabKind.NonPrefabInstance);
+
+            var path = $"Assets/_AlchemyPrefabKindConnect_{System.Guid.NewGuid():N}.prefab";
+            try
+            {
+                PrefabUtility.SaveAsPrefabAssetAndConnect(scene, path, InteractionMode.AutomatedAction);
+                AssertKind(scene, PrefabKind.InstanceInScene);
+                AssertKind(scene, PrefabKind.InstanceInScene);
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(path);
+            }
+        }
+
+        [Test]
         public void GetPrefabKind_NonPrefabSceneObject_IsNonPrefabInstance()
         {
             var gameObject = helper.Create("Scene");
