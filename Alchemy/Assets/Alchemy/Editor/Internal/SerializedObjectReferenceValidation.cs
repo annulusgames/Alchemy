@@ -62,8 +62,15 @@ namespace Alchemy.Editor
             }
 
             // Do not Update/Apply: pending inspector edits must stay on the shared object.
-            // Shared getters expose one value (or min arraySize) across targets, so mixed
-            // values and array tails are read from an isolated copy of each target.
+            // A single target already exposes those edits, so validate it in place.
+            // Mixed values and array tails need an isolated copy of each target.
+            if (targets.Length == 1)
+            {
+                var target = targets[0];
+                if (target == null) return false;
+                return IsPropertyValid(property, createValidator(target));
+            }
+
             for (var i = 0; i < targets.Length; i++)
             {
                 var target = targets[i];
