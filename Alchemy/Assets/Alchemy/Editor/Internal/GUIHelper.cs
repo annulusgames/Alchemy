@@ -205,16 +205,32 @@ namespace Alchemy.Editor
             }
         }
 
-        public static IMGUIContainer CreateLine(Color color, float height)
+        // Match EditorGUILayout.GetControlRect(false, height): layerMaskField margins, stroke from the band midpoint downward.
+        public static VisualElement CreateLine(Color color, float height)
         {
-            return new IMGUIContainer(() =>
+            var margin = EditorStyles.layerMaskField.margin;
+            var line = new VisualElement
             {
-                var rect = EditorGUILayout.GetControlRect(false, height);
-                rect.xMin += 3f;
-                rect.y += rect.height * 0.5f;
-                rect.height = 1f;
-                EditorGUI.DrawRect(rect, color);
+                style =
+                {
+                    height = height,
+                    marginTop = margin.top,
+                    marginBottom = margin.bottom,
+                }
+            };
+            line.Add(new VisualElement
+            {
+                style =
+                {
+                    position = Position.Absolute,
+                    top = height * 0.5f,
+                    left = margin.left + 3f,
+                    right = margin.right,
+                    height = 1f,
+                    backgroundColor = color,
+                }
             });
+            return line;
         }
 
         // Retries until the label exists; PropertyField creates its label after construction.
