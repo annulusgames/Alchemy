@@ -9,13 +9,31 @@ namespace Alchemy.Editor
     {
         private static readonly Dictionary<string, Texture2D> TextureCached = new();
 
+#if UNITY_6000_4_OR_NEWER
+        private static readonly Dictionary<EntityId, bool> LastSiblingCached = new();
+#else
+        private static readonly Dictionary<int, bool> LastSiblingCached = new();
+#endif
+
+        // Sibling order changes with the hierarchy, so one subscription can drop the whole cache.
+        static HierarchyTreeMapDrawer()
+        {
+            EditorApplication.hierarchyChanged += ClearLastSiblingCache;
+        }
+
+        internal static void ClearLastSiblingCache()
+        {
+            if (LastSiblingCached.Count == 0) return;
+            LastSiblingCached.Clear();
+            // hierarchyChanged is deferred, so a repaint may already have drawn stale lines.
+            EditorApplication.RepaintHierarchyWindow();
+        }
+
         public static Texture2D TreeMapCurrent
         {
             get
             {
-                TextureCached.TryGetValue(nameof(TreeMapCurrent), out var tex);
-
-                if (tex != null) return tex;
+                if (TextureCached.TryGetValue(nameof(TreeMapCurrent), out var tex)) return tex;
                 tex = AssetHelper.FindAssetWithPath<Texture2D>("tree_map_current.png", "Editor/Hierarchy/Textures");
                 TextureCached[nameof(TreeMapCurrent)] = tex;
                 return tex;
@@ -26,9 +44,7 @@ namespace Alchemy.Editor
         {
             get
             {
-                TextureCached.TryGetValue(nameof(TreeMapLast), out var tex);
-
-                if (tex != null) return tex;
+                if (TextureCached.TryGetValue(nameof(TreeMapLast), out var tex)) return tex;
                 tex = AssetHelper.FindAssetWithPath<Texture2D>("tree_map_last.png", "Editor/Hierarchy/Textures");
                 TextureCached[nameof(TreeMapLast)] = tex;
                 return tex;
@@ -39,9 +55,7 @@ namespace Alchemy.Editor
         {
             get
             {
-                TextureCached.TryGetValue(nameof(TreeMapLevel), out var tex);
-
-                if (tex != null) return tex;
+                if (TextureCached.TryGetValue(nameof(TreeMapLevel), out var tex)) return tex;
                 tex = AssetHelper.FindAssetWithPath<Texture2D>("tree_map_level.png", "Editor/Hierarchy/Textures");
                 TextureCached[nameof(TreeMapLevel)] = tex;
                 return tex;
@@ -52,13 +66,28 @@ namespace Alchemy.Editor
         {
             get
             {
-                TextureCached.TryGetValue(nameof(TreeMapLine), out var tex);
-
-                if (tex != null) return tex;
+                if (TextureCached.TryGetValue(nameof(TreeMapLine), out var tex)) return tex;
                 tex = AssetHelper.FindAssetWithPath<Texture2D>("tree_map_line.png", "Editor/Hierarchy/Textures");
                 TextureCached[nameof(TreeMapLine)] = tex;
                 return tex;
             }
+        }
+
+        internal static bool IsLastSibling(Transform transform)
+        {
+#if UNITY_6000_4_OR_NEWER
+            var id = transform.GetEntityId();
+#else
+            var id = transform.GetInstanceID();
+#endif
+            if (LastSiblingCached.TryGetValue(id, out var isLast)) return isLast;
+
+            var parent = transform.parent;
+            if (parent == null) isLast = transform.GetSiblingIndex() == transform.gameObject.scene.rootCount - 1;
+            else isLast = transform.GetSiblingIndex() == parent.childCount - 1;
+
+            LastSiblingCached[id] = isLast;
+            return isLast;
         }
 
 #if UNITY_6000_4_OR_NEWER
@@ -104,18 +133,7 @@ namespace Alchemy.Editor
                     else if (i == 1)
                     {
                         GUI.color = settings.TreeMapColor;
-                        if (parent == null)
-                        {
-                            if (t.GetSiblingIndex() == gameObject.scene.rootCount - 1)
-                            {
-                                GUI.DrawTexture(selectionRect, TreeMapLast);
-                            }
-                            else
-                            {
-                                GUI.DrawTexture(selectionRect, TreeMapCurrent);
-                            }
-                        }
-                        else if (t.GetSiblingIndex() == parent.childCount - 1)
+                        if (IsLastSibling(t))
                         {
                             GUI.DrawTexture(selectionRect, TreeMapLast);
                         }
@@ -128,11 +146,7 @@ namespace Alchemy.Editor
                     }
                     else
                     {
-                        if (parent == null)
-                        {
-                            if (t.GetSiblingIndex() != gameObject.scene.rootCount - 1) GUI.DrawTexture(selectionRect, TreeMapLevel);
-                        }
-                        else if (t.GetSiblingIndex() != parent.childCount - 1) GUI.DrawTexture(selectionRect, TreeMapLevel);
+                        if (!IsLastSibling(t)) GUI.DrawTexture(selectionRect, TreeMapLevel);
 
                         t = parent;
                     }
