@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Alchemy.Editor.Elements;
 using Alchemy.Inspector;
 using UnityEditor;
@@ -61,24 +60,30 @@ namespace Alchemy.Editor.Drawers
     [CustomGroupDrawer(typeof(TabGroupAttribute))]
     public sealed class TabGroupDrawer : AlchemyGroupDrawer
     {
+        // Adding a button past value.length assigns value and notifies. Stay at the 64-option
+        // maximum, with one bit set, so building the bar does not rewrite the saved tab.
+#if UNITY_2023_2_OR_NEWER
+        const int ToggleStateLength = 64;
+#endif
+
         VisualElement rootElement;
+#if UNITY_2023_2_OR_NEWER
+        ToggleButtonGroup tabBar;
+#else
+        VisualElement tabBar;
+#endif
         readonly Dictionary<string, VisualElement> tabElements = new();
+        readonly List<string> tabNames = new();
+        readonly List<Button> tabButtons = new();
 
-        string[] keyArrayCache = new string[0];
+        string configKey;
         int tabIndex;
-        int prevTabIndex;
-
-        sealed class TabItem
-        {
-            public string name;
-            public VisualElement element;
-        }
+        float toolbarHeight;
 
         public override VisualElement CreateRootElement(string label)
         {
-            var configKey = UniqueId + "_TabGroup";
+            configKey = UniqueId + "_TabGroup";
             int.TryParse(EditorUserSettings.GetConfigValue(configKey), out tabIndex);
-            prevTabIndex = tabIndex;
 
             rootElement = new HelpBox()
             {
@@ -93,35 +98,31 @@ namespace Alchemy.Editor.Drawers
             };
             rootElement.Q<Label>()?.RemoveFromHierarchy();
 
-            var tabGUIElement = new IMGUIContainer(() =>
+            // Match the old IMGUI toolbar rect: 3.7px bleed over the HelpBox padding, 1px short of the layout slot.
+            const float bleed = 3.7f;
+            toolbarHeight = EditorGUIUtility.singleLineHeight + bleed - 1f;
+#if UNITY_2023_2_OR_NEWER
+            var initialBit = (uint)tabIndex < (uint)ToggleStateLength ? tabIndex : 0;
+            tabBar = new ToggleButtonGroup(new ToggleButtonGroupState(1UL << initialBit, ToggleStateLength))
             {
-                var rect = EditorGUILayout.GetControlRect();
-                rect.xMin -= 3.7f;
-                rect.xMax += 3.7f;
-                rect.yMin -= 3.7f;
-                rect.yMax -= 1f;
-                tabIndex = GUI.Toolbar(rect, tabIndex, keyArrayCache);
-                if (tabIndex != prevTabIndex)
-                {
-                    EditorUserSettings.SetConfigValue(configKey, tabIndex.ToString());
-                    prevTabIndex = tabIndex;
-                }
-
-                foreach (var kv in tabElements)
-                {
-                    kv.Value.style.display = keyArrayCache[tabIndex] == kv.Key ? DisplayStyle.Flex : DisplayStyle.None;
-                }
-            })
-            {
-                style = {
-                    width = Length.Percent(100f),
-                    marginLeft = 0f,
-                    marginRight = 0f,
-                    marginTop = 0f
-                }
+                allowEmptySelection = false,
+                isMultipleSelection = false,
             };
-            rootElement.Add(tabGUIElement);
-
+            tabBar.RegisterValueChangedCallback(OnTabGroupChanged);
+            tabBar.contentContainer.style.flexGrow = 1f;
+            tabBar.contentContainer.style.flexDirection = FlexDirection.Row;
+#else
+            tabBar = new VisualElement();
+#endif
+            tabBar.style.flexDirection = FlexDirection.Row;
+            tabBar.style.flexShrink = 0f;
+            tabBar.style.width = Length.Percent(100f);
+            tabBar.style.height = toolbarHeight;
+            tabBar.style.marginLeft = -bleed;
+            tabBar.style.marginRight = -bleed;
+            tabBar.style.marginTop = -bleed;
+            tabBar.style.marginBottom = 1f;
+            rootElement.Add(tabBar);
             return rootElement;
         }
 
@@ -141,10 +142,102 @@ namespace Alchemy.Editor.Drawers
                 rootElement.Add(element);
                 tabElements.Add(tabName, element);
 
-                keyArrayCache = tabElements.Keys.ToArray();
+                var index = tabNames.Count;
+                tabNames.Add(tabName);
+                tabBar.Add(CreateTabButton(tabName, index));
+                ApplyTabState();
             }
 
             return element;
+        }
+
+        Button CreateTabButton(string tabName, int index)
+        {
+#if UNITY_2023_2_OR_NEWER
+            var button = new Button()
+#else
+            var button = new Button(() => SelectTab(index))
+#endif
+            {
+                text = tabName,
+                style = {
+                    flexGrow = 1f,
+                    flexShrink = 1f,
+                    flexBasis = Length.Percent(0f),
+                    minWidth = 0f,
+                    height = toolbarHeight,
+                    minHeight = toolbarHeight,
+                    maxHeight = toolbarHeight,
+                    marginLeft = 0f,
+                    marginRight = 0f,
+                    marginTop = 0f,
+                    marginBottom = 0f,
+                    paddingTop = 0f,
+                    paddingBottom = 0f,
+                    paddingLeft = 4f,
+                    paddingRight = 4f,
+                    unityTextAlign = TextAnchor.MiddleCenter,
+                    overflow = Overflow.Hidden,
+                    whiteSpace = WhiteSpace.NoWrap,
+                }
+            };
+            tabButtons.Add(button);
+            return button;
+        }
+
+        void SelectTab(int index)
+        {
+            if (index == tabIndex) return;
+
+            tabIndex = index;
+            EditorUserSettings.SetConfigValue(configKey, tabIndex.ToString());
+            ApplyTabState();
+        }
+
+#if UNITY_2023_2_OR_NEWER
+        void OnTabGroupChanged(ChangeEvent<ToggleButtonGroupState> evt)
+        {
+            var state = evt.newValue;
+            var count = tabButtons.Count;
+            var limit = state.length < count ? state.length : count;
+            for (var i = 0; i < limit; i++)
+            {
+                if (!state[i]) continue;
+                SelectTab(i);
+                return;
+            }
+        }
+#endif
+
+        // Visibility updates when tabs are added or the selection changes, not on repaint.
+        void ApplyTabState()
+        {
+            var count = tabButtons.Count;
+            if (count == 0) return;
+
+            var selectedIndex = (uint)tabIndex < (uint)count ? tabIndex : 0;
+#if UNITY_2023_2_OR_NEWER
+            tabBar.SetValueWithoutNotify(new ToggleButtonGroupState(1UL << selectedIndex, ToggleStateLength));
+#else
+            var last = count - 1;
+#endif
+            for (var i = 0; i < count; i++)
+            {
+                var selected = i == selectedIndex;
+                tabElements[tabNames[i]].style.display = selected ? DisplayStyle.Flex : DisplayStyle.None;
+
+#if !UNITY_2023_2_OR_NEWER
+                var button = tabButtons[i];
+                var first = i == 0;
+                button.style.borderTopLeftRadius = first ? 3f : 0f;
+                button.style.borderBottomLeftRadius = first ? 3f : 0f;
+                button.style.borderTopRightRadius = i == last ? 3f : 0f;
+                button.style.borderBottomRightRadius = i == last ? 3f : 0f;
+                if (first) button.style.borderLeftWidth = StyleKeyword.Null;
+                else button.style.borderLeftWidth = 0f;
+                button.style.unityFontStyleAndWeight = selected ? FontStyle.Bold : StyleKeyword.Null;
+#endif
+            }
         }
     }
 
