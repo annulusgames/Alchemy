@@ -583,35 +583,40 @@ namespace Alchemy.Editor.Drawers
     [CustomAttributeDrawer(typeof(BlockquoteAttribute))]
     public sealed class BlockquoteDrawer : AlchemyAttributeDrawer
     {
-        public BlockquoteDrawer()
-        {
-            textStyle = EditorStyles.label;
-            textStyle.wordWrap = true;
-        }
-
-        readonly GUIStyle textStyle;
+        const float BarWidth = 3f;
+        const float TextInset = 7f;
 
         public override void OnCreateElement()
         {
             var att = (BlockquoteAttribute)Attribute;
-            var blockquote = new IMGUIContainer(() =>
+            var spacing = EditorGUIUtility.standardVerticalSpacing;
+            var textColor = GUIHelper.TextColor;
+            var backgroundColor = textColor;
+            backgroundColor.a = 0.06f;
+            // Match EditorGUILayout.GetControlRect: layerMaskField margins inset the block.
+            var margin = EditorStyles.layerMaskField.margin;
+
+            // The border is the bar, so the remaining padding keeps the text 7px from the block's left edge.
+            var blockquote = new VisualElement
             {
-                var width = EditorGUIUtility.currentViewWidth;
-                var labelContent = new GUIContent(att.Text);
-                var labelHeight = textStyle.CalcHeight(labelContent, width - 3f);
-                var position = EditorGUILayout.GetControlRect(false, labelHeight + EditorGUIUtility.standardVerticalSpacing * 2f);
-
-                var blockRect = position;
-                var backgroundColor = GUIHelper.TextColor;
-                backgroundColor.a = 0.06f;
-                EditorGUI.DrawRect(blockRect, backgroundColor);
-                blockRect.x = position.xMin;
-                blockRect.width = 3;
-                EditorGUI.DrawRect(blockRect, GUIHelper.TextColor);
-
-                var labelPosition = position;
-                labelPosition.xMin += 7f;
-                EditorGUI.LabelField(labelPosition, labelContent, textStyle);
+                style = {
+                    backgroundColor = backgroundColor,
+                    borderLeftWidth = BarWidth,
+                    borderLeftColor = textColor,
+                    paddingTop = spacing,
+                    paddingBottom = spacing,
+                    paddingLeft = TextInset - BarWidth,
+                    marginTop = margin.top,
+                    marginBottom = margin.bottom,
+                    marginLeft = margin.left,
+                    marginRight = margin.right
+                }
+            };
+            blockquote.Add(new Label(att.Text)
+            {
+                style = {
+                    whiteSpace = WhiteSpace.Normal
+                }
             });
 
             var parent = TargetElement.parent;
