@@ -9,6 +9,7 @@ using Alchemy.Editor.Elements;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
@@ -70,7 +71,7 @@ namespace Alchemy.Tests.EditorUI.EditMode
             }
             finally
             {
-                // Detach before dispose so the button's IMGUI cannot run against a disposed property.
+                // Detach before dispose so a binding callback cannot read the disposed property.
                 field.RemoveFromHierarchy();
                 CloseWindow();
                 DisposeSerializedObject();
@@ -101,6 +102,70 @@ namespace Alchemy.Tests.EditorUI.EditMode
                 // The field is already detached and, on success, collected. Dispose only after that
                 // check so the SerializedObject finalizer cannot run while the field still exists.
                 DisposeSerializedObject();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator TypeLabel_UpdatesWhenManagedReferenceChanges()
+        {
+            var iconText = EditorIcons.CsScriptIcon.text;
+            host = ScriptableObject.CreateInstance<SerializeReferenceFieldHost>();
+            serializedObject = new SerializedObject(host);
+            var property = serializedObject.FindProperty(nameof(SerializeReferenceFieldHost.node));
+            var fieldTypeName = property.GetManagedReferenceFieldTypeName();
+            var field = new SerializeReferenceField(property);
+            window = EditModeEditorTestUtility.ShowInWindow(field);
+            try
+            {
+                var button = field.buttonContainer;
+                var label = button.Q<Label>(className: "unity-object-field-display__label");
+                var nullLabel = $"Null ({fieldTypeName})";
+                var assignedLabel = $"SerializeReferenceFieldNode ({fieldTypeName})";
+
+                Assert.That(button, Is.InstanceOf<Button>());
+                Assert.That(field.Q<IMGUIContainer>(), Is.Null);
+                Assert.That(button.ClassListContains(ObjectField.objectUssClassName), Is.True);
+                Assert.That(button.ClassListContains(Button.ussClassName), Is.False);
+                Assert.That(label, Is.Not.Null);
+                Assert.That(label.text, Is.EqualTo(nullLabel));
+                Assert.That(button.text, Is.Empty);
+                Assert.That(button.Q<Image>().image, Is.EqualTo(EditorIcons.CsScriptIcon.image));
+                Assert.That(EditorIcons.CsScriptIcon.text, Is.EqualTo(iconText));
+
+                // Let TrackPropertyValue register before editing. 6000.0 does not report a
+                // change applied on the tracked SerializedObject itself.
+                for (var i = 0; i < 5; i++) yield return null;
+
+                SetNode(new SerializeReferenceFieldNode());
+                serializedObject.Update();
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => label.text == assignedLabel))
+                    yield return wait;
+
+                Assert.That(label.text, Is.EqualTo(assignedLabel));
+                Assert.That(EditorIcons.CsScriptIcon.text, Is.EqualTo(iconText));
+
+                SetNode(null);
+                serializedObject.Update();
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => label.text == nullLabel))
+                    yield return wait;
+
+                Assert.That(label.text, Is.EqualTo(nullLabel));
+                Assert.That(EditorIcons.CsScriptIcon.text, Is.EqualTo(iconText));
+            }
+            finally
+            {
+                field.RemoveFromHierarchy();
+                CloseWindow();
+                DisposeSerializedObject();
+            }
+        }
+
+        void SetNode(SerializeReferenceFieldNode node)
+        {
+            using (var editing = new SerializedObject(host))
+            {
+                editing.FindProperty(nameof(SerializeReferenceFieldHost.node)).managedReferenceValue = node;
+                editing.ApplyModifiedPropertiesWithoutUndo();
             }
         }
 

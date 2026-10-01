@@ -28,58 +28,40 @@ namespace Alchemy.Editor.Elements
             foldout.BindProperty(property);
             Add(foldout);
 
-            buttonContainer = new IMGUIContainer(() =>
+            buttonContainer = new Button(() => ShowTypeDropdown(property));
+            buttonContainer.RemoveFromClassList(Button.ussClassName);
+            buttonContainer.AddToClassList(ObjectField.objectUssClassName);
+            buttonContainer.AddToClassList(ObjectFieldDisplayClassName);
+            buttonContainer.style.flexDirection = FlexDirection.Row;
+            buttonContainer.style.alignItems = Align.Center;
+            buttonContainer.style.overflow = Overflow.Hidden;
+            buttonContainer.style.minWidth = 0f;
+            buttonContainer.style.marginLeft = 0f;
+            buttonContainer.style.marginRight = 0f;
+            buttonContainer.style.marginTop = 0f;
+            buttonContainer.style.marginBottom = 0f;
+
+            var typeIcon = new Image
             {
-                var position = EditorGUILayout.GetControlRect();
-
-                var dropdownRect = position;
-                dropdownRect.height = EditorGUIUtility.singleLineHeight;
-
-                var buttonLabel = EditorIcons.CsScriptIcon;
-
-                try
-                {
-                    if (property != null)
-                    {
-                        // Disposed properties throw when read. Skip the label until the field is gone.
-                        if (property.serializedObject == null) return;
-
-                        buttonLabel.text = (property.managedReferenceValue == null ? "Null" : property.managedReferenceValue.GetType().Name) +
-                            $" ({property.GetManagedReferenceFieldTypeName()})";
-                    }
-                }
-                catch (InvalidOperationException)
-                {
-                    // Ignoring exceptions when disposed (bad solution)
-                    return;
-                }
-                catch (NullReferenceException)
-                {
-                    // Unity 6: "SerializedObject of SerializedProperty has been Disposed."
-                    return;
-                }
-
-                if (GUI.Button(dropdownRect, buttonLabel, EditorStyles.objectField))
-                {
-                    const int MaxTypePopupLineCount = 13;
-
-                    var baseType = property.GetManagedReferenceFieldType();
-                    SerializeReferenceDropdown dropdown = new(MaxTypePopupLineCount, new AdvancedDropdownState());
-                    dropdown.SetSortedTypes(SerializeReferenceDropdown.GetCandidateTypes(baseType));
-
-                    dropdown.onItemSelected += item =>
-                    {
-                        property.SetManagedReferenceType(item.type);
-                        property.isExpanded = true;
-                        property.serializedObject.ApplyModifiedProperties();
-                        property.serializedObject.Update();
-
-                        Rebuild(property);
-                    };
-
-                    dropdown.Show(position);
-                }
-            });
+                image = EditorIcons.CsScriptIcon.image,
+                scaleMode = ScaleMode.ScaleAndCrop,
+                pickingMode = PickingMode.Ignore
+            };
+            typeIcon.AddToClassList(ObjectFieldDisplayClassName + "__icon");
+            typeIcon.style.width = 16f;
+            typeIcon.style.height = 16f;
+            typeIcon.style.flexShrink = 0f;
+            typeIcon.style.marginLeft = 2f;
+            typeIcon.style.marginRight = 2f;
+            typeLabel = new Label { pickingMode = PickingMode.Ignore };
+            typeLabel.AddToClassList(ObjectFieldDisplayClassName + "__label");
+            typeLabel.style.flexGrow = 1f;
+            typeLabel.style.flexShrink = 1f;
+            typeLabel.style.minWidth = 0f;
+            typeLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            typeLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            buttonContainer.Add(typeIcon);
+            buttonContainer.Add(typeLabel);
 
             EventCallback<GeometryChangedEvent> onGeometryChanged = null;
             VisualElement registeredTree = null;
@@ -125,19 +107,94 @@ namespace Alchemy.Editor.Elements
             buttonContainer.style.position = Position.Absolute;
             buttonContainer.style.top = EditorGUIUtility.standardVerticalSpacing * 0.5f;
             buttonContainer.style.right = 0f;
+            buttonContainer.style.height = EditorGUIUtility.singleLineHeight;
             Add(buttonContainer);
 
+            this.TrackPropertyValue(property, UpdateTypeLabel);
             Rebuild(property);
         }
 
+        const string ObjectFieldDisplayClassName = "unity-object-field-display";
+
         public readonly Foldout foldout;
-        public readonly IMGUIContainer buttonContainer;
+        public readonly Button buttonContainer;
+        readonly Label typeLabel;
+        Type displayedReferenceType;
+        bool hasDisplayedReferenceType;
+
+        void ShowTypeDropdown(SerializedProperty property)
+        {
+            Type baseType;
+            try
+            {
+                if (property == null || property.serializedObject == null) return;
+                baseType = property.GetManagedReferenceFieldType();
+            }
+            catch (InvalidOperationException)
+            {
+                return;
+            }
+            catch (NullReferenceException)
+            {
+                // Unity 6: "SerializedObject of SerializedProperty has been Disposed."
+                return;
+            }
+
+            const int MaxTypePopupLineCount = 13;
+
+            var dropdown = new SerializeReferenceDropdown(MaxTypePopupLineCount, new AdvancedDropdownState());
+            dropdown.SetSortedTypes(SerializeReferenceDropdown.GetCandidateTypes(baseType));
+
+            dropdown.onItemSelected += item =>
+            {
+                property.SetManagedReferenceType(item.type);
+                property.isExpanded = true;
+                property.serializedObject.ApplyModifiedProperties();
+                property.serializedObject.Update();
+
+                UpdateTypeLabel(property);
+                Rebuild(property);
+            };
+
+            // Panel space matches the GUI rect AdvancedDropdown.Show expects from this window.
+            dropdown.Show(buttonContainer.worldBound);
+        }
+
+        void UpdateTypeLabel(SerializedProperty property)
+        {
+            if (property == null) return;
+
+            try
+            {
+                // Disposed properties throw when read.
+                if (property.serializedObject == null) return;
+
+                var value = property.managedReferenceValue;
+                var valueType = value == null ? null : value.GetType();
+                // Nested field edits also notify the tracker. The label only names the assigned type.
+                if (hasDisplayedReferenceType && valueType == displayedReferenceType) return;
+
+                var text = (valueType == null ? "Null" : valueType.Name) +
+                    $" ({property.GetManagedReferenceFieldTypeName()})";
+                hasDisplayedReferenceType = true;
+                displayedReferenceType = valueType;
+                typeLabel.text = text;
+            }
+            catch (InvalidOperationException)
+            {
+            }
+            catch (NullReferenceException)
+            {
+                // Unity 6: "SerializedObject of SerializedProperty has been Disposed."
+            }
+        }
 
         /// <summary>
         /// Rebuild child elements
         /// </summary>
         void Rebuild(SerializedProperty property)
         {
+            UpdateTypeLabel(property);
             foldout.Clear();
 
             if (property.managedReferenceValue == null)
