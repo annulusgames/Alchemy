@@ -624,11 +624,13 @@ namespace Alchemy.Editor.Drawers
     {
         public override void OnCreateElement()
         {
-            TargetElement.TrackPropertyValue(SerializedProperty, property =>
+            var property = SerializedProperty;
+            var callbacks = property == null
+                ? null
+                : FindCallbacks(Target.GetType(), ((OnValueChangedAttribute)Attribute).MethodName, property.GetPropertyType());
+            TargetElement.TrackPropertyValue(property, changed =>
             {
-                var methodName = ((OnValueChangedAttribute)Attribute).MethodName;
-                var callbacks = FindCallbacks(Target.GetType(), methodName, property.GetPropertyType());
-                InvokeCallbacks(Target, callbacks, () => property.GetValue<object>());
+                InvokeCallbacks(Target, callbacks, () => changed.GetValue<object>());
             });
         }
 
