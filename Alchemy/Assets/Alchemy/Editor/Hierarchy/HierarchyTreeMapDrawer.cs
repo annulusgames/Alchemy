@@ -67,6 +67,9 @@ namespace Alchemy.Editor
         public override void OnGUI(int instanceID, Rect selectionRect)
 #endif
         {
+            var settings = AlchemySettings.GetOrCreateSettings();
+            if (!settings.ShowTreeMap) return;
+
 #if UNITY_6000_4_OR_NEWER
             var gameObject = EditorUtility.EntityIdToObject(instanceID) as GameObject;
 #else
@@ -74,48 +77,35 @@ namespace Alchemy.Editor
 #endif
             if (gameObject == null) return;
 
-            var settings = AlchemySettings.GetOrCreateSettings();
-
             var tempColor = GUI.color;
 
-            if (settings.ShowTreeMap)
+            selectionRect.width = 14;
+            selectionRect.height = 16;
+
+            int childCount = gameObject.transform.childCount;
+            int level = Mathf.RoundToInt(selectionRect.x / 14f);
+            var t = gameObject.transform;
+            Transform parent = null;
+
+            for (int i = 0, j = level - 1; j >= 0; i++, j--)
             {
-                selectionRect.width = 14;
-                selectionRect.height = 16;
-
-                int childCount = gameObject.transform.childCount;
-                int level = Mathf.RoundToInt(selectionRect.x / 14f);
-                var t = gameObject.transform;
-                Transform parent = null;
-
-                for (int i = 0, j = level - 1; j >= 0; i++, j--)
+                selectionRect.x = 14 * j;
+                if (i == 0)
                 {
-                    selectionRect.x = 14 * j;
-                    if (i == 0)
-                    {
-                        if (childCount == 0)
-                        {
-                            GUI.color = settings.TreeMapColor;
-                            GUI.DrawTexture(selectionRect, TreeMapLine);
-                        }
-
-                        t = gameObject.transform;
-                    }
-                    else if (i == 1)
+                    if (childCount == 0)
                     {
                         GUI.color = settings.TreeMapColor;
-                        if (parent == null)
-                        {
-                            if (t.GetSiblingIndex() == gameObject.scene.rootCount - 1)
-                            {
-                                GUI.DrawTexture(selectionRect, TreeMapLast);
-                            }
-                            else
-                            {
-                                GUI.DrawTexture(selectionRect, TreeMapCurrent);
-                            }
-                        }
-                        else if (t.GetSiblingIndex() == parent.childCount - 1)
+                        GUI.DrawTexture(selectionRect, TreeMapLine);
+                    }
+
+                    t = gameObject.transform;
+                }
+                else if (i == 1)
+                {
+                    GUI.color = settings.TreeMapColor;
+                    if (parent == null)
+                    {
+                        if (t.GetSiblingIndex() == gameObject.scene.rootCount - 1)
                         {
                             GUI.DrawTexture(selectionRect, TreeMapLast);
                         }
@@ -123,26 +113,34 @@ namespace Alchemy.Editor
                         {
                             GUI.DrawTexture(selectionRect, TreeMapCurrent);
                         }
-
-                        t = parent;
+                    }
+                    else if (t.GetSiblingIndex() == parent.childCount - 1)
+                    {
+                        GUI.DrawTexture(selectionRect, TreeMapLast);
                     }
                     else
                     {
-                        if (parent == null)
-                        {
-                            if (t.GetSiblingIndex() != gameObject.scene.rootCount - 1) GUI.DrawTexture(selectionRect, TreeMapLevel);
-                        }
-                        else if (t.GetSiblingIndex() != parent.childCount - 1) GUI.DrawTexture(selectionRect, TreeMapLevel);
-
-                        t = parent;
+                        GUI.DrawTexture(selectionRect, TreeMapCurrent);
                     }
 
-                    if (t != null) parent = t.parent;
-                    else break;
+                    t = parent;
+                }
+                else
+                {
+                    if (parent == null)
+                    {
+                        if (t.GetSiblingIndex() != gameObject.scene.rootCount - 1) GUI.DrawTexture(selectionRect, TreeMapLevel);
+                    }
+                    else if (t.GetSiblingIndex() != parent.childCount - 1) GUI.DrawTexture(selectionRect, TreeMapLevel);
+
+                    t = parent;
                 }
 
-                GUI.color = tempColor;
+                if (t != null) parent = t.parent;
+                else break;
             }
+
+            GUI.color = tempColor;
         }
     }
 }

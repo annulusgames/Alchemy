@@ -13,6 +13,9 @@ namespace Alchemy.Editor
         public override void OnGUI(int instanceID, Rect selectionRect)
 #endif
         {
+            var settings = AlchemySettings.GetOrCreateSettings();
+            if (!settings.ShowHierarchyToggles && !settings.ShowComponentIcons) return;
+
 #if UNITY_6000_4_OR_NEWER
             var gameObject = EditorUtility.EntityIdToObject(instanceID) as GameObject;
 #else
@@ -20,8 +23,6 @@ namespace Alchemy.Editor
 #endif
             if (gameObject == null) return;
             if (gameObject.TryGetComponent<HierarchyObject>(out _)) return;
-
-            var settings = AlchemySettings.GetOrCreateSettings();
 
             if (settings.ShowHierarchyToggles)
             {
