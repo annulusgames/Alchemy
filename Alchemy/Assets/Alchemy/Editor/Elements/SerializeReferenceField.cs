@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEditor.UIElements;
@@ -65,17 +64,8 @@ namespace Alchemy.Editor.Elements
                     const int MaxTypePopupLineCount = 13;
 
                     var baseType = property.GetManagedReferenceFieldType();
-                    SerializeReferenceDropdown dropdown = new(
-                        TypeCache.GetTypesDerivedFrom(baseType).Append(baseType).Where(t =>
-                            (t.IsPublic || t.IsNestedPublic) &&
-                            !t.IsAbstract &&
-                            !t.IsGenericType &&
-                            !typeof(UnityEngine.Object).IsAssignableFrom(t) &&
-                            t.IsSerializable
-                        ),
-                        MaxTypePopupLineCount,
-                        new AdvancedDropdownState()
-                    );
+                    SerializeReferenceDropdown dropdown = new(MaxTypePopupLineCount, new AdvancedDropdownState());
+                    dropdown.SetSortedTypes(SerializeReferenceDropdown.GetCandidateTypes(baseType));
 
                     dropdown.onItemSelected += item =>
                     {
