@@ -161,14 +161,25 @@ namespace Alchemy.Editor
         {
             if (IsMixed(index)) return "—";
             var value = Read(0, index);
-            if (labels.TryGetValue(index, out var label) && Equals(label.Key, value)) return label.Value;
+            var known = labels.TryGetValue(index, out var label);
+            if (known && Equals(label.Key, value)) return label.Value;
+            var context = Context(0, index, false);
+            // An index already resolved on this binding is evaluated again when its value changes.
+            // New rows and later inspectors reuse labels warmed from the provider snapshot.
+            if (!known && ValueDropdownLabels.TryGet(attribute, ValueType, context, value, out var cached))
+            {
+                labels[index] = new KeyValuePair<object, string>(value, cached);
+                return cached;
+            }
             string text;
             try
             {
-                // Evaluated once per displayed value, not per repaint.
-                var snapshot = ValueDropdownSource.Get(attribute, ValueType, Context(0, index, false));
+                // Evaluated on a miss, not per repaint. A non-context snapshot warms the other values too.
+                var snapshot = ValueDropdownSource.Get(attribute, ValueType, context);
                 var found = snapshot.Find(value);
                 text = found >= 0 ? snapshot.Entries[found].Text : ValueDropdownSnapshot.Format(value);
+                ValueDropdownLabels.StoreSnapshot(attribute, ValueType, context, snapshot);
+                ValueDropdownLabels.Store(attribute, ValueType, context, value, text);
             }
             catch (Exception)
             {
@@ -179,7 +190,13 @@ namespace Alchemy.Editor
             return text;
         }
 
-        public void RememberLabel(int index, string text) => labels[index] = new KeyValuePair<object, string>(Read(0, index), text);
+        public void RememberLabel(int index, string text)
+        {
+            var value = Read(0, index);
+            labels[index] = new KeyValuePair<object, string>(value, text);
+            var attribute = ValueDropdownSource.GetAttribute(Member);
+            if (attribute != null) ValueDropdownLabels.Store(attribute, ValueType, Context(0, index, false), value, text);
+        }
 
         public ValueDropdownContext Context(int target, int index, bool adding) =>
             new(Root(target), Owner(target), adding ? null : Read(target, index), adding ? -1 : index, adding);

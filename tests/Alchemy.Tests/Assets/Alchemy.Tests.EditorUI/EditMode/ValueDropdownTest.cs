@@ -267,6 +267,280 @@ namespace Alchemy.Tests.EditorUI.EditMode
         }
 
         [Test]
+        public void Binding_DisplayTextReusesLabelsAcrossRowsAndLaterBindings()
+        {
+            var owner = new SnapshotLabelOwner();
+            var attribute = new ValueDropdownAttribute(nameof(SnapshotLabelOwner.Weapons));
+            var binding = BindValues(owner);
+            Assert.That(binding.DisplayText(0, attribute), Is.EqualTo("Melee/Sword"));
+            Assert.That(binding.DisplayText(1, attribute), Is.EqualTo("Melee/Axe"));
+            Assert.That(owner.evaluations, Is.EqualTo(1));
+
+            var rebuilt = BindValues(owner);
+            Assert.That(rebuilt.DisplayText(0, attribute), Is.EqualTo("Melee/Sword"));
+            Assert.That(rebuilt.DisplayText(1, attribute), Is.EqualTo("Melee/Axe"));
+            Assert.That(owner.evaluations, Is.EqualTo(1));
+
+            var other = new SnapshotLabelOwner { sword = "Other/Sword" };
+            Assert.That(BindValues(other).DisplayText(0, attribute), Is.EqualTo("Other/Sword"));
+            Assert.That(other.evaluations, Is.EqualTo(1));
+            Assert.That(owner.evaluations, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Binding_ContextLabelsAreNotSharedAcrossOwnersOrIndices()
+        {
+            var owner = new ContextLabelOwner();
+            var attribute = new ValueDropdownAttribute(nameof(ContextLabelOwner.Options));
+            var binding = BindContext(owner);
+            Assert.That(binding.DisplayText(0, attribute), Is.EqualTo("A0"));
+            Assert.That(binding.DisplayText(1, attribute), Is.EqualTo("A1"));
+            Assert.That(owner.evaluations, Is.EqualTo(2));
+            Assert.That(BindContext(owner).DisplayText(0, attribute), Is.EqualTo("A0"));
+            Assert.That(owner.evaluations, Is.EqualTo(2));
+
+            var other = new ContextLabelOwner { mark = "B" };
+            Assert.That(BindContext(other).DisplayText(0, attribute), Is.EqualTo("B0"));
+            Assert.That(other.evaluations, Is.EqualTo(1));
+            Assert.That(owner.evaluations, Is.EqualTo(2));
+
+            ValueDropdownLabels.Clear();
+            StaticContextOwner.evaluations = 0;
+            var first = new StaticContextOwner { mark = "A" };
+            var second = new StaticContextOwner { mark = "B" };
+            var staticAttribute = new ValueDropdownAttribute(nameof(StaticContextOwner.Options));
+            Assert.That(BindStaticContext(first).DisplayText(-1, staticAttribute), Is.EqualTo("A"));
+            Assert.That(BindStaticContext(second).DisplayText(-1, staticAttribute), Is.EqualTo("B"));
+            Assert.That(BindStaticContext(first).DisplayText(-1, staticAttribute), Is.EqualTo("A"));
+            Assert.That(StaticContextOwner.evaluations, Is.EqualTo(2));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Binding_ContextLabelsAreNotSharedAcrossCurrentValues(bool openPopup)
+        {
+            ValueDropdownLabels.Clear();
+            var owner = new CurrentValueLabelOwner();
+            var attribute = new ValueDropdownAttribute(nameof(CurrentValueLabelOwner.Options));
+            ValueDropdownBinding Bind(string name) => new ValueDropdownBinding(owner,
+                typeof(CurrentValueLabelOwner).GetField(name), typeof(int),
+                () => typeof(CurrentValueLabelOwner).GetField(name).GetValue(owner),
+                value => typeof(CurrentValueLabelOwner).GetField(name).SetValue(owner, value), null, null);
+
+            var first = Bind(nameof(CurrentValueLabelOwner.first));
+            if (openPopup) _ = new ValueDropdownSession(first, attribute, -1, false);
+            else Assert.That(first.DisplayText(-1, attribute), Is.EqualTo("1:1"));
+            Assert.That(Bind(nameof(CurrentValueLabelOwner.second)).DisplayText(-1, attribute), Is.EqualTo("2:2"));
+            Assert.That(Bind(nameof(CurrentValueLabelOwner.first)).DisplayText(-1, attribute), Is.EqualTo("1:1"));
+            Assert.That(owner.evaluations, Is.EqualTo(2));
+        }
+
+        class CurrentValueLabelOwner
+        {
+            public int first = 1;
+            public int second = 2;
+            public int evaluations;
+
+            public ValueDropdownList<int> Options(ValueDropdownContext context)
+            {
+                evaluations++;
+                return new ValueDropdownList<int>
+                {
+                    { $"{context.CurrentValue}:1", 1 },
+                    { $"{context.CurrentValue}:2", 2 },
+                };
+            }
+        }
+
+        [Test]
+        public void Binding_StaticProviderLabelsAreSharedAcrossOwners()
+        {
+            ValueDropdownLabels.Clear();
+            SharedStaticOwner.evaluations = 0;
+            var attribute = new ValueDropdownAttribute(nameof(SharedStaticOwner.Weapons));
+            var first = new SharedStaticOwner();
+            var second = new SharedStaticOwner();
+            Assert.That(BindStatic(first).DisplayText(-1, attribute), Is.EqualTo("Sword"));
+            Assert.That(BindStatic(second).DisplayText(-1, attribute), Is.EqualTo("Sword"));
+            Assert.That(SharedStaticOwner.evaluations, Is.EqualTo(1));
+
+            var typed = new ValueDropdownAttribute(typeof(SharedStaticOwner), nameof(SharedStaticOwner.Weapons));
+            Assert.That(BindStatic(first).DisplayText(-1, typed), Is.EqualTo("Sword"));
+            Assert.That(BindStatic(second).DisplayText(-1, typed), Is.EqualTo("Sword"));
+            Assert.That(SharedStaticOwner.evaluations, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Binding_RememberLabelAndFreshSnapshotRefreshSharedLabels()
+        {
+            ValueDropdownLabels.Clear();
+            var owner = new SharedLabelOwner();
+            var attribute = new ValueDropdownAttribute(nameof(SharedLabelOwner.Weapons));
+            Assert.That(BindShared(owner).DisplayText(-1, attribute), Is.EqualTo("Melee/Sword"));
+            Assert.That(owner.evaluations, Is.EqualTo(1));
+
+            owner.sword = "Blade";
+            BindShared(owner).RememberLabel(-1, "Blade");
+            Assert.That(BindShared(owner).DisplayText(-1, attribute), Is.EqualTo("Blade"));
+            Assert.That(owner.evaluations, Is.EqualTo(1));
+
+            owner.sword = "Edge";
+            var session = new ValueDropdownSession(BindShared(owner), attribute, -1, false);
+            Assert.That(session.Snapshot.Entries[session.CurrentChoice].Text, Is.EqualTo("Edge"));
+            Assert.That(BindShared(owner).DisplayText(-1, attribute), Is.EqualTo("Edge"));
+            Assert.That(owner.evaluations, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Binding_SharedLabelCacheDoesNotRetainUnityObjectsAndIsBounded()
+        {
+            ValueDropdownLabels.Clear();
+            var picked = ScriptableObject.CreateInstance<ValueDropdownUnityLabelHost>();
+            var host = ScriptableObject.CreateInstance<ValueDropdownUnityLabelHost>();
+            var other = ScriptableObject.CreateInstance<ValueDropdownUnityLabelHost>();
+            try
+            {
+                host.picked = picked;
+                other.picked = picked;
+                var attribute = new ValueDropdownAttribute(nameof(ValueDropdownUnityLabelHost.Options));
+                Assert.That(BindUnity(host).DisplayText(-1, attribute), Is.EqualTo("Picked"));
+                Assert.That(BindUnity(host).DisplayText(-1, attribute), Is.EqualTo("Picked"));
+                Assert.That(host.evaluations, Is.EqualTo(1));
+                Assert.That(BindUnity(other).DisplayText(-1, attribute), Is.EqualTo("Picked"));
+                Assert.That(other.evaluations, Is.EqualTo(1));
+                Assert.That(host.evaluations, Is.EqualTo(1));
+                Assert.That(ValueDropdownLabels.Retains(host), Is.False);
+                Assert.That(ValueDropdownLabels.Retains(picked), Is.False);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+                UnityEngine.Object.DestroyImmediate(other);
+                UnityEngine.Object.DestroyImmediate(picked);
+            }
+
+            ValueDropdownLabels.Clear();
+            var owner = new SharedLabelOwner();
+            var scope = new ValueDropdownAttribute(nameof(SharedLabelOwner.Weapons));
+            var context = new ValueDropdownContext(null, owner, 0, -1, false);
+            for (var i = 0; i < ValueDropdownLabels.Capacity + 5; i++)
+                ValueDropdownLabels.Store(scope, typeof(int), context, i, "n");
+            Assert.That(ValueDropdownLabels.Count, Is.EqualTo(ValueDropdownLabels.Capacity));
+            Assert.That(ValueDropdownLabels.TryGet(scope, typeof(int), context, ValueDropdownLabels.Capacity + 4, out var text), Is.True);
+            Assert.That(text, Is.EqualTo("n"));
+            Assert.That(owner.evaluations, Is.Zero);
+            ValueDropdownLabels.Clear();
+        }
+
+        static ValueDropdownBinding BindValues(SnapshotLabelOwner owner) =>
+            new ValueDropdownBinding(owner, typeof(SnapshotLabelOwner).GetField(nameof(SnapshotLabelOwner.weapons)), typeof(int[]),
+                () => owner.weapons, null, null, null);
+
+        [Test]
+        public void Binding_SharedLabelsKeepValueEqualOwnersSeparate()
+        {
+            ValueDropdownLabels.Clear();
+            var first = new ValueEqualOwner { label = "First owner" };
+            var second = new ValueEqualOwner { label = "Second owner" };
+            Assert.That(first, Is.EqualTo(second));
+            var attribute = new ValueDropdownAttribute(nameof(ValueEqualOwner.Options));
+            ValueDropdownBinding Bind(ValueEqualOwner owner) => new ValueDropdownBinding(owner,
+                typeof(ValueEqualOwner).GetField(nameof(ValueEqualOwner.value)), typeof(int),
+                () => owner.value, null, null, null);
+
+            Assert.That(Bind(first).DisplayText(-1, attribute), Is.EqualTo("First owner"));
+            Assert.That(Bind(second).DisplayText(-1, attribute), Is.EqualTo("Second owner"));
+            Assert.That(Bind(first).DisplayText(-1, attribute), Is.EqualTo("First owner"));
+            Assert.That(first.evaluations, Is.EqualTo(1));
+            Assert.That(second.evaluations, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Labels_ContextKeepsValueEqualRootsSeparate()
+        {
+            ValueDropdownLabels.Clear();
+            var owner = new ValueEqualOwner();
+            var first = new ValueEqualOwner { label = "First root" };
+            var second = new ValueEqualOwner { label = "Second root" };
+            var attribute = new ValueDropdownAttribute(nameof(ValueEqualOwner.ContextOptions));
+            var firstContext = new ValueDropdownContext(first, owner, 1, -1, false);
+            var secondContext = new ValueDropdownContext(second, owner, 1, -1, false);
+            ValueDropdownLabels.StoreSnapshot(attribute, typeof(int), firstContext,
+                ValueDropdownSource.Get(attribute, typeof(int), firstContext));
+            Assert.That(ValueDropdownLabels.TryGet(attribute, typeof(int), secondContext, 1, out _), Is.False);
+            ValueDropdownLabels.StoreSnapshot(attribute, typeof(int), secondContext,
+                ValueDropdownSource.Get(attribute, typeof(int), secondContext));
+            Assert.That(ValueDropdownLabels.TryGet(attribute, typeof(int), firstContext, 1, out var text), Is.True);
+            Assert.That(text, Is.EqualTo("First root"));
+            Assert.That(ValueDropdownLabels.TryGet(attribute, typeof(int), secondContext, 1, out text), Is.True);
+            Assert.That(text, Is.EqualTo("Second root"));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Labels_MutableOwnerHashesPreserveLookupsAndCapacity(bool changeRoot)
+        {
+            ValueDropdownLabels.Clear();
+            var owner = new ValueEqualOwner();
+            var root = new ValueEqualOwner();
+            var attribute = new ValueDropdownAttribute(nameof(ValueEqualOwner.ContextOptions));
+            var context = new ValueDropdownContext(root, owner, 1, -1, false);
+            for (var i = 0; i < ValueDropdownLabels.Capacity; i++)
+                ValueDropdownLabels.Store(attribute, typeof(int), context, i, "Cached");
+
+            (changeRoot ? root : owner).id++;
+            ValueDropdownLabels.Store(attribute, typeof(int), context, ValueDropdownLabels.Capacity, "Newest");
+            Assert.That(ValueDropdownLabels.Count, Is.EqualTo(ValueDropdownLabels.Capacity));
+            Assert.That(ValueDropdownLabels.TryGet(attribute, typeof(int), context,
+                ValueDropdownLabels.Capacity - 1, out var text), Is.True);
+            Assert.That(text, Is.EqualTo("Cached"));
+            Assert.That(ValueDropdownLabels.TryGet(attribute, typeof(int), context,
+                ValueDropdownLabels.Capacity, out text), Is.True);
+            Assert.That(text, Is.EqualTo("Newest"));
+            ValueDropdownLabels.Clear();
+        }
+
+        class ValueEqualOwner
+        {
+            public int id = 7;
+            public int value = 1;
+            public string label;
+            public int evaluations;
+
+            public ValueDropdownList<int> Options()
+            {
+                evaluations++;
+                return new ValueDropdownList<int> { { label, value } };
+            }
+
+            public ValueDropdownList<int> ContextOptions(ValueDropdownContext context) =>
+                new ValueDropdownList<int> { { ((ValueEqualOwner)context.Root).label, value } };
+
+            public override bool Equals(object other) => other is ValueEqualOwner owner && id == owner.id;
+            public override int GetHashCode() => id;
+        }
+
+        static ValueDropdownBinding BindContext(ContextLabelOwner owner) =>
+            new ValueDropdownBinding(owner, typeof(ContextLabelOwner).GetField(nameof(ContextLabelOwner.values)), typeof(int[]),
+                () => owner.values, null, null, null);
+
+        static ValueDropdownBinding BindStaticContext(StaticContextOwner owner) =>
+            new ValueDropdownBinding(owner, typeof(StaticContextOwner).GetField(nameof(StaticContextOwner.value)), typeof(int),
+                () => owner.value, null, null, null);
+
+        static ValueDropdownBinding BindStatic(SharedStaticOwner owner) =>
+            new ValueDropdownBinding(owner, typeof(SharedStaticOwner).GetField(nameof(SharedStaticOwner.weapon)), typeof(int),
+                () => owner.weapon, null, null, null);
+
+        static ValueDropdownBinding BindShared(SharedLabelOwner owner) =>
+            new ValueDropdownBinding(owner, typeof(SharedLabelOwner).GetField(nameof(SharedLabelOwner.weapon)), typeof(int),
+                () => owner.weapon, value => owner.weapon = (int)value, null, null);
+
+        static ValueDropdownBinding BindUnity(ValueDropdownUnityLabelHost host) =>
+            new ValueDropdownBinding(host, typeof(ValueDropdownUnityLabelHost).GetField(nameof(ValueDropdownUnityLabelHost.picked)), typeof(UnityEngine.Object),
+                () => host.picked, null, null, null);
+
+        [Test]
         public void Snapshot_FindsCurrentValueWhoseOnlyEntryIsDisabled()
         {
             var items = new ValueDropdownList<int>();
@@ -773,6 +1047,70 @@ namespace Alchemy.Tests.EditorUI.EditMode
             }
         }
 
+        class SnapshotLabelOwner
+        {
+            public int[] weapons = { 1, 2 };
+            public int evaluations;
+            public string sword = "Melee/Sword";
+
+            public ValueDropdownList<int> Weapons()
+            {
+                evaluations++;
+                return new ValueDropdownList<int> { { sword, 1 }, { "Melee/Axe", 2 } };
+            }
+        }
+
+        class ContextLabelOwner
+        {
+            public int[] values = { 1, 1 };
+            public int evaluations;
+            public string mark = "A";
+
+            public ValueDropdownList<int> Options(ValueDropdownContext context)
+            {
+                evaluations++;
+                return new ValueDropdownList<int> { { mark + context.Index, 1 } };
+            }
+        }
+
+        class StaticContextOwner
+        {
+            public int value = 1;
+            public string mark = "A";
+            public static int evaluations;
+
+            public static ValueDropdownList<int> Options(ValueDropdownContext context)
+            {
+                evaluations++;
+                return new ValueDropdownList<int> { { ((StaticContextOwner)context.Owner).mark, 1 } };
+            }
+        }
+
+        class SharedStaticOwner
+        {
+            public int weapon = 1;
+            public static int evaluations;
+
+            public static ValueDropdownList<int> Weapons()
+            {
+                evaluations++;
+                return new ValueDropdownList<int> { { "Sword", 1 } };
+            }
+        }
+
+        class SharedLabelOwner
+        {
+            [ValueDropdown(nameof(Weapons))] public int weapon = 1;
+            public int evaluations;
+            public string sword = "Melee/Sword";
+
+            public ValueDropdownList<int> Weapons()
+            {
+                evaluations++;
+                return new ValueDropdownList<int> { { sword, 1 }, { "Melee/Axe", 2 } };
+            }
+        }
+
         class Effect
         {
             public int power;
@@ -807,6 +1145,18 @@ namespace Alchemy.Tests.EditorUI.EditMode
             public Faulty value = new Faulty();
             public List<Faulty> items = new List<Faulty> { new Faulty { fail = true } };
             public Faulty[] None => Array.Empty<Faulty>();
+        }
+    }
+
+    public class ValueDropdownUnityLabelHost : ScriptableObject
+    {
+        public int evaluations;
+        public UnityEngine.Object picked;
+
+        public ValueDropdownList<UnityEngine.Object> Options()
+        {
+            evaluations++;
+            return new ValueDropdownList<UnityEngine.Object> { { "Picked", picked } };
         }
     }
 
