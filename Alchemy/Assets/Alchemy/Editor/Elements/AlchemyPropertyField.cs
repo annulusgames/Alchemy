@@ -66,11 +66,26 @@ namespace Alchemy.Editor.Elements
                     }
                     else
                     {
-                        var foldout = new Foldout() { text = labelText };
+                        var foldout = new Foldout()
+                        {
+                            text = labelText,
+                            value = property.isExpanded
+                        };
 
                         var clickable = InternalAPIHelper.GetClickable(foldout.Q<Toggle>());
                         InternalAPIHelper.SetAcceptClicksIfDisabled(clickable, true);
-                        InspectorHelper.BuildElements(property.serializedObject, foldout, property.GetValue<object>(), name => property.FindPropertyRelative(name));
+                        var serializedObject = property.serializedObject;
+                        var propertyPath = property.propertyPath;
+                        var expanded = property.isExpanded;
+                        InspectorHelper.BuildFoldoutContents(foldout, expanded, () =>
+                        {
+                            // Re-find on expand. A property copied at construction is invalid after SerializedObject.Update.
+                            var source = serializedObject.FindProperty(propertyPath);
+                            if (source == null) return;
+                            InspectorHelper.BuildElements(serializedObject, foldout, source.GetValue<object>(), name => source.FindPropertyRelative(name));
+                            // A collapsed foldout is built after the inspector Bind has already walked the tree.
+                            if (!expanded) foldout.contentContainer.Bind(serializedObject);
+                        });
                         foldout.BindProperty(property);
                         element = foldout;
                     }

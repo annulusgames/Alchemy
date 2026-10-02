@@ -170,6 +170,59 @@ namespace Alchemy.Editor
             PrefabConditionalElement.SetInspectorTargets(rootElement, serializedObject, target);
         }
 
+        // Collapsed foldouts skip child construction until the first expand.
+        // Toggles raise ChangeEvent. SetValueWithoutNotify and isExpanded bindings do not;
+        // those still flip content display, which changes layout.
+        // ChangeEvent is not dispatched while detached; a value set off-panel is applied on attach.
+        internal static void BuildFoldoutContents(Foldout foldout, bool expanded, Action build)
+        {
+            if (expanded)
+            {
+                build();
+                return;
+            }
+
+            var built = false;
+            EventCallback<ChangeEvent<bool>> onValueChanged = null;
+            EventCallback<GeometryChangedEvent> onFoldoutGeometryChanged = null;
+            EventCallback<GeometryChangedEvent> onContentGeometryChanged = null;
+            EventCallback<AttachToPanelEvent> onAttachToPanel = null;
+
+            void Unregister()
+            {
+                foldout.UnregisterCallback(onValueChanged);
+                foldout.UnregisterCallback(onFoldoutGeometryChanged);
+                foldout.contentContainer.UnregisterCallback(onContentGeometryChanged);
+                foldout.UnregisterCallback(onAttachToPanel);
+            }
+
+            void BuildOnce()
+            {
+                if (built || !foldout.value) return;
+                built = true;
+                Unregister();
+                build();
+            }
+
+            onValueChanged = evt =>
+            {
+                if (evt.target != foldout) return;
+                BuildOnce();
+            };
+            onFoldoutGeometryChanged = _ => BuildOnce();
+            onContentGeometryChanged = _ => BuildOnce();
+            onAttachToPanel = evt =>
+            {
+                if (evt.target != foldout) return;
+                BuildOnce();
+            };
+
+            foldout.RegisterCallback(onValueChanged);
+            foldout.RegisterCallback(onFoldoutGeometryChanged);
+            foldout.contentContainer.RegisterCallback(onContentGeometryChanged);
+            foldout.RegisterCallback(onAttachToPanel);
+        }
+
         static void BuildNodeElements(
             GroupNode node,
             SerializedObject serializedObject,
