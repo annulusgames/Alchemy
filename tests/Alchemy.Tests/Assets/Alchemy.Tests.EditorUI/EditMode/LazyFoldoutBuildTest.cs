@@ -15,10 +15,7 @@ namespace Alchemy.Tests.EditorUI.EditMode
         EditorWindow window;
 
         [TearDown]
-        public void TearDown()
-        {
-            if (window != null) UnityEngine.Object.DestroyImmediate(window);
-        }
+        public void TearDown() => ReleaseWindow();
 
         [UnityTest]
         public IEnumerator CollapsedNestedClass_BuildsAndBindsChildrenWhenExpanded()
@@ -26,12 +23,13 @@ namespace Alchemy.Tests.EditorUI.EditMode
             var host = ScriptableObject.CreateInstance<NestedClassHost>();
             host.nested ??= new NestedClass();
             var serializedObject = new SerializedObject(host);
+            AlchemyPropertyField field = null;
             try
             {
                 var property = serializedObject.FindProperty(nameof(NestedClassHost.nested));
                 property.isExpanded = false;
 
-                var field = new AlchemyPropertyField(property, typeof(NestedClass));
+                field = new AlchemyPropertyField(property, typeof(NestedClass));
                 var foldout = (Foldout)field.FieldElement;
                 Assert.That(foldout.contentContainer.childCount, Is.EqualTo(0));
 
@@ -52,17 +50,13 @@ namespace Alchemy.Tests.EditorUI.EditMode
 
                 foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => child.Q<IntegerField>() != null))
                     yield return wait;
+
+                foreach (var wait in WaitForPendingBindings())
+                    yield return wait;
             }
             finally
             {
-                if (window != null)
-                {
-                    UnityEngine.Object.DestroyImmediate(window);
-                    window = null;
-                }
-
-                serializedObject.Dispose();
-                UnityEngine.Object.DestroyImmediate(host);
+                ReleaseBuiltUi(field, serializedObject, host);
             }
         }
 
@@ -72,12 +66,13 @@ namespace Alchemy.Tests.EditorUI.EditMode
             var host = ScriptableObject.CreateInstance<NestedClassHost>();
             host.nested ??= new NestedClass();
             var serializedObject = new SerializedObject(host);
+            AlchemyPropertyField field = null;
             try
             {
                 var property = serializedObject.FindProperty(nameof(NestedClassHost.nested));
                 property.isExpanded = false;
 
-                var field = new AlchemyPropertyField(property, typeof(NestedClass));
+                field = new AlchemyPropertyField(property, typeof(NestedClass));
                 var foldout = (Foldout)field.FieldElement;
                 Assert.That(foldout.contentContainer.childCount, Is.EqualTo(0));
 
@@ -90,20 +85,17 @@ namespace Alchemy.Tests.EditorUI.EditMode
                 foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => foldout.contentContainer.childCount > 0))
                     yield return wait;
 
+                var expectedPath = property.propertyPath + ".value";
+                foreach (var wait in WaitForPendingBindings())
+                    yield return wait;
+
                 var child = foldout.Q<PropertyField>();
                 Assert.That(child, Is.Not.Null);
-                Assert.That(child.bindingPath, Is.EqualTo(property.propertyPath + ".value"));
+                Assert.That(child.bindingPath, Is.EqualTo(expectedPath));
             }
             finally
             {
-                if (window != null)
-                {
-                    UnityEngine.Object.DestroyImmediate(window);
-                    window = null;
-                }
-
-                serializedObject.Dispose();
-                UnityEngine.Object.DestroyImmediate(host);
+                ReleaseBuiltUi(field, serializedObject, host);
             }
         }
 
@@ -113,12 +105,13 @@ namespace Alchemy.Tests.EditorUI.EditMode
             var host = ScriptableObject.CreateInstance<NestedClassHost>();
             host.nested ??= new NestedClass();
             var serializedObject = new SerializedObject(host);
+            AlchemyPropertyField field = null;
             try
             {
                 var property = serializedObject.FindProperty(nameof(NestedClassHost.nested));
                 property.isExpanded = false;
 
-                var field = new AlchemyPropertyField(property, typeof(NestedClass));
+                field = new AlchemyPropertyField(property, typeof(NestedClass));
                 var foldout = (Foldout)field.FieldElement;
                 Assert.That(foldout.contentContainer.childCount, Is.EqualTo(0));
 
@@ -134,21 +127,57 @@ namespace Alchemy.Tests.EditorUI.EditMode
                 foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => foldout.contentContainer.childCount > 0))
                     yield return wait;
 
+                var expectedPath = property.propertyPath + ".value";
+                foreach (var wait in WaitForPendingBindings())
+                    yield return wait;
+
                 var child = foldout.Q<PropertyField>();
                 Assert.That(child, Is.Not.Null);
-                Assert.That(child.bindingPath, Is.EqualTo(property.propertyPath + ".value"));
+                Assert.That(child.bindingPath, Is.EqualTo(expectedPath));
             }
             finally
             {
-                if (window != null)
-                {
-                    UnityEngine.Object.DestroyImmediate(window);
-                    window = null;
-                }
-
-                serializedObject.Dispose();
-                UnityEngine.Object.DestroyImmediate(host);
+                ReleaseBuiltUi(field, serializedObject, host);
             }
+        }
+
+        // contentContainer.Bind is applied on a later panel update. 6000.0 skips that
+        // update unless the window repaints. Run it before SerializedObject.Dispose.
+        IEnumerable WaitForPendingBindings()
+        {
+            if (window != null) window.Repaint();
+            yield return null;
+        }
+
+        void ReleaseBuiltUi(VisualElement root, SerializedObject serializedObject, UnityEngine.Object host)
+        {
+            if (root != null)
+            {
+                UnbindTree(root);
+                root.RemoveFromHierarchy();
+            }
+
+            ReleaseWindow();
+            serializedObject.Dispose();
+            if (host != null) UnityEngine.Object.DestroyImmediate(host);
+        }
+
+        void ReleaseWindow()
+        {
+            if (window == null) return;
+            UnbindTree(window.rootVisualElement);
+            window.rootVisualElement.Clear();
+            window.Close();
+            if (window != null) UnityEngine.Object.DestroyImmediate(window);
+            window = null;
+        }
+
+        static void UnbindTree(VisualElement element)
+        {
+            if (element == null) return;
+            element.Unbind();
+            for (var i = 0; i < element.childCount; i++)
+                UnbindTree(element[i]);
         }
 
         [Serializable]
