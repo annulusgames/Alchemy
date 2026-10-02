@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Alchemy.Editor.Elements;
@@ -220,8 +221,11 @@ namespace Alchemy.Editor.Drawers
         protected abstract string GetErrorMessage();
         protected abstract bool IsPropertyValid();
 
+        const long ExternalRefreshDelayMs = 100;
+
         HelpBox helpBox;
         bool subscribed;
+        IVisualElementScheduledItem pendingExternalRefresh;
 
         public override void OnCreateElement()
         {
@@ -272,10 +276,34 @@ namespace Alchemy.Editor.Drawers
             OnInspectorChanged();
         }
 
-        void OnDetachFromPanel(DetachFromPanelEvent evt) => Unsubscribe();
+        void OnDetachFromPanel(DetachFromPanelEvent evt)
+        {
+            Unsubscribe();
+            CancelExternalRefresh();
+        }
 
+        // hierarchyChanged can fire for every Instantiate/Destroy. One delayed refresh
+        // validates the latest state and caps that work at about 10 Hz per field.
         void OnExternalChange()
         {
+            if (pendingExternalRefresh != null || TargetElement.panel == null) return;
+            pendingExternalRefresh = TargetElement.schedule
+                .Execute(RefreshAfterExternalChange)
+                .StartingIn(ExternalRefreshDelayMs);
+        }
+
+        void CancelExternalRefresh()
+        {
+            var pending = pendingExternalRefresh;
+            pendingExternalRefresh = null;
+            pending?.Pause();
+        }
+
+        void RefreshAfterExternalChange()
+        {
+            pendingExternalRefresh = null;
+            if (TargetElement.panel == null) return;
+
             if (!SerializedObjectReferenceValidation.TryAccessProperty(SerializedProperty, out var serializedObject, out _))
             {
                 return;
