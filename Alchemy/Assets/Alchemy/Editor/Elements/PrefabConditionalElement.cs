@@ -111,6 +111,12 @@ namespace Alchemy.Editor.Elements
 
             inspectorTargets.Remove(root);
             inspectorTargets.Add(root, owners);
+            UpdateConditionalElements(root);
+        }
+
+        // Late-built children miss SetInspectorTargets. Targets still resolve by walking ancestors.
+        internal static void UpdateConditionalElements(VisualElement root)
+        {
             root.Query<PrefabConditionalElement>().ForEach(element => element.UpdateState());
         }
 

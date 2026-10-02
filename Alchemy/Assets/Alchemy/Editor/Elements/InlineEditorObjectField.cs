@@ -20,7 +20,8 @@ namespace Alchemy.Editor.Elements
 
             foldout = new Foldout()
             {
-                text = ObjectNames.NicifyVariableName(property.displayName)
+                text = ObjectNames.NicifyVariableName(property.displayName),
+                value = property.isExpanded
             };
             var toggle = foldout.Q<Toggle>();
             var clickable = InternalAPIHelper.GetClickable(toggle);
@@ -57,6 +58,7 @@ namespace Alchemy.Editor.Elements
         readonly VisualElement inspectorContainer;
         readonly ObjectField field;
         bool isNull;
+        bool buildWhenExpanded;
 
         public bool IsObjectNull => isNull;
 
@@ -99,14 +101,25 @@ namespace Alchemy.Editor.Elements
 
             isNull = property.objectReferenceValue == null;
             toggle.style.display = isNull ? DisplayStyle.None : DisplayStyle.Flex;
-            if (!isNull)
+            if (isNull) return;
+
+            if (!property.isExpanded && !foldout.value)
             {
-                foldout.Add(new VisualElement() { style = { height = EditorGUIUtility.standardVerticalSpacing } });
-                var so = new SerializedObject(property.objectReferenceValue);
-                InspectorHelper.BuildElements(so, inspectorContainer, so.targetObject, name => so.FindProperty(name));
-                inspectorContainer.Bind(so);
-                foldout.Add(inspectorContainer);
+                if (buildWhenExpanded) return;
+                buildWhenExpanded = true;
+                InspectorHelper.BuildFoldoutContents(foldout, false, () =>
+                {
+                    buildWhenExpanded = false;
+                    Build(property);
+                });
+                return;
             }
+
+            foldout.Add(new VisualElement() { style = { height = EditorGUIUtility.standardVerticalSpacing } });
+            var so = new SerializedObject(property.objectReferenceValue);
+            InspectorHelper.BuildElements(so, inspectorContainer, so.targetObject, name => so.FindProperty(name));
+            inspectorContainer.Bind(so);
+            foldout.Add(inspectorContainer);
         }
     }
 }
