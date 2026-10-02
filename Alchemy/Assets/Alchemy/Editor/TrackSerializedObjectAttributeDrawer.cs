@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEditor.UIElements;
 
 namespace Alchemy.Editor.Drawers
@@ -6,17 +7,24 @@ namespace Alchemy.Editor.Drawers
     {
         public override void OnCreateElement()
         {
-            if (SerializedObject != null)
+            var trackedProperty = GetTrackedProperty();
+            if (trackedProperty != null)
             {
-                TargetElement.TrackSerializedObjectValue(SerializedObject, x =>
-                {
-                    OnInspectorChanged();
-                });
+                TargetElement.TrackPropertyValue(trackedProperty, _ => OnInspectorChanged());
+            }
+            else if (SerializedObject != null)
+            {
+                TargetElement.TrackSerializedObjectValue(SerializedObject, _ => OnInspectorChanged());
             }
 
             OnInspectorChanged();
             TargetElement.schedule.Execute(() => OnInspectorChanged());
         }
+
+        /// <summary>
+        /// Serialized property whose changes re-evaluate this drawer. Null tracks the whole serialized object.
+        /// </summary>
+        protected virtual SerializedProperty GetTrackedProperty() => null;
 
         protected abstract void OnInspectorChanged();
     }
