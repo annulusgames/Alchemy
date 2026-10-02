@@ -139,12 +139,19 @@ namespace Alchemy.Editor
             return typeName[(splitIndex + 1)..];
         }
 
+        // Key is SerializedProperty.managedReferenceFieldTypename ("AssemblyName TypeName").
+        static readonly Dictionary<string, Type> managedReferenceFieldTypes = new();
+
         public static Type GetManagedReferenceFieldType(this SerializedProperty property)
         {
             var typeName = property.managedReferenceFieldTypename;
+            if (typeName != null && managedReferenceFieldTypes.TryGetValue(typeName, out var cached)) return cached;
+
             var splitIndex = typeName.IndexOf(' ');
             var assembly = Assembly.Load(typeName[..splitIndex]);
-            return assembly.GetType(typeName[(splitIndex + 1)..]);
+            var type = assembly.GetType(typeName[(splitIndex + 1)..]);
+            if (typeName != null) managedReferenceFieldTypes[typeName] = type;
+            return type;
         }
 
         static UnityEngine.Object GetSerializedPropertyRootObject(SerializedProperty property)

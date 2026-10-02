@@ -23,10 +23,34 @@ namespace Alchemy.Editor
         private static readonly int maxNamespaceNestCount = 16;
         private static readonly string nullDisplayName = "(Null)";
 
+        // Filtered, FullName-ordered candidates. Cleared on domain reload with the rest of the static state.
+        private static readonly Dictionary<Type, Type[]> candidateTypes = new();
+
         private Type[] types;
         public event Action<SerializeReferenceDropdownItem> onItemSelected;
 
+        public static Type[] GetCandidateTypes(Type baseType)
+        {
+            if (baseType != null && candidateTypes.TryGetValue(baseType, out var cached)) return cached;
+
+            var candidates = TypeCache.GetTypesDerivedFrom(baseType).Append(baseType).Where(t =>
+                (t.IsPublic || t.IsNestedPublic) &&
+                !t.IsAbstract &&
+                !t.IsGenericType &&
+                !typeof(UnityEngine.Object).IsAssignableFrom(t) &&
+                t.IsSerializable
+            ).OrderBy(x => x.FullName).ToArray();
+
+            if (baseType != null) candidateTypes[baseType] = candidates;
+            return candidates;
+        }
+
         public static void AddTo(AdvancedDropdownItem root, IEnumerable<Type> types)
+        {
+            AddSortedTypes(root, types.OrderBy(x => x.FullName).ToArray());
+        }
+
+        static void AddSortedTypes(AdvancedDropdownItem root, Type[] typeArray)
         {
             var itemCount = 0;
             var nullItem = new SerializeReferenceDropdownItem(null, nullDisplayName)
@@ -34,8 +58,6 @@ namespace Alchemy.Editor
                 id = itemCount++
             };
             root.AddChild(nullItem);
-
-            var typeArray = types.OrderBy(x => x.FullName);
 
             var isSingleNamespace = true;
             var namespaces = new string[maxNamespaceNestCount];
@@ -113,21 +135,32 @@ namespace Alchemy.Editor
             return null;
         }
 
-        public SerializeReferenceDropdown(IEnumerable<Type> types, int maxLineCount, AdvancedDropdownState state) : base(state)
+        public SerializeReferenceDropdown(IEnumerable<Type> types, int maxLineCount, AdvancedDropdownState state)
+            : this(maxLineCount, state)
         {
             SetTypes(types);
+        }
+
+        internal SerializeReferenceDropdown(int maxLineCount, AdvancedDropdownState state) : base(state)
+        {
             minimumSize = new(minimumSize.x, EditorGUIUtility.singleLineHeight * maxLineCount + headerHeight);
         }
 
         public void SetTypes(IEnumerable<Type> types)
         {
-            this.types = types.ToArray();
+            this.types = types.OrderBy(x => x.FullName).ToArray();
+        }
+
+        // Already ordered by FullName. The dropdown only reads the array, so the cached instance is kept.
+        public void SetSortedTypes(Type[] sortedTypes)
+        {
+            this.types = sortedTypes;
         }
 
         protected override AdvancedDropdownItem BuildRoot()
         {
             var root = new AdvancedDropdownItem("Select Type");
-            AddTo(root, types);
+            AddSortedTypes(root, types);
             return root;
         }
 
