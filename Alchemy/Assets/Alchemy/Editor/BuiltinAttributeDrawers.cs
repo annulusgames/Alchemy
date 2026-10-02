@@ -138,6 +138,9 @@ namespace Alchemy.Editor.Drawers
     [CustomAttributeDrawer(typeof(HideIfAttribute))]
     public sealed class HideIfDrawer : TrackSerializedObjectAttributeDrawer
     {
+        protected override SerializedProperty GetTrackedProperty() =>
+            ConditionTracking.FindSibling(Target, SerializedObject, SerializedProperty, ((HideIfAttribute)Attribute).Condition);
+
         protected override void OnInspectorChanged()
         {
             var condition = ReflectionHelper.GetValueBool(Target, ((HideIfAttribute)Attribute).Condition);
@@ -148,6 +151,9 @@ namespace Alchemy.Editor.Drawers
     [CustomAttributeDrawer(typeof(ShowIfAttribute))]
     public sealed class ShowIfDrawer : TrackSerializedObjectAttributeDrawer
     {
+        protected override SerializedProperty GetTrackedProperty() =>
+            ConditionTracking.FindSibling(Target, SerializedObject, SerializedProperty, ((ShowIfAttribute)Attribute).Condition);
+
         protected override void OnInspectorChanged()
         {
             var condition = ReflectionHelper.GetValueBool(Target, ((ShowIfAttribute)Attribute).Condition);
@@ -158,6 +164,9 @@ namespace Alchemy.Editor.Drawers
     [CustomAttributeDrawer(typeof(DisableIfAttribute))]
     public sealed class DisableIfDrawer : TrackSerializedObjectAttributeDrawer
     {
+        protected override SerializedProperty GetTrackedProperty() =>
+            ConditionTracking.FindSibling(Target, SerializedObject, SerializedProperty, ((DisableIfAttribute)Attribute).Condition);
+
         protected override void OnInspectorChanged()
         {
             var condition = ReflectionHelper.GetValueBool(Target, ((DisableIfAttribute)Attribute).Condition);
@@ -168,10 +177,60 @@ namespace Alchemy.Editor.Drawers
     [CustomAttributeDrawer(typeof(EnableIfAttribute))]
     public sealed class EnableIfDrawer : TrackSerializedObjectAttributeDrawer
     {
+        protected override SerializedProperty GetTrackedProperty() =>
+            ConditionTracking.FindSibling(Target, SerializedObject, SerializedProperty, ((EnableIfAttribute)Attribute).Condition);
+
         protected override void OnInspectorChanged()
         {
             var condition = ReflectionHelper.GetValueBool(Target, ((EnableIfAttribute)Attribute).Condition);
             TargetElement.SetEnabled(condition);
+        }
+    }
+
+    static class ConditionTracking
+    {
+        internal static SerializedProperty FindSibling(object target, SerializedObject serializedObject, SerializedProperty property, string condition)
+        {
+            if (!IsInstanceField(target, condition) || serializedObject == null || property == null)
+                return null;
+
+            // Root fields resolve by name. Nested fields are siblings under the parent path,
+            // including array elements ("items.Array.data[0].value" -> "...show").
+            var path = property.propertyPath;
+            var separator = path.LastIndexOf('.');
+            var siblingPath = separator < 0 ? condition : path.Substring(0, separator + 1) + condition;
+            return serializedObject.FindProperty(siblingPath);
+        }
+
+        // Match GetValueBool: a field on the declaring type wins; a property or method hides a base field.
+        static bool IsInstanceField(object target, string name)
+        {
+            if (target == null || string.IsNullOrEmpty(name)) return false;
+
+            const BindingFlags declared = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            for (var type = target.GetType(); type != null; type = type.BaseType)
+            {
+                var field = type.GetField(name, declared);
+                if (field != null) return !field.IsStatic;
+                if (DeclaresPropertyOrMethod(type, name, declared)) return false;
+            }
+
+            return false;
+        }
+
+        static bool DeclaresPropertyOrMethod(Type type, string name, BindingFlags flags)
+        {
+            foreach (var property in type.GetProperties(flags))
+            {
+                if (property.Name == name) return true;
+            }
+
+            foreach (var method in type.GetMethods(flags))
+            {
+                if (method.Name == name) return true;
+            }
+
+            return false;
         }
     }
 
@@ -221,6 +280,8 @@ namespace Alchemy.Editor.Drawers
         protected abstract string GetErrorMessage();
         protected abstract bool IsPropertyValid();
 
+        protected override SerializedProperty GetTrackedProperty() => SerializedProperty;
+
         const long ExternalRefreshDelayMs = 100;
 
         HelpBox helpBox;
@@ -248,7 +309,6 @@ namespace Alchemy.Editor.Drawers
                 Subscribe();
             }
 
-            TargetElement.TrackPropertyValue(SerializedProperty, _ => OnInspectorChanged());
             base.OnCreateElement();
         }
 
@@ -346,6 +406,8 @@ namespace Alchemy.Editor.Drawers
     {
         HelpBox helpBox;
 
+        protected override SerializedProperty GetTrackedProperty() => SerializedProperty;
+
         public override void OnCreateElement()
         {
             if (SerializedProperty == null || SerializedProperty.propertyType != SerializedPropertyType.ObjectReference) return;
@@ -369,6 +431,8 @@ namespace Alchemy.Editor.Drawers
     public sealed class RequiredListLengthDrawer : TrackSerializedObjectAttributeDrawer
     {
         HelpBox helpBox;
+
+        protected override SerializedProperty GetTrackedProperty() => SerializedProperty;
 
         public override void OnCreateElement()
         {
@@ -400,7 +464,6 @@ namespace Alchemy.Editor.Drawers
                     attribute.Max),
                 HelpBoxMessageType.Error);
             InsertHelpBox();
-            TargetElement.TrackPropertyValue(SerializedProperty, _ => OnInspectorChanged());
             base.OnCreateElement();
         }
 
@@ -508,6 +571,8 @@ namespace Alchemy.Editor.Drawers
         private PreviewImageUpdater previewUpdater;
         private const float BorderWidth = 1f;
         private static readonly Color borderColor = new Color(0f, 0f, 0f, 0.3f);
+
+        protected override SerializedProperty GetTrackedProperty() => SerializedProperty;
 
         public override void OnCreateElement()
         {
