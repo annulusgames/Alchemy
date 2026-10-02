@@ -9,6 +9,7 @@ using Alchemy.Editor.Elements;
 using Alchemy.Inspector;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
@@ -642,6 +643,73 @@ namespace Alchemy.Tests.EditorUI.EditMode
         }
 
         [UnityTest]
+        public IEnumerator Collection_AppendRefreshRebuildsReplacedManagedReferences() =>
+            CheckManagedReferenceRefresh(false, false);
+
+        [UnityTest]
+        public IEnumerator Collection_AppendRefreshRetargetsSameTypeCallbacks() =>
+            CheckManagedReferenceRefresh(true, false);
+
+        [UnityTest]
+        public IEnumerator Collection_AppendRefreshRebuildsShiftedManagedReferences() =>
+            CheckManagedReferenceRefresh(false, true);
+
+        IEnumerator CheckManagedReferenceRefresh(bool sameType, bool removeFirst)
+        {
+            var host = ScriptableObject.CreateInstance<ValueDropdownTestHost>();
+            var serialized = new SerializedObject(host);
+            ValueDropdownCollectionElement collection = null;
+            try
+            {
+                var previous = sameType ? new ValueDropdownTestHost.DerivedItem { extra = 42 } :
+                    new ValueDropdownTestHost.Item { number = 1 };
+                var replacement = new ValueDropdownTestHost.DerivedItem { extra = 99 };
+                host.managedItems = removeFirst ? new[] { previous, replacement } : new[] { previous };
+                serialized.Update();
+                var property = serialized.FindProperty(nameof(ValueDropdownTestHost.managedItems));
+                property.GetArrayElementAtIndex(0).isExpanded = true;
+                var binding = new ValueDropdownBinding(property,
+                    typeof(ValueDropdownTestHost).GetField(nameof(ValueDropdownTestHost.managedItems)), typeof(ValueDropdownTestHost.Item[]));
+                var attribute = new ValueDropdownAttribute(nameof(ValueDropdownTestHost.Numbers)) { Mode = ValueDropdownMode.Append };
+                collection = new ValueDropdownCollectionElement(binding, attribute, "References");
+                window = EditModeEditorTestUtility.ShowInWindow(collection);
+                var list = collection.Q<ListView>();
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => list.Q<IntegerField>() != null)) yield return wait;
+                var previousButton = list.Q<ValueDropdownElement>().Q<MethodButton>();
+
+                if (removeFirst) binding.Remove(new[] { 0 });
+                else binding.Set(0, new object[] { replacement });
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+                {
+                    serialized.UpdateIfRequiredOrScript();
+                    window.Repaint();
+                    var row = list.Q<ValueDropdownElement>();
+                    return row != null && row.Q<MethodButton>() != previousButton && row.Query<PropertyField>().ToList()
+                        .Any(field => field.bindingPath.EndsWith(".extra") && field.Q<IntegerField>()?.value == 99);
+                })) yield return wait;
+                Assert.That(list.Q<MethodButton>(), Is.Not.Null);
+                using (var submit = NavigationSubmitEvent.GetPooled())
+                {
+                    var button = list.Q<MethodButton>().Q<Button>();
+                    submit.target = button;
+                    button.SendEvent(submit);
+                }
+                Assert.That(((ValueDropdownTestHost.DerivedItem)host.managedItems[0]).extra, Is.EqualTo(100));
+                if (sameType) Assert.That(((ValueDropdownTestHost.DerivedItem)previous).extra, Is.EqualTo(42));
+                yield return null;
+            }
+            finally
+            {
+                collection?.Unbind();
+                collection?.RemoveFromHierarchy();
+                if (window != null) window.Close();
+                window = null;
+                serialized.Dispose();
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Collection_AppendReadOnlyRefreshKeepsTheRowDisabled()
         {
             var owner = new AppendListOwner();
@@ -749,6 +817,7 @@ namespace Alchemy.Tests.EditorUI.EditMode
         public int other;
         public List<string> tags;
         public List<Item> items;
+        [SerializeReference] public Item[] managedItems;
         public Item payload;
         public string title;
         public string weapon;
@@ -771,6 +840,13 @@ namespace Alchemy.Tests.EditorUI.EditMode
         {
             public int number;
             public string name;
+        }
+
+        [Serializable]
+        public class DerivedItem : Item
+        {
+            public int extra;
+            [Button] public void IncrementExtra() => extra++;
         }
     }
 }
