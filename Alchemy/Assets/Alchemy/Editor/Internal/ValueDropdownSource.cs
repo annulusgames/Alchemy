@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using Alchemy.Inspector;
+using UnityEditor;
 using UnityEngine;
 
 namespace Alchemy.Editor
@@ -14,6 +15,10 @@ namespace Alchemy.Editor
         {
             public Func<object, ValueDropdownContext, object> Get;
             public string Error;
+            // Instance members and context methods can return different labels per owner.
+            public bool VariesByOwner;
+            // ValueDropdownContext methods can also vary by root, index, and adding.
+            public bool VariesByContext;
         }
 
         static readonly Dictionary<(Type, string, bool), Accessor> accessors = new();
@@ -33,14 +38,7 @@ namespace Alchemy.Editor
 
         public static ValueDropdownSnapshot Get(ValueDropdownAttribute attribute, Type valueType, ValueDropdownContext context)
         {
-            var type = attribute.SourceType ?? context.Owner?.GetType();
-            if (type == null) throw new InvalidOperationException("The value provider has no owner.");
-            var key = (type, attribute.ValuesGetter, attribute.SourceType != null);
-            if (!accessors.TryGetValue(key, out var accessor))
-            {
-                accessor = Resolve(type, attribute.ValuesGetter, key.Item3);
-                accessors.Add(key, accessor);
-            }
+            var accessor = GetAccessor(attribute, context.Owner);
             if (accessor.Error != null) throw new InvalidOperationException(accessor.Error);
             var source = accessor.Get(context.Owner, context);
             if (!builders.TryGetValue(valueType, out var build))
@@ -51,6 +49,31 @@ namespace Alchemy.Editor
                 builders.Add(valueType, build);
             }
             return build(source);
+        }
+
+        internal static bool TryGetLabelScope(ValueDropdownAttribute attribute, object owner, out ValueDropdownLabelScope scope)
+        {
+            scope = default;
+            if (attribute == null) return false;
+            var type = attribute.SourceType ?? owner?.GetType();
+            if (type == null) return false;
+            var accessor = GetAccessor(attribute, owner);
+            if (accessor.Error != null) return false;
+            scope = new ValueDropdownLabelScope(type, attribute.ValuesGetter, attribute.SourceType != null, accessor.VariesByOwner, accessor.VariesByContext);
+            return true;
+        }
+
+        static Accessor GetAccessor(ValueDropdownAttribute attribute, object owner)
+        {
+            var type = attribute.SourceType ?? owner?.GetType();
+            if (type == null) throw new InvalidOperationException("The value provider has no owner.");
+            var key = (type, attribute.ValuesGetter, attribute.SourceType != null);
+            if (!accessors.TryGetValue(key, out var accessor))
+            {
+                accessor = Resolve(type, attribute.ValuesGetter, key.Item3);
+                accessors.Add(key, accessor);
+            }
+            return accessor;
         }
 
         static ValueDropdownSnapshot Build<T>(object source) => new ValueDropdownSnapshot<T>(source);
@@ -93,13 +116,246 @@ namespace Alchemy.Editor
                     };
                     if (body.Type == typeof(string) || !typeof(IEnumerable).IsAssignableFrom(body.Type))
                         throw new ArgumentException($"Provider '{name}' must return IEnumerable (not a string).");
-                    return new Accessor { Get = Expression.Lambda<Func<object, ValueDropdownContext, object>>(Expression.Convert(body, typeof(object)), owner, context).Compile() };
+                    var variesByContext = selected is MethodInfo selectedMethod && selectedMethod.GetParameters().Length == 1;
+                    var variesByOwner = variesByContext || selected switch
+                    {
+                        FieldInfo field => !field.IsStatic,
+                        PropertyInfo property => !property.GetGetMethod(true).IsStatic,
+                        MethodInfo method => !method.IsStatic,
+                        _ => false,
+                    };
+                    return new Accessor
+                    {
+                        Get = Expression.Lambda<Func<object, ValueDropdownContext, object>>(Expression.Convert(body, typeof(object)), owner, context).Compile(),
+                        VariesByOwner = variesByOwner,
+                        VariesByContext = variesByContext,
+                    };
                 }
                 throw new MissingMemberException(ownerType.FullName, name);
             }
             catch (Exception exception)
             {
                 return new Accessor { Error = exception.Message };
+            }
+        }
+    }
+
+    internal readonly struct ValueDropdownLabelScope
+    {
+        public ValueDropdownLabelScope(Type type, string member, bool staticSource, bool variesByOwner, bool variesByContext)
+        {
+            Type = type;
+            Member = member;
+            StaticSource = staticSource;
+            VariesByOwner = variesByOwner;
+            VariesByContext = variesByContext;
+        }
+
+        public readonly Type Type;
+        public readonly string Member;
+        public readonly bool StaticSource;
+        public readonly bool VariesByOwner;
+        public readonly bool VariesByContext;
+    }
+
+    // Cross-inspector labels. Pure static providers share by value; anything that reads the owner or
+    // ValueDropdownContext also keys by that owner (and by root, index, and adding when the method takes context).
+    // Unity objects are keyed by id so this cache does not keep them alive. Domain reload drops the static state.
+    internal static class ValueDropdownLabels
+    {
+        internal const int Capacity = 1024;
+
+        static readonly Dictionary<Key, string> entries = new();
+
+        // After domain reload the dictionary is already empty; re-subscribe once events are live again.
+        [InitializeOnLoadMethod]
+        static void Initialize()
+        {
+            EditorApplication.projectChanged -= Clear;
+            EditorApplication.projectChanged += Clear;
+        }
+
+        internal static int Count => entries.Count;
+
+        internal static void Clear() => entries.Clear();
+
+        public static bool TryGet(ValueDropdownAttribute attribute, Type valueType, ValueDropdownContext context, object value, out string text)
+        {
+            text = null;
+            return TryMakeKey(attribute, valueType, context, value, out var key) && entries.TryGetValue(key, out text);
+        }
+
+        public static void Store(ValueDropdownAttribute attribute, Type valueType, ValueDropdownContext context, object value, string text)
+        {
+            if (!TryMakeKey(attribute, valueType, context, value, out var key)) return;
+            if (!entries.ContainsKey(key) && entries.Count >= Capacity) EvictOne();
+            entries[key] = text;
+        }
+
+        public static void StoreSnapshot(ValueDropdownAttribute attribute, Type valueType, ValueDropdownContext context, ValueDropdownSnapshot snapshot)
+        {
+            if (snapshot == null) return;
+            for (var i = 0; i < snapshot.Count; i++)
+            {
+                var value = snapshot.GetValue(i);
+                // Prefer the entry Find would return, so a disabled duplicate does not overwrite it.
+                if (snapshot.Find(value) != i) continue;
+                Store(attribute, valueType, context, value, snapshot.Entries[i].Text);
+            }
+        }
+
+        internal static bool Retains(object target)
+        {
+            if (target == null) return false;
+            foreach (var key in entries.Keys)
+                if (key.Retains(target)) return true;
+            return false;
+        }
+
+        static bool TryMakeKey(ValueDropdownAttribute attribute, Type valueType, ValueDropdownContext context, object value, out Key key)
+        {
+            key = default;
+            if (valueType == null || !ValueDropdownSource.TryGetLabelScope(attribute, context.Owner, out var scope)) return false;
+            key = new Key(scope, valueType, context, value);
+            return true;
+        }
+
+        static void EvictOne()
+        {
+            var found = false;
+            var extra = default(Key);
+            foreach (var key in entries.Keys)
+            {
+                extra = key;
+                found = true;
+                break;
+            }
+            if (found) entries.Remove(extra);
+        }
+
+        readonly struct Key : IEquatable<Key>
+        {
+            readonly Type type;
+            readonly string member;
+            readonly Type valueType;
+            readonly bool staticSource;
+            readonly ObjectId owner;
+            readonly ObjectId root;
+            readonly int index;
+            readonly bool adding;
+            readonly ObjectId value;
+
+            public Key(ValueDropdownLabelScope scope, Type valueType, ValueDropdownContext context, object value)
+            {
+                type = scope.Type;
+                member = scope.Member;
+                this.valueType = valueType;
+                staticSource = scope.StaticSource;
+                var contextual = scope.VariesByOwner || scope.VariesByContext;
+                owner = contextual ? ObjectId.From(context.Owner) : ObjectId.None;
+                root = scope.VariesByContext ? ObjectId.From(context.Root) : ObjectId.None;
+                index = scope.VariesByContext ? context.Index : 0;
+                adding = scope.VariesByContext && context.IsAdding;
+                this.value = ObjectId.From(value);
+            }
+
+            public bool Retains(object target) => owner.Holds(target) || root.Holds(target) || value.Holds(target);
+
+            public bool Equals(Key other) =>
+                type == other.type && member == other.member && valueType == other.valueType && staticSource == other.staticSource &&
+                owner.Equals(other.owner) && root.Equals(other.root) && index == other.index && adding == other.adding && value.Equals(other.value);
+
+            public override bool Equals(object obj) => obj is Key other && Equals(other);
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = type != null ? type.GetHashCode() : 0;
+                    hash = (hash * 397) ^ (member != null ? member.GetHashCode() : 0);
+                    hash = (hash * 397) ^ (valueType != null ? valueType.GetHashCode() : 0);
+                    hash = (hash * 397) ^ staticSource.GetHashCode();
+                    hash = (hash * 397) ^ owner.GetHashCode();
+                    hash = (hash * 397) ^ root.GetHashCode();
+                    hash = (hash * 397) ^ index;
+                    hash = (hash * 397) ^ adding.GetHashCode();
+                    return (hash * 397) ^ value.GetHashCode();
+                }
+            }
+        }
+
+        readonly struct ObjectId : IEquatable<ObjectId>
+        {
+            enum Kind : byte { None, Null, Unity, Value }
+
+            readonly Kind kind;
+#if UNITY_6000_4_OR_NEWER
+            readonly EntityId entityId;
+#else
+            readonly int instanceId;
+#endif
+            readonly object value;
+
+            public static ObjectId None => default;
+
+            public static ObjectId From(object target)
+            {
+                if (target == null) return new ObjectId(Kind.Null, default, null);
+                if (target is UnityEngine.Object unity)
+                {
+#if UNITY_6000_4_OR_NEWER
+                    return new ObjectId(Kind.Unity, unity.GetEntityId(), null);
+#else
+                    return new ObjectId(Kind.Unity, unity.GetInstanceID(), null);
+#endif
+                }
+                return new ObjectId(Kind.Value, default, target);
+            }
+
+#if UNITY_6000_4_OR_NEWER
+            ObjectId(Kind kind, EntityId entityId, object value)
+#else
+            ObjectId(Kind kind, int instanceId, object value)
+#endif
+            {
+                this.kind = kind;
+#if UNITY_6000_4_OR_NEWER
+                this.entityId = entityId;
+#else
+                this.instanceId = instanceId;
+#endif
+                this.value = value;
+            }
+
+            public bool Holds(object target) => target != null && ReferenceEquals(value, target);
+
+            public bool Equals(ObjectId other)
+            {
+                if (kind != other.kind) return false;
+                if (kind == Kind.Value) return Equals(value, other.value);
+#if UNITY_6000_4_OR_NEWER
+                if (kind == Kind.Unity) return entityId.Equals(other.entityId);
+#else
+                if (kind == Kind.Unity) return instanceId == other.instanceId;
+#endif
+                return true;
+            }
+
+            public override bool Equals(object obj) => obj is ObjectId other && Equals(other);
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = (int)kind;
+#if UNITY_6000_4_OR_NEWER
+                    if (kind == Kind.Unity) hash = (hash * 397) ^ entityId.GetHashCode();
+#else
+                    if (kind == Kind.Unity) hash = (hash * 397) ^ instanceId;
+#endif
+                    if (kind == Kind.Value && value != null) hash = (hash * 397) ^ value.GetHashCode();
+                    return hash;
+                }
             }
         }
     }

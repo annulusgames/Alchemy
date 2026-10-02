@@ -43,6 +43,8 @@ namespace Alchemy.Editor
                 originalValues[t] = context.CurrentValue;
                 counts[t] = binding.IsCollection ? binding.Collection(t)?.Count ?? 0 : 0;
                 snapshots[t] = ValueDropdownSource.Get(attribute, binding.ValueType, context);
+                // Opening the picker rebuilds the provider snapshot, so replace cached labels with this pass.
+                ValueDropdownLabels.StoreSnapshot(attribute, binding.ValueType, context, snapshots[t]);
                 if (attribute.IsUniqueList && binding.IsCollection)
                     existing[t] = snapshots[t].ExistingValues(binding.Collection(t), adding ? -1 : index);
             }
