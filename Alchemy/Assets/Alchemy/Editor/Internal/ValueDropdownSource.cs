@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Alchemy.Inspector;
 using UnityEditor;
 using UnityEngine;
@@ -239,8 +240,8 @@ namespace Alchemy.Editor
             readonly string member;
             readonly Type valueType;
             readonly bool staticSource;
-            readonly ObjectId owner;
-            readonly ObjectId root;
+            readonly OwnerId owner;
+            readonly OwnerId root;
             readonly ObjectId currentValue;
             readonly int index;
             readonly bool adding;
@@ -253,8 +254,8 @@ namespace Alchemy.Editor
                 this.valueType = valueType;
                 staticSource = scope.StaticSource;
                 var contextual = scope.VariesByOwner || scope.VariesByContext;
-                owner = contextual ? ObjectId.From(context.Owner) : ObjectId.None;
-                root = scope.VariesByContext ? ObjectId.From(context.Root) : ObjectId.None;
+                owner = contextual ? new OwnerId(context.Owner) : default;
+                root = scope.VariesByContext ? new OwnerId(context.Root) : default;
                 currentValue = scope.VariesByContext ? ObjectId.From(context.CurrentValue) : ObjectId.None;
                 index = scope.VariesByContext ? context.Index : 0;
                 adding = scope.VariesByContext && context.IsAdding;
@@ -286,6 +287,32 @@ namespace Alchemy.Editor
                     return (hash * 397) ^ value.GetHashCode();
                 }
             }
+        }
+
+        readonly struct OwnerId : IEquatable<OwnerId>
+        {
+            readonly object target;
+            readonly ObjectId unity;
+
+            public OwnerId(object target)
+            {
+                if (target is UnityEngine.Object)
+                {
+                    this.target = null;
+                    unity = ObjectId.From(target);
+                }
+                else
+                {
+                    this.target = target;
+                    unity = default;
+                }
+            }
+
+            public bool Holds(object value) => value != null && ReferenceEquals(target, value);
+            public bool Equals(OwnerId other) => ReferenceEquals(target, other.target) && unity.Equals(other.unity);
+            public override bool Equals(object obj) => obj is OwnerId other && Equals(other);
+            public override int GetHashCode() => unchecked(
+                ((target == null ? 0 : RuntimeHelpers.GetHashCode(target)) * 397) ^ unity.GetHashCode());
         }
 
         readonly struct ObjectId : IEquatable<ObjectId>

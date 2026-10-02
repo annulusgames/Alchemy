@@ -436,6 +436,90 @@ namespace Alchemy.Tests.EditorUI.EditMode
             new ValueDropdownBinding(owner, typeof(SnapshotLabelOwner).GetField(nameof(SnapshotLabelOwner.weapons)), typeof(int[]),
                 () => owner.weapons, null, null, null);
 
+        [Test]
+        public void Binding_SharedLabelsKeepValueEqualOwnersSeparate()
+        {
+            ValueDropdownLabels.Clear();
+            var first = new ValueEqualOwner { label = "First owner" };
+            var second = new ValueEqualOwner { label = "Second owner" };
+            Assert.That(first, Is.EqualTo(second));
+            var attribute = new ValueDropdownAttribute(nameof(ValueEqualOwner.Options));
+            ValueDropdownBinding Bind(ValueEqualOwner owner) => new ValueDropdownBinding(owner,
+                typeof(ValueEqualOwner).GetField(nameof(ValueEqualOwner.value)), typeof(int),
+                () => owner.value, null, null, null);
+
+            Assert.That(Bind(first).DisplayText(-1, attribute), Is.EqualTo("First owner"));
+            Assert.That(Bind(second).DisplayText(-1, attribute), Is.EqualTo("Second owner"));
+            Assert.That(Bind(first).DisplayText(-1, attribute), Is.EqualTo("First owner"));
+            Assert.That(first.evaluations, Is.EqualTo(1));
+            Assert.That(second.evaluations, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Labels_ContextKeepsValueEqualRootsSeparate()
+        {
+            ValueDropdownLabels.Clear();
+            var owner = new ValueEqualOwner();
+            var first = new ValueEqualOwner { label = "First root" };
+            var second = new ValueEqualOwner { label = "Second root" };
+            var attribute = new ValueDropdownAttribute(nameof(ValueEqualOwner.ContextOptions));
+            var firstContext = new ValueDropdownContext(first, owner, 1, -1, false);
+            var secondContext = new ValueDropdownContext(second, owner, 1, -1, false);
+            ValueDropdownLabels.StoreSnapshot(attribute, typeof(int), firstContext,
+                ValueDropdownSource.Get(attribute, typeof(int), firstContext));
+            Assert.That(ValueDropdownLabels.TryGet(attribute, typeof(int), secondContext, 1, out _), Is.False);
+            ValueDropdownLabels.StoreSnapshot(attribute, typeof(int), secondContext,
+                ValueDropdownSource.Get(attribute, typeof(int), secondContext));
+            Assert.That(ValueDropdownLabels.TryGet(attribute, typeof(int), firstContext, 1, out var text), Is.True);
+            Assert.That(text, Is.EqualTo("First root"));
+            Assert.That(ValueDropdownLabels.TryGet(attribute, typeof(int), secondContext, 1, out text), Is.True);
+            Assert.That(text, Is.EqualTo("Second root"));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Labels_MutableOwnerHashesPreserveLookupsAndCapacity(bool changeRoot)
+        {
+            ValueDropdownLabels.Clear();
+            var owner = new ValueEqualOwner();
+            var root = new ValueEqualOwner();
+            var attribute = new ValueDropdownAttribute(nameof(ValueEqualOwner.ContextOptions));
+            var context = new ValueDropdownContext(root, owner, 1, -1, false);
+            for (var i = 0; i < ValueDropdownLabels.Capacity; i++)
+                ValueDropdownLabels.Store(attribute, typeof(int), context, i, "Cached");
+
+            (changeRoot ? root : owner).id++;
+            ValueDropdownLabels.Store(attribute, typeof(int), context, ValueDropdownLabels.Capacity, "Newest");
+            Assert.That(ValueDropdownLabels.Count, Is.EqualTo(ValueDropdownLabels.Capacity));
+            Assert.That(ValueDropdownLabels.TryGet(attribute, typeof(int), context,
+                ValueDropdownLabels.Capacity - 1, out var text), Is.True);
+            Assert.That(text, Is.EqualTo("Cached"));
+            Assert.That(ValueDropdownLabels.TryGet(attribute, typeof(int), context,
+                ValueDropdownLabels.Capacity, out text), Is.True);
+            Assert.That(text, Is.EqualTo("Newest"));
+            ValueDropdownLabels.Clear();
+        }
+
+        class ValueEqualOwner
+        {
+            public int id = 7;
+            public int value = 1;
+            public string label;
+            public int evaluations;
+
+            public ValueDropdownList<int> Options()
+            {
+                evaluations++;
+                return new ValueDropdownList<int> { { label, value } };
+            }
+
+            public ValueDropdownList<int> ContextOptions(ValueDropdownContext context) =>
+                new ValueDropdownList<int> { { ((ValueEqualOwner)context.Root).label, value } };
+
+            public override bool Equals(object other) => other is ValueEqualOwner owner && id == owner.id;
+            public override int GetHashCode() => id;
+        }
+
         static ValueDropdownBinding BindContext(ContextLabelOwner owner) =>
             new ValueDropdownBinding(owner, typeof(ContextLabelOwner).GetField(nameof(ContextLabelOwner.values)), typeof(int[]),
                 () => owner.values, null, null, null);
