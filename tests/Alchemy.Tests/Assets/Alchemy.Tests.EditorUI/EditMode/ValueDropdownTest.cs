@@ -315,6 +315,43 @@ namespace Alchemy.Tests.EditorUI.EditMode
             Assert.That(StaticContextOwner.evaluations, Is.EqualTo(2));
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Binding_ContextLabelsAreNotSharedAcrossCurrentValues(bool openPopup)
+        {
+            ValueDropdownLabels.Clear();
+            var owner = new CurrentValueLabelOwner();
+            var attribute = new ValueDropdownAttribute(nameof(CurrentValueLabelOwner.Options));
+            ValueDropdownBinding Bind(string name) => new ValueDropdownBinding(owner,
+                typeof(CurrentValueLabelOwner).GetField(name), typeof(int),
+                () => typeof(CurrentValueLabelOwner).GetField(name).GetValue(owner),
+                value => typeof(CurrentValueLabelOwner).GetField(name).SetValue(owner, value), null, null);
+
+            var first = Bind(nameof(CurrentValueLabelOwner.first));
+            if (openPopup) _ = new ValueDropdownSession(first, attribute, -1, false);
+            else Assert.That(first.DisplayText(-1, attribute), Is.EqualTo("1:1"));
+            Assert.That(Bind(nameof(CurrentValueLabelOwner.second)).DisplayText(-1, attribute), Is.EqualTo("2:2"));
+            Assert.That(Bind(nameof(CurrentValueLabelOwner.first)).DisplayText(-1, attribute), Is.EqualTo("1:1"));
+            Assert.That(owner.evaluations, Is.EqualTo(2));
+        }
+
+        class CurrentValueLabelOwner
+        {
+            public int first = 1;
+            public int second = 2;
+            public int evaluations;
+
+            public ValueDropdownList<int> Options(ValueDropdownContext context)
+            {
+                evaluations++;
+                return new ValueDropdownList<int>
+                {
+                    { $"{context.CurrentValue}:1", 1 },
+                    { $"{context.CurrentValue}:2", 2 },
+                };
+            }
+        }
+
         [Test]
         public void Binding_StaticProviderLabelsAreSharedAcrossOwners()
         {

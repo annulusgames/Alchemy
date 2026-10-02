@@ -159,7 +159,7 @@ namespace Alchemy.Editor
     }
 
     // Cross-inspector labels. Pure static providers share by value; anything that reads the owner or
-    // ValueDropdownContext also keys by that owner (and by root, index, and adding when the method takes context).
+    // ValueDropdownContext also keys by that owner (and by root, current value, index, and adding when the method takes context).
     // Unity objects are keyed by id so this cache does not keep them alive. Domain reload drops the static state.
     internal static class ValueDropdownLabels
     {
@@ -241,6 +241,7 @@ namespace Alchemy.Editor
             readonly bool staticSource;
             readonly ObjectId owner;
             readonly ObjectId root;
+            readonly ObjectId currentValue;
             readonly int index;
             readonly bool adding;
             readonly ObjectId value;
@@ -254,16 +255,18 @@ namespace Alchemy.Editor
                 var contextual = scope.VariesByOwner || scope.VariesByContext;
                 owner = contextual ? ObjectId.From(context.Owner) : ObjectId.None;
                 root = scope.VariesByContext ? ObjectId.From(context.Root) : ObjectId.None;
+                currentValue = scope.VariesByContext ? ObjectId.From(context.CurrentValue) : ObjectId.None;
                 index = scope.VariesByContext ? context.Index : 0;
                 adding = scope.VariesByContext && context.IsAdding;
                 this.value = ObjectId.From(value);
             }
 
-            public bool Retains(object target) => owner.Holds(target) || root.Holds(target) || value.Holds(target);
+            public bool Retains(object target) => owner.Holds(target) || root.Holds(target) || currentValue.Holds(target) || value.Holds(target);
 
             public bool Equals(Key other) =>
                 type == other.type && member == other.member && valueType == other.valueType && staticSource == other.staticSource &&
-                owner.Equals(other.owner) && root.Equals(other.root) && index == other.index && adding == other.adding && value.Equals(other.value);
+                owner.Equals(other.owner) && root.Equals(other.root) && currentValue.Equals(other.currentValue) &&
+                index == other.index && adding == other.adding && value.Equals(other.value);
 
             public override bool Equals(object obj) => obj is Key other && Equals(other);
 
@@ -277,6 +280,7 @@ namespace Alchemy.Editor
                     hash = (hash * 397) ^ staticSource.GetHashCode();
                     hash = (hash * 397) ^ owner.GetHashCode();
                     hash = (hash * 397) ^ root.GetHashCode();
+                    hash = (hash * 397) ^ currentValue.GetHashCode();
                     hash = (hash * 397) ^ index;
                     hash = (hash * 397) ^ adding.GetHashCode();
                     return (hash * 397) ^ value.GetHashCode();
