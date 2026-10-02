@@ -27,7 +27,7 @@ namespace Alchemy.Editor
             readonly string name;
             readonly AlchemyGroupDrawer drawer;
 
-            readonly List<(MemberInfo Member, int DeclaredAt)> members = new();
+            readonly List<(MemberInfo Member, int DeclaredAt, int Order, GroupLayout[] Groups)> members = new();
             readonly List<GroupNode> children = new();
 
             bool hasDefinedOrder;
@@ -43,7 +43,8 @@ namespace Alchemy.Editor
             /// </summary>
             public int DeclaredAt { get; private set; } = int.MaxValue;
             public IEnumerable<MemberInfo> Members => members.Select(x => x.Member);
-            public IEnumerable<(MemberInfo Member, int DeclaredAt)> MemberEntries => members;
+            public IEnumerable<(MemberInfo Member, int DeclaredAt)> MemberEntries => members.Select(x => (x.Member, x.DeclaredAt));
+            internal IEnumerable<(MemberInfo Member, int DeclaredAt, int Order, GroupLayout[] Groups)> LayoutEntries => members;
             public IReadOnlyList<GroupNode> Children => children;
             public AlchemyGroupDrawer Drawer => drawer;
             public VisualElement VisualElement { get; set; }
@@ -62,7 +63,12 @@ namespace Alchemy.Editor
 
             public void AddMember(MemberInfo memberInfo, int declaredAt)
             {
-                members.Add((memberInfo, declaredAt));
+                AddMember(memberInfo, declaredAt, GetMemberOrder(memberInfo), GetOrderedGroupLayouts(memberInfo));
+            }
+
+            internal void AddMember(MemberInfo memberInfo, int declaredAt, int order, GroupLayout[] groups)
+            {
+                members.Add((memberInfo, declaredAt, order, groups));
             }
 
             public void NotifyDeclaredAt(int declaredAt)
@@ -97,12 +103,13 @@ namespace Alchemy.Editor
 
         readonly struct SiblingItem
         {
-            public SiblingItem(int order, int declaredAt, MemberInfo member)
+            public SiblingItem(int order, int declaredAt, MemberInfo member, GroupLayout[] groups)
             {
                 Order = order;
                 DeclaredAt = declaredAt;
                 Member = member;
                 Group = null;
+                Groups = groups;
             }
 
             public SiblingItem(int order, int declaredAt, GroupNode group)
@@ -111,12 +118,46 @@ namespace Alchemy.Editor
                 DeclaredAt = declaredAt;
                 Member = null;
                 Group = group;
+                Groups = null;
             }
 
             public int Order { get; }
             public int DeclaredAt { get; }
             public MemberInfo Member { get; }
             public GroupNode Group { get; }
+            public GroupLayout[] Groups { get; }
+        }
+
+        // One reflection walk per concrete type. Group drawers are still created per build.
+        static readonly Dictionary<Type, MemberLayout[]> memberLayouts = new();
+        static readonly GroupLayout[] emptyGroups = Array.Empty<GroupLayout>();
+
+        readonly struct MemberLayout
+        {
+            public MemberLayout(MemberInfo member, int declaredAt, int order, GroupLayout[] groups)
+            {
+                Member = member;
+                DeclaredAt = declaredAt;
+                Order = order;
+                Groups = groups;
+            }
+
+            public MemberInfo Member { get; }
+            public int DeclaredAt { get; }
+            public int Order { get; }
+            public GroupLayout[] Groups { get; }
+        }
+
+        internal readonly struct GroupLayout
+        {
+            public GroupLayout(PropertyGroupAttribute attribute, string[] hierarchy)
+            {
+                Attribute = attribute;
+                Hierarchy = hierarchy;
+            }
+
+            public PropertyGroupAttribute Attribute { get; }
+            public string[] Hierarchy { get; }
         }
 
         public static void BuildElements(SerializedObject serializedObject, VisualElement rootElement, object target, Func<string, SerializedProperty> findPropertyFunc)
@@ -154,13 +195,14 @@ namespace Alchemy.Editor
                     continue;
                 }
 
-                AddMemberElement(node, item.Member, serializedObject, target, findPropertyFunc);
+                AddMemberElement(node, item.Member, item.Groups, serializedObject, target, findPropertyFunc);
             }
         }
 
         static void AddMemberElement(
             GroupNode node,
             MemberInfo member,
+            GroupLayout[] groups,
             SerializedObject serializedObject,
             object target,
             Func<string, SerializedProperty> findPropertyFunc)
@@ -171,9 +213,12 @@ namespace Alchemy.Editor
             if (member.HasCustomAttribute<HideInInspector>() && member.Name != "m_SerializedDataModeController")
                 return;
 
-            // Add default PropertyField if member has DisableAlchemyEditorAttribute
+            // Add default PropertyField if member has DisableAlchemyEditorAttribute.
+            // Methods are never serialized properties.
             if (member.GetCustomAttribute<DisableAlchemyEditorAttribute>() != null)
             {
+                if (member is MethodInfo) return;
+
                 var p = findPropertyFunc(member.Name);
                 if (p != null)
                 {
@@ -185,13 +230,17 @@ namespace Alchemy.Editor
             }
 
             VisualElement element = null;
-            var property = findPropertyFunc(member.Name);
+            SerializedProperty property = null;
+            if (member is not MethodInfo)
+            {
+                property = findPropertyFunc(member.Name);
+            }
             var isManagedReferenceProperty = property?.propertyType == SerializedPropertyType.ManagedReference;
 
             // Select the value UI before constructing a potentially expensive custom drawer.
             if (ValueDropdownSource.GetAttribute(member) != null)
             {
-                element = CreateMemberElement(serializedObject, target, member, findPropertyFunc);
+                element = CreateMemberElement(serializedObject, target, member, property, findPropertyFunc);
             }
             // Add default PropertyField if the property has a custom PropertyDrawer
             else if ((member is FieldInfo fieldInfo && InternalAPIHelper.GetDrawerTypeForType(fieldInfo.FieldType, isManagedReferenceProperty) != null) ||
@@ -204,17 +253,13 @@ namespace Alchemy.Editor
             }
             else
             {
-                element = CreateMemberElement(serializedObject, target, member, findPropertyFunc);
+                element = CreateMemberElement(serializedObject, target, member, property, findPropertyFunc);
             }
 
             if (element == null) return;
             element.style.width = Length.Percent(100f);
 
-            var e = node.Drawer?.GetGroupElement(
-                member.GetCustomAttributes<PropertyGroupAttribute>()
-                    .OrderByDescending(x => x.GroupPath.Split('/').Length)
-                    .FirstOrDefault()
-            );
+            var e = node.Drawer?.GetGroupElement(GetLeafGroupAttribute(groups));
 
             if (e == null) node.VisualElement.Add(element);
             else e.Add(element);
@@ -235,12 +280,13 @@ namespace Alchemy.Editor
         {
             // Ordering only — visibility is decided later by AddMemberElement /
             // CreateMemberElement (Inspector) or ReflectionField (ClassField).
-            var memberItems = node.MemberEntries
+            var memberItems = node.LayoutEntries
                 .Select(entry =>
                     new SiblingItem(
-                        GetMemberOrder(entry.Member),
+                        entry.Order,
                         entry.DeclaredAt,
-                        entry.Member));
+                        entry.Member,
+                        entry.Groups));
 
             var groupItems = node.Children.Select(child =>
                 new SiblingItem(child.Order, child.DeclaredAt, child));
@@ -298,30 +344,71 @@ namespace Alchemy.Editor
             return orderAttribute?.Order ?? 0;
         }
 
+        static MemberLayout[] GetMemberLayouts(Type targetType)
+        {
+            if (memberLayouts.TryGetValue(targetType, out var cached))
+                return cached;
+
+            var ordered = DeclarationOrderHelper.OrderMembers(
+                targetType,
+                ReflectionHelper.GetMembers(targetType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, true));
+
+            var layouts = new MemberLayout[ordered.Length];
+            for (var i = 0; i < ordered.Length; i++)
+            {
+                var (member, declaredAt) = ordered[i];
+                layouts[i] = new MemberLayout(member, declaredAt, GetMemberOrder(member), GetOrderedGroupLayouts(member));
+            }
+
+            memberLayouts.Add(targetType, layouts);
+            return layouts;
+        }
+
+        // Path-length order matches the previous OrderBy(GroupPath.Split('/').Length), which is stable.
+        static GroupLayout[] GetOrderedGroupLayouts(MemberInfo member)
+        {
+            var attributes = member.GetCustomAttributes<PropertyGroupAttribute>(true).ToArray();
+            if (attributes.Length == 0) return emptyGroups;
+
+            return attributes
+                .Select(attribute => new GroupLayout(attribute, attribute.GroupPath.Split('/')))
+                .OrderBy(group => group.Hierarchy.Length)
+                .ToArray();
+        }
+
+        // First attribute among the longest paths. Matches OrderByDescending(path length).First().
+        static PropertyGroupAttribute GetLeafGroupAttribute(GroupLayout[] groups)
+        {
+            if (groups == null || groups.Length == 0) return null;
+
+            var leaf = groups[groups.Length - 1];
+            var depth = leaf.Hierarchy.Length;
+            for (var i = groups.Length - 2; i >= 0; i--)
+            {
+                if (groups[i].Hierarchy.Length != depth) break;
+                leaf = groups[i];
+            }
+
+            return leaf.Attribute;
+        }
+
         internal static GroupNode BuildInspectorNode(Type targetType)
         {
             var rootNode = new GroupNode("Inspector-Group-Root", null);
 
-            // Order members once, then assign sequential DeclaredAt (avoids int-packed ordinals).
-            var members = DeclarationOrderHelper.OrderMembers(
-                targetType,
-                ReflectionHelper.GetMembers(targetType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, true));
-
-            foreach (var (member, declaredAt) in members)
+            foreach (var layout in GetMemberLayouts(targetType))
             {
-                var groupAttributes = member.GetCustomAttributes<PropertyGroupAttribute>(true);
-                if (groupAttributes.Count() == 0)
+                if (layout.Groups.Length == 0)
                 {
-                    rootNode.AddMember(member, declaredAt);
+                    rootNode.AddMember(layout.Member, layout.DeclaredAt, layout.Order, layout.Groups);
                     continue;
                 }
 
                 var parentNode = rootNode;
 
-                foreach (var (groupAttribute, hierarchy) in groupAttributes
-                    .Select(x => (x, x.GroupPath.Split('/')))
-                    .OrderBy(x => x.Item2.Length))
+                foreach (var group in layout.Groups)
                 {
+                    var hierarchy = group.Hierarchy;
                     parentNode = rootNode;
                     for (var i = 0; i < hierarchy.Length; i++)
                     {
@@ -330,25 +417,25 @@ namespace Alchemy.Editor
                         if (next == null)
                         {
                             var nodePath = string.Join("/", hierarchy.Take(i + 1));
-                            var drawer = AlchemyEditorUtility.CreateGroupDrawer(groupAttribute, targetType, nodePath);
+                            var drawer = AlchemyEditorUtility.CreateGroupDrawer(group.Attribute, targetType, nodePath);
                             next = new GroupNode(groupName, drawer);
                             parentNode.Add(next);
                         }
 
                         // Earliest declaring member wins for group placement among siblings.
-                        next.NotifyDeclaredAt(declaredAt);
+                        next.NotifyDeclaredAt(layout.DeclaredAt);
 
                         // Order on a group attribute applies to the leaf group of that path.
                         if (i == hierarchy.Length - 1)
                         {
-                            next.RegisterOrder(groupAttribute);
+                            next.RegisterOrder(group.Attribute);
                         }
 
                         parentNode = next;
                     }
                 }
 
-                parentNode.AddMember(member, declaredAt);
+                parentNode.AddMember(layout.Member, layout.DeclaredAt, layout.Order, layout.Groups);
             }
 
             rootNode.SortChildrenRecursive();
@@ -356,6 +443,12 @@ namespace Alchemy.Editor
         }
 
         public static VisualElement CreateMemberElement(SerializedObject serializedObject, object target, MemberInfo memberInfo, Func<string, SerializedProperty> findPropertyFunc)
+        {
+            var property = findPropertyFunc?.Invoke(memberInfo.Name);
+            return CreateMemberElement(serializedObject, target, memberInfo, property, findPropertyFunc);
+        }
+
+        internal static VisualElement CreateMemberElement(SerializedObject serializedObject, object target, MemberInfo memberInfo, SerializedProperty property, Func<string, SerializedProperty> findPropertyFunc)
         {
             switch (memberInfo)
             {
@@ -373,8 +466,6 @@ namespace Alchemy.Editor
 
                     if (isSerializedMember)
                     {
-                        var property = findPropertyFunc?.Invoke(memberInfo.Name);
-
                         // Create property field
                         if (property != null)
                         {

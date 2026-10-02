@@ -1,10 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Alchemy.Editor;
+using Alchemy.Editor.Drawers;
+using Alchemy.Editor.Elements;
 using Alchemy.Inspector;
 using Alchemy.Tests.EditorUI;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 #if ALCHEMY_SUPPORT_SERIALIZATION
@@ -209,6 +213,132 @@ namespace Alchemy.Tests.EditorUI.EditMode
             Assert.That(indexC, Is.GreaterThan(indexB));
         }
 
+        [Test]
+        public void BuildInspectorNode_CachedLayout_RebuildsDrawersWithoutChangingOrder()
+        {
+            var first = InspectorHelper.BuildInspectorNode(typeof(OrderedGroups));
+            InspectorHelper.BuildInspectorNode(typeof(EqualOrderGroups));
+            var second = InspectorHelper.BuildInspectorNode(typeof(OrderedGroups));
+
+            Assert.That(
+                second.Children.Select(x => x.Name).ToArray(),
+                Is.EqualTo(first.Children.Select(x => x.Name).ToArray()));
+            Assert.That(
+                second.Children.Select(x => x.Order).ToArray(),
+                Is.EqualTo(first.Children.Select(x => x.Order).ToArray()));
+            Assert.That(
+                InspectorHelper.GetOrderedSiblingNames(second),
+                Is.EqualTo(InspectorHelper.GetOrderedSiblingNames(first)));
+            Assert.That(second.Children[0].Drawer, Is.Not.SameAs(first.Children[0].Drawer));
+            Assert.That(second.Children[0].Drawer, Is.TypeOf(first.Children[0].Drawer.GetType()));
+        }
+
+        [Test]
+        public void BuildInspectorNode_StackedGroupAttributes_CreateDrawersFromShorterPathFirst()
+        {
+            var root = InspectorHelper.BuildInspectorNode(typeof(StackedGroupLayouts));
+            var horizontal = root.Children.Single(x => x.Name == "Horizontal");
+            var box = horizontal.Children.Single(x => x.Name == "Box1");
+
+            Assert.That(horizontal.Drawer, Is.TypeOf<HorizontalGroupDrawer>());
+            Assert.That(box.Drawer, Is.TypeOf<BoxGroupDrawer>());
+            Assert.That(box.Members.Select(x => x.Name).ToArray(), Is.EqualTo(new[] { "foo" }));
+            Assert.That(horizontal.Drawer.UniqueId, Does.EndWith("_Horizontal"));
+            Assert.That(box.Drawer.UniqueId, Does.EndWith("_Horizontal/Box1"));
+
+            var again = InspectorHelper.BuildInspectorNode(typeof(StackedGroupLayouts));
+            var cachedHorizontal = again.Children.Single(x => x.Name == "Horizontal");
+            var cachedBox = cachedHorizontal.Children.Single(x => x.Name == "Box1");
+            Assert.That(cachedHorizontal.Drawer, Is.TypeOf<HorizontalGroupDrawer>());
+            Assert.That(cachedBox.Drawer, Is.TypeOf<BoxGroupDrawer>());
+            Assert.That(cachedHorizontal.Drawer, Is.Not.SameAs(horizontal.Drawer));
+        }
+
+        [Test]
+        public void BuildElements_FindsEachSerializedPropertyOnceAndSkipsMethods()
+        {
+            var target = ScriptableObject.CreateInstance<FindPropertyOnceTarget>();
+            try
+            {
+                var serializedObject = new SerializedObject(target);
+                var calls = new List<string>();
+                var root = new VisualElement();
+                InspectorHelper.BuildElements(serializedObject, root, target, name =>
+                {
+                    calls.Add(name);
+                    return serializedObject.FindProperty(name);
+                });
+                AssertFindPropertyOnce(calls, root);
+
+                calls.Clear();
+                var cachedRoot = new VisualElement();
+                InspectorHelper.BuildElements(serializedObject, cachedRoot, target, name =>
+                {
+                    calls.Add(name);
+                    return serializedObject.FindProperty(name);
+                });
+                AssertFindPropertyOnce(calls, cachedRoot);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(target);
+            }
+        }
+
+        [Test]
+        public void CreateMemberElement_ReusesSuppliedProperty()
+        {
+            var target = ScriptableObject.CreateInstance<FindPropertyOnceTarget>();
+            try
+            {
+                var serializedObject = new SerializedObject(target);
+                var property = serializedObject.FindProperty(nameof(FindPropertyOnceTarget.amount));
+                var member = typeof(FindPropertyOnceTarget).GetField(nameof(FindPropertyOnceTarget.amount));
+                var calls = 0;
+                var element = InspectorHelper.CreateMemberElement(
+                    serializedObject,
+                    target,
+                    member,
+                    property,
+                    _ =>
+                    {
+                        calls++;
+                        return null;
+                    });
+
+                Assert.That(calls, Is.EqualTo(0));
+                Assert.That(element, Is.InstanceOf<AlchemyPropertyField>());
+
+                var fromPublic = InspectorHelper.CreateMemberElement(
+                    serializedObject,
+                    target,
+                    member,
+                    name =>
+                    {
+                        calls++;
+                        return serializedObject.FindProperty(name);
+                    });
+                Assert.That(calls, Is.EqualTo(1));
+                Assert.That(fromPublic, Is.InstanceOf<AlchemyPropertyField>());
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(target);
+            }
+        }
+
+        static void AssertFindPropertyOnce(List<string> calls, VisualElement root)
+        {
+            Assert.That(calls.Count(name => name == nameof(FindPropertyOnceTarget.amount)), Is.EqualTo(1));
+            Assert.That(calls.Count(name => name == nameof(FindPropertyOnceTarget.grouped)), Is.EqualTo(1));
+            Assert.That(calls, Does.Not.Contain(nameof(FindPropertyOnceTarget.InvokeButton)));
+            Assert.That(calls, Does.Not.Contain(nameof(FindPropertyOnceTarget.HiddenMethod)));
+            var paths = root.Query<PropertyField>().ToList().Select(field => field.bindingPath).ToArray();
+            Assert.That(paths.Count(path => path == nameof(FindPropertyOnceTarget.amount)), Is.EqualTo(1));
+            Assert.That(paths.Count(path => path == nameof(FindPropertyOnceTarget.grouped)), Is.EqualTo(1));
+            Assert.That(root.Query<Button>().ToList().Any(button => button.text == nameof(FindPropertyOnceTarget.InvokeButton)), Is.True);
+        }
+
 #if ALCHEMY_SUPPORT_SERIALIZATION
         [Test]
         public void GetOrderedSiblings_IncludesPrivateAlchemySerializeField()
@@ -362,5 +492,23 @@ namespace Alchemy.Tests.EditorUI.EditMode
         {
             public int c;
         }
+
+        sealed class StackedGroupLayouts
+        {
+            [HorizontalGroup("Horizontal")][BoxGroup("Horizontal/Box1")] public float foo;
+        }
+    }
+
+    public class FindPropertyOnceTarget : ScriptableObject
+    {
+        public int amount;
+
+        [Group("Stats")]
+        public int grouped;
+
+        [Button]
+        public void InvokeButton() { }
+
+        public void HiddenMethod() { }
     }
 }
