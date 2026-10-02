@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using System.Reflection;
 using Alchemy.Inspector;
 using UnityEditor;
@@ -58,7 +58,6 @@ namespace Alchemy.Editor
         {
             var attributes = memberInfo.GetCustomAttributes();
             Elements.PrefabConditionalElement.Wrap(serializedObject, target, attributes, memberElement);
-            var processorTypes = TypeCache.GetTypesWithAttribute(typeof(CustomAttributeDrawerAttribute));
             var hasValueDropdown = ValueDropdownSource.GetAttribute(memberInfo) != null;
             foreach (var attribute in attributes)
             {
@@ -67,7 +66,7 @@ namespace Alchemy.Editor
                 if (hasValueDropdown && property == null && attribute is OnValueChangedAttribute) continue;
                 // Dropdown controls apply LabelWidth to the labels they create.
                 if (hasValueDropdown && attribute is LabelWidthAttribute) continue;
-                var processorType = processorTypes.FirstOrDefault(x => x.IsSubclassOf(typeof(AlchemyAttributeDrawer)) && x.GetCustomAttribute<CustomAttributeDrawerAttribute>().targetAttributeType == attribute.GetType());
+                var processorType = GetAttributeDrawerType(attribute.GetType());
                 if (processorType == null) continue;
 
                 var processor = (AlchemyAttributeDrawer)Activator.CreateInstance(processorType);
@@ -80,6 +79,31 @@ namespace Alchemy.Editor
 
                 processor.OnCreateElement();
             }
+        }
+
+        static Dictionary<Type, Type> attributeDrawerTypes;
+
+        static Type GetAttributeDrawerType(Type attributeType)
+        {
+            attributeDrawerTypes ??= CreateAttributeDrawerTypes();
+            attributeDrawerTypes.TryGetValue(attributeType, out var drawerType);
+            return drawerType;
+        }
+
+        static Dictionary<Type, Type> CreateAttributeDrawerTypes()
+        {
+            var drawerTypes = new Dictionary<Type, Type>();
+            foreach (var drawerType in TypeCache.GetTypesWithAttribute(typeof(CustomAttributeDrawerAttribute)))
+            {
+                if (!drawerType.IsSubclassOf(typeof(AlchemyAttributeDrawer))) continue;
+
+                var targetAttributeType = drawerType.GetCustomAttribute<CustomAttributeDrawerAttribute>().targetAttributeType;
+                // TypeCache order matches the previous FirstOrDefault scan; the first drawer wins.
+                if (targetAttributeType == null || drawerTypes.ContainsKey(targetAttributeType)) continue;
+                drawerTypes.Add(targetAttributeType, drawerType);
+            }
+
+            return drawerTypes;
         }
     }
 }

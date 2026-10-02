@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using System.Reflection;
 using Alchemy.Inspector;
 using UnityEditor;
@@ -11,13 +11,30 @@ namespace Alchemy.Editor
     /// </summary>
     public static class AlchemyEditorUtility
     {
+        static Dictionary<Type, Type> groupDrawerTypes;
+
         /// <summary>
         /// Finds the type of drawer that corresponds to PropertyGroupAttribute.
         /// </summary>
         public static Type FindGroupDrawerType(PropertyGroupAttribute attribute)
         {
-            return TypeCache.GetTypesWithAttribute<CustomGroupDrawerAttribute>()
-                .FirstOrDefault(x => x.GetCustomAttribute<CustomGroupDrawerAttribute>().targetAttributeType == attribute.GetType());
+            groupDrawerTypes ??= CreateGroupDrawerTypes();
+            groupDrawerTypes.TryGetValue(attribute.GetType(), out var drawerType);
+            return drawerType;
+        }
+
+        static Dictionary<Type, Type> CreateGroupDrawerTypes()
+        {
+            var drawerTypes = new Dictionary<Type, Type>();
+            foreach (var drawerType in TypeCache.GetTypesWithAttribute<CustomGroupDrawerAttribute>())
+            {
+                var targetAttributeType = drawerType.GetCustomAttribute<CustomGroupDrawerAttribute>().targetAttributeType;
+                // TypeCache order matches the previous FirstOrDefault scan; the first drawer wins.
+                if (targetAttributeType == null || drawerTypes.ContainsKey(targetAttributeType)) continue;
+                drawerTypes.Add(targetAttributeType, drawerType);
+            }
+
+            return drawerTypes;
         }
 
         internal static AlchemyGroupDrawer CreateGroupDrawer(PropertyGroupAttribute attribute, Type targetType, string groupPath = null)
