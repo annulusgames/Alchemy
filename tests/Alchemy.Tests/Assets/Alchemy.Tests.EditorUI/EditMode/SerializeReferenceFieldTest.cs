@@ -133,20 +133,24 @@ namespace Alchemy.Tests.EditorUI.EditMode
                 Assert.That(EditorIcons.CsScriptIcon.text, Is.EqualTo(iconText));
 
                 // Let TrackPropertyValue register before editing. 6000.0 does not report a
-                // change applied on the tracked SerializedObject itself.
-                for (var i = 0; i < 5; i++) yield return null;
+                // change applied on the tracked SerializedObject itself, and polls that
+                // tracker only during a panel binding update, which this window skips
+                // unless it is repainted.
+                for (var i = 0; i < 5; i++)
+                {
+                    window.Repaint();
+                    yield return null;
+                }
 
                 SetNode(new SerializeReferenceFieldNode());
-                serializedObject.Update();
-                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => label.text == assignedLabel))
+                foreach (var wait in WaitForLabel(() => label.text == assignedLabel))
                     yield return wait;
 
                 Assert.That(label.text, Is.EqualTo(assignedLabel));
                 Assert.That(EditorIcons.CsScriptIcon.text, Is.EqualTo(iconText));
 
                 SetNode(null);
-                serializedObject.Update();
-                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => label.text == nullLabel))
+                foreach (var wait in WaitForLabel(() => label.text == nullLabel))
                     yield return wait;
 
                 Assert.That(label.text, Is.EqualTo(nullLabel));
@@ -160,6 +164,18 @@ namespace Alchemy.Tests.EditorUI.EditMode
             }
         }
 
+        IEnumerable WaitForLabel(Func<bool> ready)
+        {
+            // Refresh the tracked object, then repaint so 6000.0's binding update can observe it.
+            foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+            {
+                serializedObject.UpdateIfRequiredOrScript();
+                window.Repaint();
+                return ready();
+            }))
+                yield return wait;
+        }
+
         void SetNode(SerializeReferenceFieldNode node)
         {
             using (var editing = new SerializedObject(host))
@@ -167,6 +183,8 @@ namespace Alchemy.Tests.EditorUI.EditMode
                 editing.FindProperty(nameof(SerializeReferenceFieldHost.node)).managedReferenceValue = node;
                 editing.ApplyModifiedPropertiesWithoutUndo();
             }
+
+            serializedObject.UpdateIfRequiredOrScript();
         }
 
         static float ExpectedWidth(VisualElement button, VisualElement visualTree)
