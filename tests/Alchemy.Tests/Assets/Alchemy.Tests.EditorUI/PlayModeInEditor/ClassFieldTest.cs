@@ -1,15 +1,28 @@
+using System.Collections;
 using System.Linq;
 using Alchemy.Editor.Elements;
 using Alchemy.Inspector;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
 namespace Alchemy.Tests.EditorUI.PlayModeInEditor
 {
     public class ClassFieldTest
     {
+        EditorWindow window;
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (window == null) return;
+            UnityEngine.Object.DestroyImmediate(window);
+            window = null;
+        }
+
         sealed class ConditionalTarget
         {
             public bool show;
@@ -55,12 +68,15 @@ namespace Alchemy.Tests.EditorUI.PlayModeInEditor
             public GameObject value;
         }
 
-        [Test]
-        public void Test_RequiredInAttributeDoesNotRequireSerializedProperty()
+        [UnityTest]
+        public IEnumerator Test_RequiredInAttributeDoesNotRequireSerializedProperty()
         {
             var target = new RequiredInTarget();
+            var field = new ClassField(target, target.GetType(), "Target");
 
-            Assert.DoesNotThrow(() => new ClassField(target, target.GetType(), "Target"));
+            Assert.DoesNotThrow(() => Expand(field));
+            foreach (var wait in WaitUntilBuilt(field))
+                yield return wait;
         }
 
         sealed class PrivateFieldTarget
@@ -69,11 +85,14 @@ namespace Alchemy.Tests.EditorUI.PlayModeInEditor
             public int publicValue;
         }
 
-        [Test]
-        public void Test_PrivateFieldsAreDrawnViaReflectionField()
+        [UnityTest]
+        public IEnumerator Test_PrivateFieldsAreDrawnViaReflectionField()
         {
             var target = new PrivateFieldTarget();
             var field = new ClassField(target, target.GetType(), "Target");
+            Expand(field);
+            foreach (var wait in WaitUntilBuilt(field))
+                yield return wait;
 
             Assert.That(
                 field.Query<IntegerField>().ToList().Any(x => x.label == "Private Value"),
@@ -84,11 +103,14 @@ namespace Alchemy.Tests.EditorUI.PlayModeInEditor
                 Is.True);
         }
 
-        [Test]
-        public void Test_ConditionalAttributesDoNotRequireSerializedObject()
+        [UnityTest]
+        public IEnumerator Test_ConditionalAttributesDoNotRequireSerializedObject()
         {
             var target = new ConditionalTarget();
             var field = new ClassField(target, target.GetType(), "Target");
+            Expand(field);
+            foreach (var wait in WaitUntilBuilt(field))
+                yield return wait;
 
             var showIfField = EditorTestUtility.QueryRequired<ReflectionField>(
                 field,
@@ -101,36 +123,67 @@ namespace Alchemy.Tests.EditorUI.PlayModeInEditor
             Assert.That(hideIfField.style.display.value, Is.EqualTo(DisplayStyle.None));
         }
 
-        [Test]
-        public void Test_RequiredAttributeDoesNotRequireSerializedProperty()
+        [UnityTest]
+        public IEnumerator Test_RequiredAttributeDoesNotRequireSerializedProperty()
         {
             var target = new RequiredTarget();
+            var field = new ClassField(target, target.GetType(), "Target");
 
-            Assert.DoesNotThrow(() => new ClassField(target, target.GetType(), "Target"));
+            Assert.DoesNotThrow(() => Expand(field));
+            foreach (var wait in WaitUntilBuilt(field))
+                yield return wait;
         }
 
-        [Test]
-        public void Test_ValidateInputAttributeDoesNotRequireSerializedProperty()
+        [UnityTest]
+        public IEnumerator Test_ValidateInputAttributeDoesNotRequireSerializedProperty()
         {
             var target = new ValidateInputTarget();
+            var field = new ClassField(target, target.GetType(), "Target");
 
-            Assert.DoesNotThrow(() => new ClassField(target, target.GetType(), "Target"));
+            Assert.DoesNotThrow(() => Expand(field));
+            foreach (var wait in WaitUntilBuilt(field))
+                yield return wait;
         }
 
-        [Test]
-        public void Test_ChildObjectsOnlyAttributeDoesNotRequireSerializedProperty()
+        [UnityTest]
+        public IEnumerator Test_ChildObjectsOnlyAttributeDoesNotRequireSerializedProperty()
         {
             var target = new ChildObjectsOnlyTarget();
+            var field = new ClassField(target, target.GetType(), "Target");
 
-            Assert.DoesNotThrow(() => new ClassField(target, target.GetType(), "Target"));
+            Assert.DoesNotThrow(() => Expand(field));
+            foreach (var wait in WaitUntilBuilt(field))
+                yield return wait;
         }
 
-        [Test]
-        public void Test_RequiredListLengthAttributeDoesNotRequireSerializedProperty()
+        [UnityTest]
+        public IEnumerator Test_RequiredListLengthAttributeDoesNotRequireSerializedProperty()
         {
             var target = new RequiredListLengthTarget();
+            var field = new ClassField(target, target.GetType(), "Target");
 
-            Assert.DoesNotThrow(() => new ClassField(target, target.GetType(), "Target"));
+            Assert.DoesNotThrow(() => Expand(field));
+            foreach (var wait in WaitUntilBuilt(field))
+                yield return wait;
+        }
+
+        // Foldout value changes are not dispatched until the element is on a panel.
+        void Expand(ClassField field)
+        {
+            window = EditorTestUtility.ShowInWindow(field);
+            field.Q<Foldout>().value = true;
+        }
+
+        static IEnumerable WaitUntilBuilt(ClassField field)
+        {
+            var foldout = field.Q<Foldout>();
+            var deadline = EditorApplication.timeSinceStartup + 2f;
+            while (foldout.contentContainer.childCount == 0)
+            {
+                Assert.That(EditorApplication.timeSinceStartup, Is.LessThan(deadline),
+                    "Timed out waiting for the ClassField foldout to build.");
+                yield return null;
+            }
         }
     }
 }

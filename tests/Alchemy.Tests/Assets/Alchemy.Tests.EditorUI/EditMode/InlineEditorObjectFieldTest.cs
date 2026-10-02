@@ -123,6 +123,7 @@ namespace Alchemy.Tests.EditorUI.EditMode
         InlineEditorObjectField Show()
         {
             var property = serializedObject.FindProperty(nameof(InlineHost.sample));
+            property.isExpanded = true;
             var element = new InlineEditorObjectField(property, typeof(InlineTarget));
             window = EditModeEditorTestUtility.ShowInWindow(element);
             return element;

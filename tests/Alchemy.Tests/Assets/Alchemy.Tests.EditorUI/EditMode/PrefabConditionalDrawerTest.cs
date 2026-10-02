@@ -95,6 +95,7 @@ namespace Alchemy.Tests.EditorUI.EditMode
                 helper.ShowInspector(host);
             }
 
+            ExpandFoldout("Reflected Nested");
             var reflectedFields = helper.InspectorRoot.Query<IntegerField>().ToList()
                 .Where(field => field.label == "Nested Scene Only" || field.label == "Nested Editable In Scene")
                 .ToList();
@@ -107,6 +108,7 @@ namespace Alchemy.Tests.EditorUI.EditMode
                     field.label != "Nested Scene Only" || !mixedSelection,
                     field.label != "Nested Editable In Scene" || !mixedSelection);
             }
+            ExpandFoldout("Serialized Nested");
             AssertState(FieldScope("serializedNested.nestedSceneOnly"), !mixedSelection, true);
             AssertState(FieldScope("serializedNested.nestedEditableInScene"), true, !mixedSelection);
         }
@@ -250,6 +252,12 @@ namespace Alchemy.Tests.EditorUI.EditMode
             parent.Add(field);
             PrefabConditionalElement.Wrap(serialized, new object(), new[] { attribute }, field);
             return parent[0];
+        }
+
+        void ExpandFoldout(string text)
+        {
+            var foldout = helper.InspectorRoot.Query<Foldout>().ToList().Single(element => element.text == text);
+            foldout.value = true;
         }
 
         VisualElement FieldScope(string name)

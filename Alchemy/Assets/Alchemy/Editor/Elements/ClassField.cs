@@ -20,9 +20,13 @@ namespace Alchemy.Editor.Elements
             var clickable = InternalAPIHelper.GetClickable(toggle);
             InternalAPIHelper.SetAcceptClicksIfDisabled(clickable, true);
 
-            var rootNode = InspectorHelper.BuildInspectorNode(type);
-            rootNode.VisualElement = foldout;
-            BuildNodeElements(rootNode, obj, value => OnValueChanged?.Invoke(value));
+            InspectorHelper.BuildFoldoutContents(foldout, foldout.value, () =>
+            {
+                var rootNode = InspectorHelper.BuildInspectorNode(type);
+                rootNode.VisualElement = foldout;
+                BuildNodeElements(rootNode, obj, value => OnValueChanged?.Invoke(value));
+                PrefabConditionalElement.UpdateConditionalElements(foldout);
+            });
 
             Add(foldout);
         }
