@@ -79,6 +79,12 @@ namespace Alchemy.Tests.EditorUI.EditMode
                 yield return null;
                 yield return null;
                 Assert.That(calls, Is.EqualTo(callsAfterStop));
+
+                updater.Update(Texture2D.blackTexture);
+                Assert.That(updater.HasActiveJob, Is.True);
+                Assert.That(updater.Target, Is.SameAs(Texture2D.blackTexture));
+                Assert.That(updater.Attempts, Is.EqualTo(0));
+                updater.Stop();
             }
             finally
             {
@@ -127,19 +133,24 @@ namespace Alchemy.Tests.EditorUI.EditMode
         }
 
         [UnityTest]
-        public IEnumerator Update_StopsAfterMaxAttemptsAndRetriesOnLaterNotification()
+        public IEnumerator Update_DoesNotRetrySameReferenceAfterMaxAttempts()
         {
             var image = new Image();
             var host = new VisualElement();
             host.Add(image);
             var window = EditModeEditorTestUtility.ShowInWindow(host);
             const int maxAttempts = 3;
+            var calls = 0;
             Texture preview = null;
             try
             {
                 yield return null;
 
-                var updater = new PreviewImageUpdater(host, image, _ => preview, maxAttempts);
+                var updater = new PreviewImageUpdater(host, image, _ =>
+                {
+                    calls++;
+                    return preview;
+                }, maxAttempts);
                 updater.Update(Texture2D.whiteTexture);
 
                 foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => !updater.HasActiveJob))
@@ -148,6 +159,7 @@ namespace Alchemy.Tests.EditorUI.EditMode
                 Assert.That(updater.HasActiveJob, Is.False);
                 Assert.That(updater.Attempts, Is.EqualTo(maxAttempts));
                 Assert.That(image.image, Is.Null);
+                Assert.That(calls, Is.EqualTo(maxAttempts));
 
                 yield return null;
                 Assert.That(updater.HasActiveJob, Is.False);
@@ -155,12 +167,25 @@ namespace Alchemy.Tests.EditorUI.EditMode
 
                 preview = Texture2D.whiteTexture;
                 updater.Update(Texture2D.whiteTexture);
+                Assert.That(updater.HasActiveJob, Is.False);
+                Assert.That(updater.Attempts, Is.EqualTo(maxAttempts));
+
+                yield return null;
+                yield return null;
+                Assert.That(calls, Is.EqualTo(maxAttempts));
+                Assert.That(image.image, Is.Null);
+
+                updater.Update(Texture2D.blackTexture);
+                Assert.That(image.image, Is.Null);
+                Assert.That(updater.Target, Is.SameAs(Texture2D.blackTexture));
                 Assert.That(updater.HasActiveJob, Is.True);
-                Assert.That(updater.Attempts, Is.Zero);
+                Assert.That(updater.Attempts, Is.EqualTo(0));
+
                 foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => !updater.HasActiveJob))
                     yield return wait;
                 Assert.That(image.image, Is.SameAs(preview));
                 Assert.That(updater.HasActiveJob, Is.False);
+                Assert.That(calls, Is.EqualTo(maxAttempts + 1));
             }
             finally
             {
