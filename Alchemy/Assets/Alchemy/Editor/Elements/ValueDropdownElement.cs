@@ -295,6 +295,7 @@ namespace Alchemy.Editor.Elements
         {
             public int Index;
             public int BoundIndex = -2;
+            public object BoundValue;
             public bool NeedsBind;
             public ValueDropdownElement Dropdown;
 
@@ -403,7 +404,11 @@ namespace Alchemy.Editor.Elements
             }
 
             // The default field is bound to one array index. Replace rows have no field, so they retarget every index.
-            var retarget = row.Dropdown != null && (attribute.Mode == ValueDropdownMode.Replace || row.BoundIndex == index);
+            var tracksReference = attribute.Mode != ValueDropdownMode.Replace && binding.SerializedObject != null &&
+                !binding.ValueType.IsValueType && binding.ValueType != typeof(string);
+            var value = tracksReference ? binding.Read(0, index) : null;
+            var retarget = row.Dropdown != null && (attribute.Mode == ValueDropdownMode.Replace ||
+                (row.BoundIndex == index && (!tracksReference || ReferenceEquals(row.BoundValue, value))));
             if (!retarget)
             {
                 if (row.Dropdown != null)
@@ -415,6 +420,7 @@ namespace Alchemy.Editor.Elements
                 row.Dropdown = new ValueDropdownElement(binding, attribute, () => row.Index, label, reportError: ShowError);
                 row.Add(row.Dropdown);
                 row.BoundIndex = index;
+                row.BoundValue = value;
                 row.NeedsBind = false;
             }
             else if (row.NeedsBind && binding.SerializedObject != null && attribute.Mode != ValueDropdownMode.Replace)
