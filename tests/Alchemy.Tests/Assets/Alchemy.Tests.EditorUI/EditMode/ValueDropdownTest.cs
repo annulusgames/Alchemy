@@ -9,6 +9,7 @@ using Alchemy.Editor.Elements;
 using Alchemy.Inspector;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
@@ -588,10 +589,166 @@ namespace Alchemy.Tests.EditorUI.EditMode
             foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => appended.Q<Label>()?.style.width.value.value == 200f)) yield return wait;
         }
 
+        [UnityTest]
+        public IEnumerator Collection_AppendRefreshReusesRowsBoundToTheSameIndex()
+        {
+            var host = ScriptableObject.CreateInstance<ValueDropdownTestHost>();
+            try
+            {
+                host.values = new[] { 1, 2, 3 };
+                using var serialized = new SerializedObject(host);
+                var binding = new ValueDropdownBinding(serialized.FindProperty("values"),
+                    typeof(ValueDropdownTestHost).GetField("values"), typeof(int[]));
+                var attribute = new ValueDropdownAttribute(nameof(ValueDropdownTestHost.Numbers)) { Mode = ValueDropdownMode.Append };
+                var collection = new ValueDropdownCollectionElement(binding, attribute, "Values");
+                window = EditModeEditorTestUtility.ShowInWindow(collection);
+                var list = collection.Q<ListView>();
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+                {
+                    var found = list.Query<ValueDropdownElement>().ToList();
+                    return found.Count == 3 && found.All(row => row.Q<IntegerField>() != null);
+                })) yield return wait;
+                var rows = list.Query<ValueDropdownElement>().ToList();
+                var fields = rows.Select(row => row.Q<IntegerField>()).ToList();
+                Assert.That(rows.Select(row => row.Label), Is.EqualTo(new[] { "Element 0", "Element 1", "Element 2" }));
+                Assert.That(fields[1].enabledInHierarchy, Is.True);
+                Assert.That(rows[1].Q<Button>().text, Is.EqualTo("▾"));
+
+                binding.Set(1, new object[] { 4 });
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => fields[1].value == 4)) yield return wait;
+                for (var i = 0; i < 3; i++) yield return null;
+                Assert.That(list.Query<ValueDropdownElement>().ToList(), Is.EqualTo(rows));
+                Assert.That(rows.Select(row => row.Q<IntegerField>()).ToList(), Is.EqualTo(fields));
+                Assert.That(rows[1].Label, Is.EqualTo("Element 1"));
+                Assert.That(host.values, Is.EqualTo(new[] { 1, 4, 3 }));
+
+                binding.Append(new[] { new object[] { 8 } });
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => list.Query<ValueDropdownElement>().ToList().Count == 4)) yield return wait;
+                for (var i = 0; i < 3; i++) yield return null;
+                var appended = list.Query<ValueDropdownElement>().ToList();
+                Assert.That(appended.Take(3), Is.EqualTo(rows));
+                Assert.That(appended[3].Q<IntegerField>().value, Is.EqualTo(8));
+
+                binding.Remove(new[] { 0 });
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => rows[0].Q<IntegerField>().value == 4)) yield return wait;
+                for (var i = 0; i < 3; i++) yield return null;
+                Assert.That(rows[0].Q<IntegerField>(), Is.SameAs(fields[0]));
+                Assert.That(host.values, Is.EqualTo(new[] { 4, 3, 8 }));
+                Assert.That(rows[0].Label, Is.EqualTo("Element 0"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Collection_AppendRefreshRebuildsReplacedManagedReferences() =>
+            CheckManagedReferenceRefresh(false, false);
+
+        [UnityTest]
+        public IEnumerator Collection_AppendRefreshRetargetsSameTypeCallbacks() =>
+            CheckManagedReferenceRefresh(true, false);
+
+        [UnityTest]
+        public IEnumerator Collection_AppendRefreshRebuildsShiftedManagedReferences() =>
+            CheckManagedReferenceRefresh(false, true);
+
+        IEnumerator CheckManagedReferenceRefresh(bool sameType, bool removeFirst)
+        {
+            var host = ScriptableObject.CreateInstance<ValueDropdownTestHost>();
+            var serialized = new SerializedObject(host);
+            ValueDropdownCollectionElement collection = null;
+            try
+            {
+                var previous = sameType ? new ValueDropdownTestHost.DerivedItem { extra = 42 } :
+                    new ValueDropdownTestHost.Item { number = 1 };
+                var replacement = new ValueDropdownTestHost.DerivedItem { extra = 99 };
+                host.managedItems = removeFirst ? new[] { previous, replacement } : new[] { previous };
+                serialized.Update();
+                var property = serialized.FindProperty(nameof(ValueDropdownTestHost.managedItems));
+                property.GetArrayElementAtIndex(0).isExpanded = true;
+                var binding = new ValueDropdownBinding(property,
+                    typeof(ValueDropdownTestHost).GetField(nameof(ValueDropdownTestHost.managedItems)), typeof(ValueDropdownTestHost.Item[]));
+                var attribute = new ValueDropdownAttribute(nameof(ValueDropdownTestHost.Numbers)) { Mode = ValueDropdownMode.Append };
+                collection = new ValueDropdownCollectionElement(binding, attribute, "References");
+                window = EditModeEditorTestUtility.ShowInWindow(collection);
+                var list = collection.Q<ListView>();
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => list.Q<IntegerField>() != null)) yield return wait;
+                var previousButton = list.Q<ValueDropdownElement>().Q<MethodButton>();
+
+                if (removeFirst) binding.Remove(new[] { 0 });
+                else binding.Set(0, new object[] { replacement });
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+                {
+                    serialized.UpdateIfRequiredOrScript();
+                    window.Repaint();
+                    var row = list.Q<ValueDropdownElement>();
+                    return row != null && row.Q<MethodButton>() != previousButton && row.Query<PropertyField>().ToList()
+                        .Any(field => field.bindingPath.EndsWith(".extra") && field.Q<IntegerField>()?.value == 99);
+                })) yield return wait;
+                Assert.That(list.Q<MethodButton>(), Is.Not.Null);
+                using (var submit = NavigationSubmitEvent.GetPooled())
+                {
+                    var button = list.Q<MethodButton>().Q<Button>();
+                    submit.target = button;
+                    button.SendEvent(submit);
+                }
+                Assert.That(((ValueDropdownTestHost.DerivedItem)host.managedItems[0]).extra, Is.EqualTo(100));
+                if (sameType) Assert.That(((ValueDropdownTestHost.DerivedItem)previous).extra, Is.EqualTo(42));
+                yield return null;
+            }
+            finally
+            {
+                collection?.Unbind();
+                collection?.RemoveFromHierarchy();
+                if (window != null) window.Close();
+                window = null;
+                serialized.Dispose();
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Collection_AppendReadOnlyRefreshKeepsTheRowDisabled()
+        {
+            var owner = new AppendListOwner();
+            var binding = new ValueDropdownBinding(owner, typeof(AppendListOwner).GetField("items"), typeof(List<int>),
+                () => owner.items, value => owner.items = (List<int>)value, null, null);
+            var attribute = new ValueDropdownAttribute(nameof(AppendListOwner.Choices)) { Mode = ValueDropdownMode.AppendReadOnly };
+            var collection = new ValueDropdownCollectionElement(binding, attribute, "Items");
+            window = EditModeEditorTestUtility.ShowInWindow(collection);
+            var list = collection.Q<ListView>();
+            foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+            {
+                var found = list.Query<ValueDropdownElement>().ToList();
+                return found.Count == 3 && found.All(row => row.Q<IntegerField>() != null);
+            })) yield return wait;
+            var row = list.Query<ValueDropdownElement>().ToList()[1];
+            var field = row.Q<IntegerField>();
+            Assert.That(field.enabledInHierarchy, Is.False);
+            Assert.That(row.Q<Button>().enabledInHierarchy, Is.True);
+
+            binding.Set(1, new object[] { 4 });
+            foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => row.Q<IntegerField>().value == 4)) yield return wait;
+            for (var i = 0; i < 3; i++) yield return null;
+            Assert.That(list.Query<ValueDropdownElement>().ToList()[1], Is.SameAs(row));
+            Assert.That(row.Q<IntegerField>().enabledInHierarchy, Is.False);
+            Assert.That(row.Q<Button>().enabledInHierarchy, Is.True);
+            Assert.That(row.Label, Is.EqualTo("Element 1"));
+            Assert.That(owner.items, Is.EqualTo(new[] { 1, 4, 3 }));
+        }
+
         class ScalarOwner
         {
             public int value = 1;
             public int[] Choices => new[] { 1, 2, 3 };
+        }
+
+        class AppendListOwner
+        {
+            public List<int> items = new List<int> { 1, 2, 3 };
+            public int[] Choices => new[] { 1, 2, 3, 4 };
         }
 
         class ReadOnlyCollections
@@ -656,9 +813,11 @@ namespace Alchemy.Tests.EditorUI.EditMode
     public class ValueDropdownTestHost : ScriptableObject
     {
         public int[] values;
+        public int[] Numbers => new[] { 1, 2, 3, 4, 8 };
         public int other;
         public List<string> tags;
         public List<Item> items;
+        [SerializeReference] public Item[] managedItems;
         public Item payload;
         public string title;
         public string weapon;
@@ -681,6 +840,13 @@ namespace Alchemy.Tests.EditorUI.EditMode
         {
             public int number;
             public string name;
+        }
+
+        [Serializable]
+        public class DerivedItem : Item
+        {
+            public int extra;
+            [Button] public void IncrementExtra() => extra++;
         }
     }
 }

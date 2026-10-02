@@ -294,7 +294,19 @@ namespace Alchemy.Editor.Elements
         sealed class Row : VisualElement
         {
             public int Index;
+            public int BoundIndex = -2;
+            public object BoundValue;
+            public bool NeedsBind;
             public ValueDropdownElement Dropdown;
+
+            public Row()
+            {
+                // Only the row leaving the panel releases its serialized bindings. Child detach must not count.
+                RegisterCallback<DetachFromPanelEvent>(evt =>
+                {
+                    if (evt.target == this) NeedsBind = true;
+                });
+            }
         }
 
         readonly ValueDropdownBinding binding;
@@ -328,11 +340,13 @@ namespace Alchemy.Editor.Elements
                 var row = (Row)element;
                 row.Index = -2;
                 row.Dropdown?.ResetBinding();
-                if (attribute.Mode != ValueDropdownMode.Replace || attribute.ListMode == ValueDropdownListMode.AddOnly)
+                // Append rows stay in place so a same-index rebind can retarget them. Add-only rows are plain fields.
+                if (attribute.ListMode == ValueDropdownListMode.AddOnly)
                 {
                     element.Unbind();
                     row.Clear();
                     row.Dropdown = null;
+                    row.BoundIndex = -2;
                 }
             };
             list.itemIndexChanged += (from, to) => Execute(() => binding.Move(from, to));
@@ -386,18 +400,36 @@ namespace Alchemy.Editor.Elements
             {
                 row.Clear();
                 row.Add(ValueDropdownGUI.DefaultField(binding, index, label));
+                return;
             }
-            else
+
+            // The default field is bound to one array index. Replace rows have no field, so they retarget every index.
+            var tracksReference = attribute.Mode != ValueDropdownMode.Replace && binding.SerializedObject != null &&
+                !binding.ValueType.IsValueType && binding.ValueType != typeof(string);
+            var value = tracksReference ? binding.Read(0, index) : null;
+            var retarget = row.Dropdown != null && (attribute.Mode == ValueDropdownMode.Replace ||
+                (row.BoundIndex == index && (!tracksReference || ReferenceEquals(row.BoundValue, value))));
+            if (!retarget)
             {
-                if (row.Dropdown == null || attribute.Mode != ValueDropdownMode.Replace)
+                if (row.Dropdown != null)
                 {
+                    row.Unbind();
                     row.Clear();
-                    row.Dropdown = new ValueDropdownElement(binding, attribute, () => row.Index, label, reportError: ShowError);
-                    row.Add(row.Dropdown);
+                    row.Dropdown = null;
                 }
-                row.Dropdown.Label = label;
-                row.Dropdown.Refresh();
+                row.Dropdown = new ValueDropdownElement(binding, attribute, () => row.Index, label, reportError: ShowError);
+                row.Add(row.Dropdown);
+                row.BoundIndex = index;
+                row.BoundValue = value;
+                row.NeedsBind = false;
             }
+            else if (row.NeedsBind && binding.SerializedObject != null && attribute.Mode != ValueDropdownMode.Replace)
+            {
+                row.Bind(binding.SerializedObject);
+                row.NeedsBind = false;
+            }
+            row.Dropdown.Label = label;
+            row.Dropdown.Refresh();
         }
 
         void QueueRefresh()
