@@ -26,6 +26,13 @@ namespace Alchemy.Tests.EditorUI.EditMode
             host.nested.show = false;
             helper.ShowInspector(host);
 
+            var nestedFoldout = helper.InspectorRoot.Query<Foldout>().ToList().Single(element => element.text == "Nested");
+            nestedFoldout.value = true;
+            foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+                         helper.InspectorRoot.Query<AlchemyPropertyField>().ToList()
+                             .Any(element => (element.FieldElement as PropertyField)?.bindingPath == "nested.value")))
+                yield return wait;
+
             var root = Field("value");
             var nested = Field("nested.value");
             Assert.That(root.style.display.value, Is.EqualTo(DisplayStyle.None));
