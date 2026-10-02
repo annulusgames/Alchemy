@@ -588,10 +588,99 @@ namespace Alchemy.Tests.EditorUI.EditMode
             foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => appended.Q<Label>()?.style.width.value.value == 200f)) yield return wait;
         }
 
+        [UnityTest]
+        public IEnumerator Collection_AppendRefreshReusesRowsBoundToTheSameIndex()
+        {
+            var host = ScriptableObject.CreateInstance<ValueDropdownTestHost>();
+            try
+            {
+                host.values = new[] { 1, 2, 3 };
+                using var serialized = new SerializedObject(host);
+                var binding = new ValueDropdownBinding(serialized.FindProperty("values"),
+                    typeof(ValueDropdownTestHost).GetField("values"), typeof(int[]));
+                var attribute = new ValueDropdownAttribute(nameof(ValueDropdownTestHost.Numbers)) { Mode = ValueDropdownMode.Append };
+                var collection = new ValueDropdownCollectionElement(binding, attribute, "Values");
+                window = EditModeEditorTestUtility.ShowInWindow(collection);
+                var list = collection.Q<ListView>();
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+                {
+                    var found = list.Query<ValueDropdownElement>().ToList();
+                    return found.Count == 3 && found.All(row => row.Q<IntegerField>() != null);
+                })) yield return wait;
+                var rows = list.Query<ValueDropdownElement>().ToList();
+                var fields = rows.Select(row => row.Q<IntegerField>()).ToList();
+                Assert.That(rows.Select(row => row.Label), Is.EqualTo(new[] { "Element 0", "Element 1", "Element 2" }));
+                Assert.That(fields[1].enabledInHierarchy, Is.True);
+                Assert.That(rows[1].Q<Button>().text, Is.EqualTo("▾"));
+
+                binding.Set(1, new object[] { 4 });
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => fields[1].value == 4)) yield return wait;
+                for (var i = 0; i < 3; i++) yield return null;
+                Assert.That(list.Query<ValueDropdownElement>().ToList(), Is.EqualTo(rows));
+                Assert.That(rows.Select(row => row.Q<IntegerField>()).ToList(), Is.EqualTo(fields));
+                Assert.That(rows[1].Label, Is.EqualTo("Element 1"));
+                Assert.That(host.values, Is.EqualTo(new[] { 1, 4, 3 }));
+
+                binding.Append(new[] { new object[] { 8 } });
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => list.Query<ValueDropdownElement>().ToList().Count == 4)) yield return wait;
+                for (var i = 0; i < 3; i++) yield return null;
+                var appended = list.Query<ValueDropdownElement>().ToList();
+                Assert.That(appended.Take(3), Is.EqualTo(rows));
+                Assert.That(appended[3].Q<IntegerField>().value, Is.EqualTo(8));
+
+                binding.Remove(new[] { 0 });
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => rows[0].Q<IntegerField>().value == 4)) yield return wait;
+                for (var i = 0; i < 3; i++) yield return null;
+                Assert.That(rows[0].Q<IntegerField>(), Is.SameAs(fields[0]));
+                Assert.That(host.values, Is.EqualTo(new[] { 4, 3, 8 }));
+                Assert.That(rows[0].Label, Is.EqualTo("Element 0"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Collection_AppendReadOnlyRefreshKeepsTheRowDisabled()
+        {
+            var owner = new AppendListOwner();
+            var binding = new ValueDropdownBinding(owner, typeof(AppendListOwner).GetField("items"), typeof(List<int>),
+                () => owner.items, value => owner.items = (List<int>)value, null, null);
+            var attribute = new ValueDropdownAttribute(nameof(AppendListOwner.Choices)) { Mode = ValueDropdownMode.AppendReadOnly };
+            var collection = new ValueDropdownCollectionElement(binding, attribute, "Items");
+            window = EditModeEditorTestUtility.ShowInWindow(collection);
+            var list = collection.Q<ListView>();
+            foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+            {
+                var found = list.Query<ValueDropdownElement>().ToList();
+                return found.Count == 3 && found.All(row => row.Q<IntegerField>() != null);
+            })) yield return wait;
+            var row = list.Query<ValueDropdownElement>().ToList()[1];
+            var field = row.Q<IntegerField>();
+            Assert.That(field.enabledInHierarchy, Is.False);
+            Assert.That(row.Q<Button>().enabledInHierarchy, Is.True);
+
+            binding.Set(1, new object[] { 4 });
+            foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => row.Q<IntegerField>().value == 4)) yield return wait;
+            for (var i = 0; i < 3; i++) yield return null;
+            Assert.That(list.Query<ValueDropdownElement>().ToList()[1], Is.SameAs(row));
+            Assert.That(row.Q<IntegerField>().enabledInHierarchy, Is.False);
+            Assert.That(row.Q<Button>().enabledInHierarchy, Is.True);
+            Assert.That(row.Label, Is.EqualTo("Element 1"));
+            Assert.That(owner.items, Is.EqualTo(new[] { 1, 4, 3 }));
+        }
+
         class ScalarOwner
         {
             public int value = 1;
             public int[] Choices => new[] { 1, 2, 3 };
+        }
+
+        class AppendListOwner
+        {
+            public List<int> items = new List<int> { 1, 2, 3 };
+            public int[] Choices => new[] { 1, 2, 3, 4 };
         }
 
         class ReadOnlyCollections
@@ -656,6 +745,7 @@ namespace Alchemy.Tests.EditorUI.EditMode
     public class ValueDropdownTestHost : ScriptableObject
     {
         public int[] values;
+        public int[] Numbers => new[] { 1, 2, 3, 4, 8 };
         public int other;
         public List<string> tags;
         public List<Item> items;
