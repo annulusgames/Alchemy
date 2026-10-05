@@ -426,6 +426,13 @@ namespace Alchemy.Editor
                                     Undo.RegisterCompleteObjectUndo(GetProperty().serializedObject.targetObject, undoName);
                                 };
 
+                                // The field is written by reflection, not through a SerializedProperty, so nothing
+                                // marks the object dirty and a save would skip the edit.
+                                field.OnValueChanged += x =>
+                                {
+                                    EditorUtility.SetDirty(GetProperty().serializedObject.targetObject);
+                                };
+
                                 element = field;
                             }
                         }
