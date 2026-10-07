@@ -26,6 +26,16 @@ namespace Alchemy.Editor
         static DrawerTypeForTypeArguments drawerTypeForTypeArguments;
         static bool drawerTypeForTypeResolved;
 
+#if UNITY_2023_3_OR_NEWER
+        static InternalAPIHelper()
+        {
+            // Match Unity's drawer cache lifetime, including cached misses. A pipeline
+            // switch can change which SupportedOnRenderPipeline drawer Unity returns.
+            UnityEngine.Rendering.RenderPipelineManager.activeRenderPipelineCreated += drawerTypeForTypeCache.Clear;
+            UnityEngine.Rendering.RenderPipelineManager.activeRenderPipelineDisposed += drawerTypeForTypeCache.Clear;
+        }
+#endif
+
         enum DrawerTypeForTypeArguments
         {
             TypeOnly,
