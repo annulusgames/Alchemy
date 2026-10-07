@@ -169,6 +169,35 @@ namespace Alchemy.Tests.EditorUI.EditMode
             AssertState(scope, true, true);
         }
 
+        [UnityTest]
+        public IEnumerator Conditions_DetachCancelsPendingUpdatesBeforeReattachment()
+        {
+            using var serialized = new SerializedObject(CreateTarget(PrefabKind.None));
+            var scope = (PrefabConditionalElement)Wrap(serialized, new HideInAttribute(PrefabKind.Regular));
+            var window = EditModeEditorTestUtility.ShowInWindow(scope);
+            try
+            {
+                for (var i = 0; i < 3; i++)
+                {
+                    scope.QueueUpdate();
+                    scope.RemoveFromHierarchy();
+                    window.rootVisualElement.Add(scope);
+                }
+                var before = scope.AppliedUpdateCount;
+                scope.QueueUpdate();
+                var settled = false;
+                scope.schedule.Execute(() => settled = true).StartingIn(300);
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => settled)) yield return wait;
+
+                Assert.That(scope.AppliedUpdateCount - before, Is.EqualTo(1));
+            }
+            finally
+            {
+                window.Close();
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void Conditions_UsePrefabStageAssetContext(bool variant)

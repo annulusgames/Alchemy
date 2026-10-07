@@ -16,7 +16,7 @@ namespace Alchemy.Editor.Elements
         readonly PrefabKind? enableIn;
         readonly PrefabKind disableIn;
         bool subscribed;
-        bool updateQueued;
+        IVisualElementScheduledItem pendingUpdate;
         internal int AppliedUpdateCount { get; private set; }
 
         PrefabConditionalElement(UnityEngine.Object[] targets, PrefabKind? showIn, PrefabKind hideIn, PrefabKind? enableIn, PrefabKind disableIn)
@@ -146,7 +146,9 @@ namespace Alchemy.Editor.Elements
             PrefabUtility.prefabInstanceUnpacked -= OnPrefabInstanceUnpacked;
 #endif
             subscribed = false;
-            updateQueued = false;
+            // Scheduled items resume on reattach unless explicitly paused.
+            pendingUpdate?.Pause();
+            pendingUpdate = null;
         }
 
         // hierarchyChanged is at most once per editor update, which is still every frame in play mode.
@@ -158,15 +160,14 @@ namespace Alchemy.Editor.Elements
         void ScheduleUpdate(long delayMs)
         {
             PrefabKindUtility.InvalidatePrefabKindCache();
-            if (updateQueued || panel == null) return;
-            updateQueued = true;
-            var update = schedule.Execute(ApplyQueuedUpdate);
-            if (delayMs > 0) update.StartingIn(delayMs);
+            if (pendingUpdate != null || panel == null) return;
+            pendingUpdate = schedule.Execute(ApplyQueuedUpdate);
+            if (delayMs > 0) pendingUpdate.StartingIn(delayMs);
         }
 
         void ApplyQueuedUpdate()
         {
-            updateQueued = false;
+            pendingUpdate = null;
             if (panel == null) return;
             AppliedUpdateCount++;
             UpdateState();
