@@ -67,10 +67,9 @@ namespace Alchemy.Editor.Drawers
 #endif
 
         VisualElement rootElement;
-#if UNITY_2023_2_OR_NEWER
-        ToggleButtonGroup tabBar;
-#else
         VisualElement tabBar;
+#if UNITY_2023_2_OR_NEWER
+        ToggleButtonGroup segmentedTabBar;
 #endif
         readonly Dictionary<string, VisualElement> tabElements = new();
         readonly List<string> tabNames = new();
@@ -103,17 +102,26 @@ namespace Alchemy.Editor.Drawers
             toolbarHeight = EditorGUIUtility.singleLineHeight + bleed - 1f;
 #if UNITY_2023_2_OR_NEWER
             var initialBit = (uint)tabIndex < (uint)ToggleStateLength ? tabIndex : 0;
-            tabBar = new ToggleButtonGroup(new ToggleButtonGroupState(1UL << initialBit, ToggleStateLength))
+            segmentedTabBar = new ToggleButtonGroup(new ToggleButtonGroupState(1UL << initialBit, ToggleStateLength))
             {
                 allowEmptySelection = false,
                 isMultipleSelection = false,
             };
-            tabBar.RegisterValueChangedCallback(OnTabGroupChanged);
-            tabBar.contentContainer.style.flexGrow = 1f;
-            tabBar.contentContainer.style.flexDirection = FlexDirection.Row;
+            segmentedTabBar.RegisterValueChangedCallback(OnTabGroupChanged);
+            segmentedTabBar.contentContainer.style.flexGrow = 1f;
+            segmentedTabBar.contentContainer.style.flexDirection = FlexDirection.Row;
+            tabBar = segmentedTabBar;
 #else
             tabBar = new VisualElement();
 #endif
+            ConfigureTabBar();
+            rootElement.Add(tabBar);
+            return rootElement;
+        }
+
+        void ConfigureTabBar()
+        {
+            const float bleed = 3.7f;
             tabBar.style.flexDirection = FlexDirection.Row;
             tabBar.style.flexShrink = 0f;
             tabBar.style.width = Length.Percent(100f);
@@ -122,8 +130,6 @@ namespace Alchemy.Editor.Drawers
             tabBar.style.marginRight = -bleed;
             tabBar.style.marginTop = -bleed;
             tabBar.style.marginBottom = 1f;
-            rootElement.Add(tabBar);
-            return rootElement;
         }
 
         public override VisualElement GetGroupElement(Attribute attribute)
@@ -144,6 +150,10 @@ namespace Alchemy.Editor.Drawers
 
                 var index = tabNames.Count;
                 tabNames.Add(tabName);
+#if UNITY_2023_2_OR_NEWER
+                if (segmentedTabBar != null && index == ToggleStateLength)
+                    UseRegularButtons();
+#endif
                 tabBar.Add(CreateTabButton(tabName, index));
                 ApplyTabState();
             }
@@ -153,11 +163,13 @@ namespace Alchemy.Editor.Drawers
 
         Button CreateTabButton(string tabName, int index)
         {
+            var button = new Button(() =>
+            {
 #if UNITY_2023_2_OR_NEWER
-            var button = new Button()
-#else
-            var button = new Button(() => SelectTab(index))
+                if (segmentedTabBar != null) return;
 #endif
+                SelectTab(index);
+            })
             {
                 text = tabName,
                 style = {
@@ -195,6 +207,29 @@ namespace Alchemy.Editor.Drawers
         }
 
 #if UNITY_2023_2_OR_NEWER
+        // ToggleButtonGroup stores selection in a ulong. Keep all tabs accessible
+        // by switching to the ordinary-button implementation beyond its limit.
+        void UseRegularButtons()
+        {
+            var previous = segmentedTabBar;
+            previous.UnregisterValueChangedCallback(OnTabGroupChanged);
+            segmentedTabBar = null;
+            tabBar = new VisualElement();
+            ConfigureTabBar();
+            rootElement.Insert(rootElement.IndexOf(previous), tabBar);
+            foreach (var button in tabButtons)
+            {
+                button.RemoveFromHierarchy();
+                button.RemoveFromClassList(ToggleButtonGroup.buttonClassName);
+                button.RemoveFromClassList(ToggleButtonGroup.buttonLeftClassName);
+                button.RemoveFromClassList(ToggleButtonGroup.buttonMidClassName);
+                button.RemoveFromClassList(ToggleButtonGroup.buttonRightClassName);
+                button.RemoveFromClassList(ToggleButtonGroup.buttonStandaloneClassName);
+                tabBar.Add(button);
+            }
+            previous.RemoveFromHierarchy();
+        }
+
         void OnTabGroupChanged(ChangeEvent<ToggleButtonGroupState> evt)
         {
             var state = evt.newValue;
@@ -217,26 +252,26 @@ namespace Alchemy.Editor.Drawers
 
             var selectedIndex = (uint)tabIndex < (uint)count ? tabIndex : 0;
 #if UNITY_2023_2_OR_NEWER
-            tabBar.SetValueWithoutNotify(new ToggleButtonGroupState(1UL << selectedIndex, ToggleStateLength));
-#else
-            var last = count - 1;
+            if (segmentedTabBar != null)
+                segmentedTabBar.SetValueWithoutNotify(new ToggleButtonGroupState(1UL << selectedIndex, ToggleStateLength));
 #endif
             for (var i = 0; i < count; i++)
             {
                 var selected = i == selectedIndex;
                 tabElements[tabNames[i]].style.display = selected ? DisplayStyle.Flex : DisplayStyle.None;
 
-#if !UNITY_2023_2_OR_NEWER
+#if UNITY_2023_2_OR_NEWER
+                if (segmentedTabBar != null) continue;
+#endif
                 var button = tabButtons[i];
                 var first = i == 0;
                 button.style.borderTopLeftRadius = first ? 3f : 0f;
                 button.style.borderBottomLeftRadius = first ? 3f : 0f;
-                button.style.borderTopRightRadius = i == last ? 3f : 0f;
-                button.style.borderBottomRightRadius = i == last ? 3f : 0f;
+                button.style.borderTopRightRadius = i == count - 1 ? 3f : 0f;
+                button.style.borderBottomRightRadius = i == count - 1 ? 3f : 0f;
                 if (first) button.style.borderLeftWidth = StyleKeyword.Null;
                 else button.style.borderLeftWidth = 0f;
                 button.style.unityFontStyleAndWeight = selected ? FontStyle.Bold : StyleKeyword.Null;
-#endif
             }
         }
     }

@@ -153,6 +153,26 @@ namespace Alchemy.Tests.EditorUI.EditMode
             AssertVisible(built.tabs[1], true);
         }
 
+        [Test]
+        public void MoreThan64Tabs_RestoresAndSelectsTabsBeyondTheSegmentedControlLimit()
+        {
+            EditorUserSettings.SetConfigValue(configKey, "64");
+            var names = new string[66];
+            for (var i = 0; i < names.Length; i++) names[i] = "Tab " + i;
+            var built = Build(names);
+
+            Assert.That(built.buttons.Count, Is.EqualTo(66));
+            AssertVisible(built.tabs[64], true);
+            AssertVisible(built.tabs[0], false);
+            Click(built.buttons[65]);
+            Assert.That(EditorUserSettings.GetConfigValue(configKey), Is.EqualTo("65"));
+            AssertVisible(built.tabs[64], false);
+            AssertVisible(built.tabs[65], true);
+            Click(built.buttons[0]);
+            AssertVisible(built.tabs[0], true);
+            AssertVisible(built.tabs[65], false);
+        }
+
         BuiltTabs Build(params string[] names)
         {
             var drawer = new TabGroupDrawer();
