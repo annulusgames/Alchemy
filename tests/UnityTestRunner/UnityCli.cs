@@ -5,6 +5,7 @@ namespace Alchemy.UnityTestRunner;
 public sealed class UnityCli
 {
     private static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan EditorLaunchTimeout = TimeSpan.FromMinutes(5);
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -100,7 +101,10 @@ public sealed class UnityCli
                     "STATUS_NO_INSTANCES") ||
                 HasErrorCode(
                     result.StandardOutput,
-                    "STATUS_ALL_UNREACHABLE"))
+                    "STATUS_ALL_UNREACHABLE") ||
+                HasErrorCode(
+                    result.StandardOutput,
+                    "STATUS_PIPELINE_LOAD_PENDING"))
             {
                 return null;
             }
@@ -165,7 +169,7 @@ public sealed class UnityCli
                 project.ProjectPath));
         try
         {
-            var deadline = DateTimeOffset.UtcNow + CommandTimeout;
+            var deadline = DateTimeOffset.UtcNow + EditorLaunchTimeout;
             while (DateTimeOffset.UtcNow < deadline)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -191,7 +195,7 @@ public sealed class UnityCli
 
             throw new UnityExecutionException(
                 $"Unity {project.EditorVersion} did not start within " +
-                $"{CommandTimeout}.");
+                $"{EditorLaunchTimeout}.");
         }
         finally
         {
@@ -297,7 +301,8 @@ public sealed class UnityCli
         }
 
         var data = root.GetProperty("data");
-        if (!data.GetProperty("success").GetBoolean())
+        if (data.TryGetProperty("success", out var commandSuccess) &&
+            !commandSuccess.GetBoolean())
         {
             throw new UnityExecutionException(
                 $"Unity Pipeline command '{command}' failed for " +

@@ -15,7 +15,7 @@ dotnet run --project tests/UnityTestRunner --configuration Release -- --treenode
 dotnet run --project tests/UnityTestRunner --configuration Release -- --treenode-filter "/*/Alchemy.UnityTestRunner/Unity*EditorCaptureTests/*"
 ```
 
-The active test lanes are Unity 6000.0, 6000.3, 6000.5, and 6000.7, registered explicitly in `UnityTestRunner/UnityVersionTests.cs`. Each version has an EditMode test and a PlayMode test.
+The active test lanes are Unity 6000.0.84f1, 6000.3.25f1, 6000.6.4f1, and 7000.0.0a7, registered explicitly in `UnityTestRunner/UnityVersionTests.cs`. Each version has an EditMode test and a PlayMode test.
 
 Unity Editor logs are stored under each version project's `Logs/UnityTestRunner/<run-id>` directory. Unity logs and NUnit reports are attached to their TUnit test, and warning-or-higher entries are written to stderr.
 

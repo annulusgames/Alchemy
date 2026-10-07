@@ -14,7 +14,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: DefaultCompany
-  productName: Unity6000.7
+  productName: Unity7000.0
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.12156863, g: 0.12156863, b: 0.1254902, a: 1}
@@ -613,14 +613,14 @@ PlayerSettings:
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
   windowsCopyVCRuntime: 1
-  metroPackageName: Unity6000.7
+  metroPackageName: Unity7000.0
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: Unity6000.7
+  metroApplicationDescription: Unity7000.0
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
