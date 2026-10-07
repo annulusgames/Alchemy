@@ -26,7 +26,7 @@ dotnet run --project scripts/docs -- generate --dry-run
 ```
 
 ## Requirements
-- Unity 6000.3.23f1
+- Unity 6000.3.25f1
 - .NET 10 or later
 
 ## Sample convention

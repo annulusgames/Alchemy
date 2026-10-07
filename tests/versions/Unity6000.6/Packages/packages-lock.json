@@ -29,7 +29,7 @@
       "dependencies": {}
     },
     "com.unity.collections": {
-      "version": "6.7.0",
+      "version": "6.6.0",
       "depth": 1,
       "source": "builtin",
       "dependencies": {
@@ -40,7 +40,7 @@
       }
     },
     "com.unity.ext.nunit": {
-      "version": "2.1.1",
+      "version": "2.1.0",
       "depth": 2,
       "source": "builtin",
       "dependencies": {}
@@ -83,28 +83,23 @@
       }
     },
     "com.unity.test-framework": {
-      "version": "1.9.0",
+      "version": "1.8.0",
       "depth": 1,
       "source": "builtin",
       "dependencies": {
         "com.unity.ext.nunit": "2.1.0",
+        "com.unity.modules.imgui": "1.0.0",
         "com.unity.modules.jsonserialize": "1.0.0"
       }
     },
     "com.unity.test-framework.performance": {
-      "version": "6.7.0",
+      "version": "6.6.0",
       "depth": 2,
       "source": "builtin",
       "dependencies": {
         "com.unity.test-framework": "1.1.33",
         "com.unity.modules.jsonserialize": "1.0.0"
       }
-    },
-    "com.unity.modules.accessibility": {
-      "version": "1.0.0",
-      "depth": 1,
-      "source": "builtin",
-      "dependencies": {}
     },
     "com.unity.modules.animation": {
       "version": "1.0.0",
@@ -166,8 +161,7 @@
         "com.unity.modules.jsonserialize": "1.0.0",
         "com.unity.modules.hierarchycore": "1.0.0",
         "com.unity.modules.physics": "1.0.0",
-        "com.unity.modules.animation": "1.0.0",
-        "com.unity.modules.accessibility": "1.0.0"
+        "com.unity.modules.animation": "1.0.0"
       }
     }
   }

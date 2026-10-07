@@ -55,19 +55,19 @@ public sealed class Unity6000_3EditorCaptureTests :
 }
 
 [InheritsTests]
-public sealed class Unity6000_5EditorCaptureTests :
-    UnityEditorCaptureTests<Unity6000_5EditorCaptureTests>,
+public sealed class Unity6000_6EditorCaptureTests :
+    UnityEditorCaptureTests<Unity6000_6EditorCaptureTests>,
     IUnityEditorCaptureTestProject
 {
     public static UnityProject Project { get; } =
-        UnityProject.Locate("../versions/Unity6000.5");
+        UnityProject.Locate("../versions/Unity6000.6");
 }
 
 [InheritsTests]
-public sealed class Unity6000_7EditorCaptureTests :
-    UnityEditorCaptureTests<Unity6000_7EditorCaptureTests>,
+public sealed class Unity7000_0EditorCaptureTests :
+    UnityEditorCaptureTests<Unity7000_0EditorCaptureTests>,
     IUnityEditorCaptureTestProject
 {
     public static UnityProject Project { get; } =
-        UnityProject.Locate("../versions/Unity6000.7");
+        UnityProject.Locate("../versions/Unity7000.0");
 }
