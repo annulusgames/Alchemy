@@ -31,7 +31,12 @@ namespace Alchemy.Editor
         {
             // Match Unity's drawer cache lifetime, including cached misses. A pipeline
             // switch can change which SupportedOnRenderPipeline drawer Unity returns.
+            // Both handlers close over the same cache instance, so the detach pairs with the
+            // attach; a static constructor runs once per domain, so this only guards a future
+            // caller that subscribes from somewhere else.
+            UnityEngine.Rendering.RenderPipelineManager.activeRenderPipelineCreated -= drawerTypeForTypeCache.Clear;
             UnityEngine.Rendering.RenderPipelineManager.activeRenderPipelineCreated += drawerTypeForTypeCache.Clear;
+            UnityEngine.Rendering.RenderPipelineManager.activeRenderPipelineDisposed -= drawerTypeForTypeCache.Clear;
             UnityEngine.Rendering.RenderPipelineManager.activeRenderPipelineDisposed += drawerTypeForTypeCache.Clear;
         }
 #endif
