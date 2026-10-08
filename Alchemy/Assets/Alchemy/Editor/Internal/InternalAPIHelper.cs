@@ -69,6 +69,21 @@ namespace Alchemy.Editor
             return (Type)drawerTypeForTypeMethod.Invoke(null, CreateDrawerTypeArguments(classType, isManagedReferenceProperty));
         }
 
+        // ScriptAttributeUtility.GetDrawerTypeForType changed shape twice, so the argument list is
+        // resolved once per domain instead of per call. What each branch below selects:
+        //
+        //   #if branch             version            signature                            resolved shape
+        //   2023_3_OR_NEWER        2023.3+            (Type, Type[], bool)                 TypeNullAndManagedReference
+        //   2023_2_OR_NEWER        2023.2.15+         (Type, bool)                         TypeAndManagedReference
+        //                          2023.2.0 - .14     (Type)                               TypeOnly
+        //   2022_3_OR_NEWER        2022.3.23+         (Type, bool)                         TypeAndManagedReference
+        //                          2022.3.0 - .22     (Type)                               TypeOnly
+        //   else                   2022.2 and older   (Type)                               TypeOnly
+        //
+        // The Type[] is renderPipelineAssetTypes and Alchemy always passes null, which is what Unity's
+        // own per-property lookup does; drawerTypeForTypeCache is cleared on pipeline transitions instead.
+        // Version.Build is the patch number, so the 2022_3 branch also applies its >= 23 test to the
+        // 2023.1 patch stream, which that branch covers as well.
         static void ResolveDrawerTypeForType()
         {
             var utilityType = EditorAssembly.GetType(Name_ScriptAttributeUtility);
@@ -77,13 +92,11 @@ namespace Alchemy.Editor
 #if UNITY_2023_3_OR_NEWER
             drawerTypeForTypeArguments = DrawerTypeForTypeArguments.TypeNullAndManagedReference;
 #elif UNITY_2023_2_OR_NEWER
-            // Unity 2023.2.15f1 added a new parameter to the method
             var version = UnityEditorInternal.InternalEditorUtility.GetUnityVersion();
             drawerTypeForTypeArguments = version.Build >= 15
                 ? DrawerTypeForTypeArguments.TypeAndManagedReference
                 : DrawerTypeForTypeArguments.TypeOnly;
 #elif UNITY_2022_3_OR_NEWER
-            // Unity 2022.3.23f1 added a new parameter to the method
             var version = UnityEditorInternal.InternalEditorUtility.GetUnityVersion();
             drawerTypeForTypeArguments = version.Build >= 23
                 ? DrawerTypeForTypeArguments.TypeAndManagedReference
