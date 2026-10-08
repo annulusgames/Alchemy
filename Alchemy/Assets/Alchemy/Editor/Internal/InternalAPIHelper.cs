@@ -109,15 +109,12 @@ namespace Alchemy.Editor
 
         static object[] CreateDrawerTypeArguments(Type classType, bool isManagedReferenceProperty)
         {
-            switch (drawerTypeForTypeArguments)
+            return drawerTypeForTypeArguments switch
             {
-                case DrawerTypeForTypeArguments.TypeAndManagedReference:
-                    return new object[] { classType, isManagedReferenceProperty };
-                case DrawerTypeForTypeArguments.TypeNullAndManagedReference:
-                    return new object[] { classType, null, isManagedReferenceProperty };
-                default:
-                    return new object[] { classType };
-            }
+                DrawerTypeForTypeArguments.TypeAndManagedReference => new object[] { classType, isManagedReferenceProperty },
+                DrawerTypeForTypeArguments.TypeNullAndManagedReference => new object[] { classType, null, isManagedReferenceProperty },
+                _ => new object[] { classType },
+            };
         }
 
         const string Name_M_Clickable = "m_Clickable";
