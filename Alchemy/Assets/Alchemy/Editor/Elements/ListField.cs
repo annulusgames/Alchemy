@@ -51,8 +51,9 @@ namespace Alchemy.Editor.Elements
 
                 fieldElement.OnValueChanged += x =>
                 {
-                    list[((Item)element).index] = x;
-                    NotifyOnValueChanged();
+                    var itemIndex = ((Item)element).index;
+                    list[itemIndex] = x;
+                    NotifyOnElementChanged(itemIndex, x);
                 };
             };
             listView.unbindItem = (element, index) =>
@@ -83,6 +84,25 @@ namespace Alchemy.Editor.Elements
         Array array;
 
         public event Action<object> OnValueChanged;
+
+        void NotifyOnElementChanged(int index, object value)
+        {
+            if (arrayElementType == null)
+            {
+                OnValueChanged?.Invoke(list);
+                return;
+            }
+
+            // Length is unchanged, so callers still receive this array instance.
+            if (array.Length == list.Count)
+            {
+                array.SetValue(value, index);
+                OnValueChanged?.Invoke(array);
+                return;
+            }
+
+            NotifyOnValueChanged();
+        }
 
         void NotifyOnValueChanged()
         {
