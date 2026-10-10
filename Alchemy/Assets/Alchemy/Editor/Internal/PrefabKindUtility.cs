@@ -25,12 +25,19 @@ namespace Alchemy.Editor
         [InitializeOnLoadMethod]
         static void RegisterPrefabKindCacheInvalidation()
         {
+            // Unsubscribe first so a second registration pass cannot double-invoke the handlers.
+            EditorApplication.hierarchyChanged -= InvalidatePrefabKindCache;
             EditorApplication.hierarchyChanged += InvalidatePrefabKindCache;
+            EditorApplication.projectChanged -= InvalidatePrefabKindCache;
             EditorApplication.projectChanged += InvalidatePrefabKindCache;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            Undo.undoRedoPerformed -= InvalidatePrefabKindCache;
             Undo.undoRedoPerformed += InvalidatePrefabKindCache;
+            PrefabUtility.prefabInstanceUpdated -= OnPrefabInstanceUpdated;
             PrefabUtility.prefabInstanceUpdated += OnPrefabInstanceUpdated;
 #if UNITY_2022_2_OR_NEWER
+            PrefabUtility.prefabInstanceUnpacked -= OnPrefabInstanceUnpacked;
             PrefabUtility.prefabInstanceUnpacked += OnPrefabInstanceUnpacked;
 #endif
         }
@@ -42,6 +49,7 @@ namespace Alchemy.Editor
         {
             if (releaseScheduled) return;
             releaseScheduled = true;
+            EditorApplication.delayCall -= ReleasePrefabKindCache;
             EditorApplication.delayCall += ReleasePrefabKindCache;
         }
 

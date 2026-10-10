@@ -120,12 +120,19 @@ namespace Alchemy.Editor.Elements
         {
             if (!subscribed)
             {
+                // Unsubscribe first so a missed detach cannot leave a duplicate handler behind.
+                EditorApplication.hierarchyChanged -= QueueUpdate;
                 EditorApplication.hierarchyChanged += QueueUpdate;
+                EditorApplication.projectChanged -= QueueUpdate;
                 EditorApplication.projectChanged += QueueUpdate;
+                EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
                 EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+                Undo.undoRedoPerformed -= QueueUpdate;
                 Undo.undoRedoPerformed += QueueUpdate;
+                PrefabUtility.prefabInstanceUpdated -= OnPrefabInstanceUpdated;
                 PrefabUtility.prefabInstanceUpdated += OnPrefabInstanceUpdated;
 #if UNITY_2022_2_OR_NEWER
+                PrefabUtility.prefabInstanceUnpacked -= OnPrefabInstanceUnpacked;
                 PrefabUtility.prefabInstanceUnpacked += OnPrefabInstanceUnpacked;
 #endif
                 subscribed = true;
