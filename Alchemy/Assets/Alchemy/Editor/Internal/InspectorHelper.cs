@@ -61,11 +61,6 @@ namespace Alchemy.Editor
                 node.Parent = this;
             }
 
-            public void AddMember(MemberInfo memberInfo, int declaredAt)
-            {
-                AddMember(memberInfo, declaredAt, GetMemberOrder(memberInfo), GetOrderedGroupLayouts(memberInfo));
-            }
-
             internal void AddMember(MemberInfo memberInfo, int declaredAt, int order, GroupLayout[] groups)
             {
                 members.Add((memberInfo, declaredAt, order, groups));
@@ -128,26 +123,6 @@ namespace Alchemy.Editor
             public GroupLayout[] Groups { get; }
         }
 
-        // One reflection walk per concrete type. Group drawers are still created per build.
-        static readonly Dictionary<Type, MemberLayout[]> memberLayouts = new();
-        static readonly GroupLayout[] emptyGroups = Array.Empty<GroupLayout>();
-
-        readonly struct MemberLayout
-        {
-            public MemberLayout(MemberInfo member, int declaredAt, int order, GroupLayout[] groups)
-            {
-                Member = member;
-                DeclaredAt = declaredAt;
-                Order = order;
-                Groups = groups;
-            }
-
-            public MemberInfo Member { get; }
-            public int DeclaredAt { get; }
-            public int Order { get; }
-            public GroupLayout[] Groups { get; }
-        }
-
         internal readonly struct GroupLayout
         {
             public GroupLayout(PropertyGroupAttribute attribute, string[] hierarchy)
@@ -158,6 +133,75 @@ namespace Alchemy.Editor
 
             public PropertyGroupAttribute Attribute { get; }
             public string[] Hierarchy { get; }
+        }
+
+        /// <summary>
+        /// One reflection walk per concrete type. Group drawers are still created per build.
+        /// </summary>
+        static class MemberLayoutCache
+        {
+            static readonly Dictionary<Type, MemberLayout[]> layoutsByType = new();
+            static readonly GroupLayout[] emptyGroups = Array.Empty<GroupLayout>();
+
+            public readonly struct MemberLayout
+            {
+                public MemberLayout(MemberInfo member, int declaredAt, int order, GroupLayout[] groups)
+                {
+                    Member = member;
+                    DeclaredAt = declaredAt;
+                    Order = order;
+                    Groups = groups;
+                }
+
+                public MemberInfo Member { get; }
+                public int DeclaredAt { get; }
+                public int Order { get; }
+                public GroupLayout[] Groups { get; }
+            }
+
+            public static MemberLayout[] Get(Type targetType)
+            {
+                if (layoutsByType.TryGetValue(targetType, out var cached))
+                    return cached;
+
+                var layouts = Build(targetType);
+                layoutsByType.Add(targetType, layouts);
+                return layouts;
+            }
+
+            static MemberLayout[] Build(Type targetType)
+            {
+                var ordered = DeclarationOrderHelper.OrderMembers(
+                    targetType,
+                    ReflectionHelper.GetMembers(targetType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, true));
+
+                var layouts = new MemberLayout[ordered.Length];
+                for (var i = 0; i < ordered.Length; i++)
+                {
+                    var (member, declaredAt) = ordered[i];
+                    layouts[i] = new MemberLayout(member, declaredAt, GetMemberOrder(member), GetOrderedGroupLayouts(member));
+                }
+
+                return layouts;
+            }
+
+            static int GetMemberOrder(MemberInfo member)
+            {
+                var orderAttribute = member.GetCustomAttribute<OrderAttribute>();
+                return orderAttribute?.Order ?? 0;
+            }
+
+            // Path-length order matches the previous OrderBy(GroupPath.Split('/').Length), which is stable.
+            static GroupLayout[] GetOrderedGroupLayouts(MemberInfo member)
+            {
+                var attributes = member.GetCustomAttributes<PropertyGroupAttribute>(true).ToArray();
+                if (attributes.Length == 0) return emptyGroups;
+
+                return attributes
+                    .Select(attribute => new GroupLayout(attribute, attribute.GroupPath.Split('/')))
+                    .OrderBy(group => group.Hierarchy.Length)
+                    .ToArray();
+            }
         }
 
         public static void BuildElements(SerializedObject serializedObject, VisualElement rootElement, object target, Func<string, SerializedProperty> findPropertyFunc)
@@ -338,44 +382,6 @@ namespace Alchemy.Editor
             return false;
         }
 
-        static int GetMemberOrder(MemberInfo member)
-        {
-            var orderAttribute = member.GetCustomAttribute<OrderAttribute>();
-            return orderAttribute?.Order ?? 0;
-        }
-
-        static MemberLayout[] GetMemberLayouts(Type targetType)
-        {
-            if (memberLayouts.TryGetValue(targetType, out var cached))
-                return cached;
-
-            var ordered = DeclarationOrderHelper.OrderMembers(
-                targetType,
-                ReflectionHelper.GetMembers(targetType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, true));
-
-            var layouts = new MemberLayout[ordered.Length];
-            for (var i = 0; i < ordered.Length; i++)
-            {
-                var (member, declaredAt) = ordered[i];
-                layouts[i] = new MemberLayout(member, declaredAt, GetMemberOrder(member), GetOrderedGroupLayouts(member));
-            }
-
-            memberLayouts.Add(targetType, layouts);
-            return layouts;
-        }
-
-        // Path-length order matches the previous OrderBy(GroupPath.Split('/').Length), which is stable.
-        static GroupLayout[] GetOrderedGroupLayouts(MemberInfo member)
-        {
-            var attributes = member.GetCustomAttributes<PropertyGroupAttribute>(true).ToArray();
-            if (attributes.Length == 0) return emptyGroups;
-
-            return attributes
-                .Select(attribute => new GroupLayout(attribute, attribute.GroupPath.Split('/')))
-                .OrderBy(group => group.Hierarchy.Length)
-                .ToArray();
-        }
-
         // First attribute among the longest paths. Matches OrderByDescending(path length).First().
         static PropertyGroupAttribute GetLeafGroupAttribute(GroupLayout[] groups)
         {
@@ -396,7 +402,7 @@ namespace Alchemy.Editor
         {
             var rootNode = new GroupNode("Inspector-Group-Root", null);
 
-            foreach (var layout in GetMemberLayouts(targetType))
+            foreach (var layout in MemberLayoutCache.Get(targetType))
             {
                 if (layout.Groups.Length == 0)
                 {
