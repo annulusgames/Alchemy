@@ -180,6 +180,27 @@ namespace Alchemy.Tests.EditorUI.EditMode
         }
 
         [Test]
+        public void Validation_SingleTargetPendingArrayShrinkUsesLiveProperty()
+        {
+            var host = CreateHost();
+            var prefab = helper.CreatePrefabAsset(helper.Create("PrefabSource"));
+            host.sceneObjects = new[] { helper.Create("Scene"), prefab };
+
+            using var serializedObject = new SerializedObject(host);
+            var sceneObjects = serializedObject.FindProperty("sceneObjects");
+            Assert.That(SceneObjectsOnlyValidation.IsSerializedPropertyValid(sceneObjects), Is.False);
+
+            sceneObjects.arraySize = 1;
+
+            Assert.That(serializedObject.hasModifiedProperties, Is.True);
+            Assert.That(SceneObjectsOnlyValidation.IsSerializedPropertyValid(sceneObjects), Is.True);
+            Assert.That(serializedObject.hasModifiedProperties, Is.True);
+            Assert.That(host.sceneObjects.Length, Is.EqualTo(2));
+            Assert.That(host.sceneObjects[1], Is.SameAs(prefab));
+            Assert.That(sceneObjects.arraySize, Is.EqualTo(1));
+        }
+
+        [Test]
         public void Validation_SupportsScriptableObjectTargets()
         {
             var asset = helper.Track(ScriptableObject.CreateInstance<SceneObjectsOnlyScriptable>());
