@@ -50,9 +50,14 @@ namespace Alchemy.Editor
             public VisualElement VisualElement { get; set; }
             public GroupNode Parent { get; private set; }
 
-            public GroupNode Find(Func<GroupNode, bool> predicate)
+            public GroupNode FindChild(string name)
             {
-                return children.FirstOrDefault(predicate);
+                foreach (var child in children)
+                {
+                    if (child.Name == name) return child;
+                }
+
+                return null;
             }
 
             public void Add(GroupNode node)
@@ -125,14 +130,75 @@ namespace Alchemy.Editor
 
         internal readonly struct GroupLayout
         {
-            public GroupLayout(PropertyGroupAttribute attribute, string[] hierarchy)
+            public GroupLayout(PropertyGroupAttribute attribute, GroupPath path)
             {
                 Attribute = attribute;
-                Hierarchy = hierarchy;
+                Path = path;
             }
 
             public PropertyGroupAttribute Attribute { get; }
-            public string[] Hierarchy { get; }
+            public GroupPath Path { get; }
+        }
+
+        /// <summary>
+        /// Split form of a <see cref="PropertyGroupAttribute.GroupPath"/>. One instance is shared by
+        /// every attribute spelling the same path, so both arrays are read-only by contract.
+        /// </summary>
+        internal sealed class GroupPath
+        {
+            public GroupPath(string[] names, string[] nodePaths)
+            {
+                this.names = names;
+                this.nodePaths = nodePaths;
+            }
+
+            readonly string[] names;
+            readonly string[] nodePaths;
+
+            /// <summary>Group names from the root down to the leaf.</summary>
+            public string[] Names => names;
+            /// <summary>Path of each group in <see cref="Names"/>: "A", then "A/B", then "A/B/C".</summary>
+            public string[] NodePaths => nodePaths;
+            public int Depth => names.Length;
+        }
+
+        /// <summary>
+        /// One split per distinct group path, shared across every member and type that spells it.
+        /// </summary>
+        static class GroupPathCache
+        {
+            static readonly Dictionary<string, GroupPath> pathsByValue = new();
+
+            public static GroupPath Get(string groupPath)
+            {
+                if (pathsByValue.TryGetValue(groupPath, out var cached))
+                    return cached;
+
+                var path = Build(groupPath);
+                pathsByValue.Add(groupPath, path);
+                return path;
+            }
+
+            static GroupPath Build(string groupPath)
+            {
+                // The common case is a single group name, where the path is both the only name and
+                // the only node path, so one array can serve as both.
+                if (groupPath.IndexOf('/') < 0)
+                {
+                    var single = new[] { groupPath };
+                    return new GroupPath(single, single);
+                }
+
+                var names = groupPath.Split('/');
+                var nodePaths = new string[names.Length];
+                for (var i = 0; i < names.Length - 1; i++)
+                {
+                    nodePaths[i] = string.Join("/", names, 0, i + 1);
+                }
+                nodePaths[names.Length - 1] = groupPath;
+
+                return new GroupPath(names, nodePaths);
+            }
         }
 
         /// <summary>
@@ -191,16 +257,33 @@ namespace Alchemy.Editor
                 return orderAttribute?.Order ?? 0;
             }
 
-            // Path-length order matches the previous OrderBy(GroupPath.Split('/').Length), which is stable.
+            // Shallowest path first. The insertion sort keeps attributes of equal depth in
+            // declaration order, matching the previous stable OrderBy(path length).
             static GroupLayout[] GetOrderedGroupLayouts(MemberInfo member)
             {
-                var attributes = member.GetCustomAttributes<PropertyGroupAttribute>(true).ToArray();
+                // Attribute.GetCustomAttributes is what GetCustomAttributes<T>(inherit) calls, minus
+                // the cast iterator and the copy. MemberInfo.GetCustomAttributes is not equivalent:
+                // it ignores inherit on properties.
+                var attributes = Attribute.GetCustomAttributes(member, typeof(PropertyGroupAttribute), true);
                 if (attributes.Length == 0) return emptyGroups;
 
-                return attributes
-                    .Select(attribute => new GroupLayout(attribute, attribute.GroupPath.Split('/')))
-                    .OrderBy(group => group.Hierarchy.Length)
-                    .ToArray();
+                var layouts = new GroupLayout[attributes.Length];
+                for (var i = 0; i < attributes.Length; i++)
+                {
+                    var attribute = (PropertyGroupAttribute)attributes[i];
+                    var layout = new GroupLayout(attribute, GroupPathCache.Get(attribute.GroupPath));
+
+                    var j = i - 1;
+                    while (j >= 0 && layouts[j].Path.Depth > layout.Path.Depth)
+                    {
+                        layouts[j + 1] = layouts[j];
+                        j--;
+                    }
+
+                    layouts[j + 1] = layout;
+                }
+
+                return layouts;
             }
         }
 
@@ -388,10 +471,10 @@ namespace Alchemy.Editor
             if (groups == null || groups.Length == 0) return null;
 
             var leaf = groups[groups.Length - 1];
-            var depth = leaf.Hierarchy.Length;
+            var depth = leaf.Path.Depth;
             for (var i = groups.Length - 2; i >= 0; i--)
             {
-                if (groups[i].Hierarchy.Length != depth) break;
+                if (groups[i].Path.Depth != depth) break;
                 leaf = groups[i];
             }
 
@@ -414,16 +497,15 @@ namespace Alchemy.Editor
 
                 foreach (var group in layout.Groups)
                 {
-                    var hierarchy = group.Hierarchy;
+                    var names = group.Path.Names;
                     parentNode = rootNode;
-                    for (var i = 0; i < hierarchy.Length; i++)
+                    for (var i = 0; i < names.Length; i++)
                     {
-                        var groupName = hierarchy[i];
-                        var next = parentNode.Find(x => x.Name == groupName);
+                        var groupName = names[i];
+                        var next = parentNode.FindChild(groupName);
                         if (next == null)
                         {
-                            var nodePath = string.Join("/", hierarchy.Take(i + 1));
-                            var drawer = AlchemyEditorUtility.CreateGroupDrawer(group.Attribute, targetType, nodePath);
+                            var drawer = AlchemyEditorUtility.CreateGroupDrawer(group.Attribute, targetType, group.Path.NodePaths[i]);
                             next = new GroupNode(groupName, drawer);
                             parentNode.Add(next);
                         }
@@ -432,7 +514,7 @@ namespace Alchemy.Editor
                         next.NotifyDeclaredAt(layout.DeclaredAt);
 
                         // Order on a group attribute applies to the leaf group of that path.
-                        if (i == hierarchy.Length - 1)
+                        if (i == names.Length - 1)
                         {
                             next.RegisterOrder(group.Attribute);
                         }
