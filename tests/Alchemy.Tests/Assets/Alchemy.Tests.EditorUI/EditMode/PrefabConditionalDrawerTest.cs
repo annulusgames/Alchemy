@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using Alchemy.Editor;
 using Alchemy.Editor.Elements;
 using Alchemy.Inspector;
 using NUnit.Framework;
@@ -111,6 +112,42 @@ namespace Alchemy.Tests.EditorUI.EditMode
         }
 
         [UnityTest]
+        public IEnumerator Conditions_ApplyFinalPrefabKindAfterCoalescedHierarchyEvents()
+        {
+            var asset = helper.CreatePrefabAsset(helper.CreateHost<PrefabConditionalHost>().gameObject);
+            var instance = helper.InstantiatePrefab(asset);
+            var host = instance.GetComponent<PrefabConditionalHost>();
+            helper.ShowInspector(host);
+            var scope = (PrefabConditionalElement)FieldScope("sceneOnly");
+            AssertState(scope, false, true);
+
+            // hierarchyChanged is not synchronous. Drive the handler for a burst, refill the
+            // kind cache, then unpack while that refresh is still pending.
+            scope.QueueUpdate();
+            scope.QueueUpdate();
+            scope.QueueUpdate();
+            Assert.That(scope.AppliedUpdateCount, Is.EqualTo(0));
+            Assert.That(PrefabKindUtility.GetPrefabKind(host), Is.EqualTo(PrefabKind.InstanceInScene));
+            PrefabUtility.UnpackPrefabInstance(instance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+
+            foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+                scope.AppliedUpdateCount >= 1 &&
+                scope.style.display.value == DisplayStyle.Flex &&
+                FieldScope("hiddenInScene").style.display.value == DisplayStyle.None &&
+                FieldScope("editableInScene").enabledInHierarchy &&
+                !FieldScope("disabledInScene").enabledInHierarchy))
+            {
+                yield return wait;
+            }
+
+            Assert.That(scope.AppliedUpdateCount, Is.EqualTo(1));
+            AssertState(scope, true, true);
+            AssertState(FieldScope("hiddenInScene"), false, true);
+            AssertState(FieldScope("editableInScene"), true, true);
+            AssertState(FieldScope("disabledInScene"), true, false);
+        }
+
+        [UnityTest]
         public IEnumerator Conditions_RefreshAfterUnpackAndReattachment()
         {
             var asset = helper.CreatePrefabAsset(helper.CreateHost<PrefabConditionalHost>().gameObject);
@@ -119,14 +156,46 @@ namespace Alchemy.Tests.EditorUI.EditMode
             var scope = FieldScope("sceneOnly");
             AssertState(scope, false, true);
             PrefabUtility.UnpackPrefabInstance(instance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-            yield return null;
+            foreach (var wait in EditModeEditorTestUtility.WaitUntil(() =>
+                scope.style.display.value == DisplayStyle.Flex))
+            {
+                yield return wait;
+            }
             AssertState(scope, true, true);
 
             var root = helper.InspectorRoot;
             root.RemoveFromHierarchy();
             helper.Window.rootVisualElement.Add(root);
-            yield return null;
             AssertState(scope, true, true);
+        }
+
+        [UnityTest]
+        public IEnumerator Conditions_DetachCancelsPendingUpdatesBeforeReattachment()
+        {
+            using var serialized = new SerializedObject(CreateTarget(PrefabKind.None));
+            var scope = (PrefabConditionalElement)Wrap(serialized, new HideInAttribute(PrefabKind.Regular));
+            var window = EditModeEditorTestUtility.ShowInWindow(scope);
+            try
+            {
+                for (var i = 0; i < 3; i++)
+                {
+                    scope.QueueUpdate();
+                    scope.RemoveFromHierarchy();
+                    window.rootVisualElement.Add(scope);
+                }
+                var before = scope.AppliedUpdateCount;
+                scope.QueueUpdate();
+                var settled = false;
+                scope.schedule.Execute(() => settled = true).StartingIn(300);
+                foreach (var wait in EditModeEditorTestUtility.WaitUntil(() => settled)) yield return wait;
+
+                Assert.That(scope.AppliedUpdateCount - before, Is.EqualTo(1));
+            }
+            finally
+            {
+                window.Close();
+                UnityEngine.Object.DestroyImmediate(window);
+            }
         }
 
         [TestCase(false)]

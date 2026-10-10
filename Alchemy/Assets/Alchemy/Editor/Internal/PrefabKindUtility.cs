@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Alchemy.Inspector;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -7,7 +9,77 @@ namespace Alchemy.Editor
 {
     internal static class PrefabKindUtility
     {
+        static Dictionary<UnityEngine.Object, PrefabKind> cache;
+        static bool releaseScheduled;
+
+        // UnityEngine.Object equality treats destroyed objects as null, so key by reference.
+        sealed class TargetReferenceComparer : IEqualityComparer<UnityEngine.Object>
+        {
+            public static readonly TargetReferenceComparer Instance = new();
+
+            public bool Equals(UnityEngine.Object x, UnityEngine.Object y) => ReferenceEquals(x, y);
+
+            public int GetHashCode(UnityEngine.Object obj) => RuntimeHelpers.GetHashCode(obj);
+        }
+
+        [InitializeOnLoadMethod]
+        static void RegisterPrefabKindCacheInvalidation()
+        {
+            // Unsubscribe first so a second registration pass cannot double-invoke the handlers.
+            EditorApplication.hierarchyChanged -= InvalidatePrefabKindCache;
+            EditorApplication.hierarchyChanged += InvalidatePrefabKindCache;
+            EditorApplication.projectChanged -= InvalidatePrefabKindCache;
+            EditorApplication.projectChanged += InvalidatePrefabKindCache;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            Undo.undoRedoPerformed -= InvalidatePrefabKindCache;
+            Undo.undoRedoPerformed += InvalidatePrefabKindCache;
+            PrefabUtility.prefabInstanceUpdated -= OnPrefabInstanceUpdated;
+            PrefabUtility.prefabInstanceUpdated += OnPrefabInstanceUpdated;
+#if UNITY_2022_2_OR_NEWER
+            PrefabUtility.prefabInstanceUnpacked -= OnPrefabInstanceUnpacked;
+            PrefabUtility.prefabInstanceUnpacked += OnPrefabInstanceUnpacked;
+#endif
+        }
+
+        // Drop cached kinds before deferred ShowIn/HideIn/EnableIn/DisableIn updates read them.
+        internal static void InvalidatePrefabKindCache() => cache?.Clear();
+
+        static void ScheduleCacheRelease()
+        {
+            if (releaseScheduled) return;
+            releaseScheduled = true;
+            EditorApplication.delayCall -= ReleasePrefabKindCache;
+            EditorApplication.delayCall += ReleasePrefabKindCache;
+        }
+
+        static void ReleasePrefabKindCache()
+        {
+            releaseScheduled = false;
+            cache?.Clear();
+        }
+
+        static void OnPlayModeStateChanged(PlayModeStateChange state) => InvalidatePrefabKindCache();
+
+        static void OnPrefabInstanceUpdated(GameObject instance) => InvalidatePrefabKindCache();
+
+#if UNITY_2022_2_OR_NEWER
+        static void OnPrefabInstanceUnpacked(GameObject instance, PrefabUnpackMode unpackMode) => InvalidatePrefabKindCache();
+#endif
+
         public static PrefabKind GetPrefabKind(UnityEngine.Object target)
+        {
+            if (target == null) return PrefabKind.None;
+            if (cache != null && cache.TryGetValue(target, out var cached)) return cached;
+
+            var kind = ComputePrefabKind(target);
+            cache ??= new Dictionary<UnityEngine.Object, PrefabKind>(TargetReferenceComparer.Instance);
+            cache[target] = kind;
+            ScheduleCacheRelease();
+            return kind;
+        }
+
+        static PrefabKind ComputePrefabKind(UnityEngine.Object target)
         {
             if (target == null) return PrefabKind.None;
 
