@@ -103,7 +103,7 @@ namespace Alchemy.Editor.Drawers
                     alchemyPropertyField.Label = labelTextAttribute.Text;
                     break;
                 case MethodButton methodButton:
-                    methodButton.SetLableText(labelTextAttribute.Text);
+                    methodButton.SetLabelText(labelTextAttribute.Text);
                     break;
                 case Button button:
                     button.text = labelTextAttribute.Text;

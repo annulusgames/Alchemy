@@ -30,7 +30,7 @@ namespace Alchemy.Editor.Elements
             Add(box);
 
             string parameterSignature = string.Join("_", parameters.Select(p => p.ParameterType.Name));
-            string configKey = $"{target.GetType().FullName}_{methodInfo.Name}_{parameterSignature}_MethodButton";
+            string configKey = $"{(target?.GetType() ?? methodInfo.DeclaringType).FullName}_{methodInfo.Name}_{parameterSignature}_MethodButton";
             bool.TryParse(EditorUserSettings.GetConfigValue(configKey), out bool savedFoldoutValue);
 
             foldout = new Foldout()
@@ -81,7 +81,10 @@ namespace Alchemy.Editor.Elements
         readonly Foldout foldout;
         readonly Button button;
 
-        public void SetLableText(string labelText)
+        [System.Obsolete("Use SetLabelText instead.")]
+        public void SetLableText(string labelText) => SetLabelText(labelText);
+
+        public void SetLabelText(string labelText)
         {
             var foldout = this.Q<Foldout>();
             if (foldout != null)

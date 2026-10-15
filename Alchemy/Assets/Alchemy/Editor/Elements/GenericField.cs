@@ -188,7 +188,7 @@ namespace Alchemy.Editor.Elements
             }
             else if (type == typeof(char))
             {
-                var charField = new TextField(label, 1, false, false, default) { value = ((char)obj).ToString() };
+                var charField = new TextField(label, 1, false, false, default) { value = ((char)obj).ToString(), isDelayed = isDelayed };
                 charField.RegisterValueChangedCallback(x =>
                 {
                     if (string.IsNullOrEmpty(x.newValue)) return;
@@ -253,10 +253,6 @@ namespace Alchemy.Editor.Elements
             else if (type == typeof(AnimationCurve))
             {
                 AddField(new CurveField(label), (AnimationCurve)obj);
-            }
-            else if (type == typeof(Gradient))
-            {
-                AddField(new GradientField(label), (Gradient)obj);
             }
             else if (typeof(UnityEngine.Object).IsAssignableFrom(type))
             {

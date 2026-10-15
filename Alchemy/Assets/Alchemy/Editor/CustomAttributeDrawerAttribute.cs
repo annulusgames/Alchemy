@@ -14,6 +14,9 @@ namespace Alchemy.Editor
         }
 
         public readonly Type targetAttributeType;
+        /// <summary>
+        /// Reserved for future use. Currently not referenced when resolving drawers; the first registered drawer for an attribute type is used.
+        /// </summary>
         public readonly int order;
     }
 }

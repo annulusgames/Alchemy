@@ -10,7 +10,7 @@ namespace Alchemy.Editor
         {
             string path = outsideScope ? $"{relativePath}/{nameAsset}" : AssetInPackagePath(relativePath, nameAsset);
             var t = AssetDatabase.LoadAssetAtPath(path, typeof(T));
-            if (t == null) Debug.LogError($"Couldn't load the {nameof(T)} at path :{path}");
+            if (t == null) Debug.LogError($"Couldn't load the {typeof(T).Name} at path :{path}");
             return t as T;
         }
 
