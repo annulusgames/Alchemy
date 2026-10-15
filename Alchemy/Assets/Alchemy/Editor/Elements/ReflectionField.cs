@@ -25,7 +25,7 @@ namespace Alchemy.Editor.Elements
                     var button = new MethodButton(target, methodInfo);
                     if (methodInfo.TryGetCustomAttribute(out LabelTextAttribute labelText))
                     {
-                        button.SetLableText(labelText.Text);
+                        button.SetLabelText(labelText.Text);
                     }
                     Add(button);
                 }
