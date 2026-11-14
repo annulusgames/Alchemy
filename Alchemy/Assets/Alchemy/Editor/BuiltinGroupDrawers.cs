@@ -167,6 +167,9 @@ namespace Alchemy.Editor.Drawers
 
             foldout.RegisterValueChangedCallback(x =>
             {
+                // ChangeEvent<bool> bubbles up from bool fields and nested foldouts in the group,
+                // and saving those would overwrite this foldout's own state.
+                if (x.target != foldout) return;
                 EditorUserSettings.SetConfigValue(configKey, x.newValue.ToString());
             });
 
