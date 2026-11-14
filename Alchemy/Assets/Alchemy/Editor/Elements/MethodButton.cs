@@ -43,6 +43,9 @@ namespace Alchemy.Editor.Elements
             };
             foldout.RegisterValueChangedCallback(x =>
             {
+                // ChangeEvent<bool> bubbles up from bool parameters and nested foldouts,
+                // and saving those would overwrite this foldout's own state.
+                if (x.target != foldout) return;
                 EditorUserSettings.SetConfigValue(configKey, x.newValue.ToString());
             });
             InternalAPIHelper.SetAcceptClicksIfDisabled(
