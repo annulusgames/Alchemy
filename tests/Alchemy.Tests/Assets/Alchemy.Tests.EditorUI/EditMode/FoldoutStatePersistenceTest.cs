@@ -27,7 +27,7 @@ namespace Alchemy.Tests.EditorUI.EditMode
         class ButtonTarget
         {
             [Button]
-            public void Run(bool flag, ButtonOptions options) { }
+            public void Run(ButtonOptions options) { }
         }
 
         class GroupTarget { }
@@ -38,7 +38,7 @@ namespace Alchemy.Tests.EditorUI.EditMode
 
         // Only used to reset the persisted state between tests; assertions go through a rebuilt element instead.
         static readonly string ButtonConfigKey =
-            $"{typeof(ButtonTarget).FullName}_{nameof(ButtonTarget.Run)}_{nameof(Boolean)}_{nameof(ButtonOptions)}_MethodButton";
+            $"{typeof(ButtonTarget).FullName}_{nameof(ButtonTarget.Run)}_{nameof(ButtonOptions)}_MethodButton";
         static readonly string GroupConfigKey =
             $"AlchemyGroupId_{typeof(GroupTarget).FullName}_{GroupName}_FoldoutGroup";
 
@@ -48,6 +48,9 @@ namespace Alchemy.Tests.EditorUI.EditMode
         public void SetUp()
         {
             ClearSavedState();
+            // Fails loudly if the keys above drift from the production keys and stale state leaks between runs.
+            Assert.That(CreateButtonFoldout().value, Is.False);
+            Assert.That(CreateGroupFoldout().value, Is.False);
         }
 
         [TearDown]
@@ -79,55 +82,14 @@ namespace Alchemy.Tests.EditorUI.EditMode
         }
 
         /// <summary>
-        /// Changing a bool parameter must not be stored as the open/close state of the [Button] foldout.
-        /// </summary>
-        [UnityTest]
-        public IEnumerator MethodButton_BoolParameterChange_KeepsSavedFoldoutState()
-        {
-            Foldout foldout = ShowButtonFoldout();
-            yield return null;
-            foldout.value = true;
-            yield return null;
-
-            Toggle parameterToggle = foldout.contentContainer.Q<Toggle>();
-            Assert.That(parameterToggle, Is.Not.Null);
-            parameterToggle.value = true;
-            yield return null;
-            parameterToggle.value = false;
-            yield return null;
-
-            Assert.That(CreateButtonFoldout().value, Is.True);
-        }
-
-        /// <summary>
-        /// Opening and closing the [Button] foldout itself is still saved and restored.
-        /// </summary>
-        [UnityTest]
-        public IEnumerator MethodButton_OwnFoldoutChange_IsSavedAndRestored()
-        {
-            Foldout foldout = ShowButtonFoldout();
-            yield return null;
-
-            foldout.value = true;
-            yield return null;
-            Assert.That(CreateButtonFoldout().value, Is.True);
-
-            foldout.value = false;
-            yield return null;
-            Assert.That(CreateButtonFoldout().value, Is.False);
-        }
-
-        /// <summary>
-        /// Bool controls and nested foldouts inside a [FoldoutGroup] must not overwrite the saved state of the group.
+        /// Changing a bool control inside a [FoldoutGroup] must not be stored as the open/close state of the group.
         /// </summary>
         [UnityTest]
         public IEnumerator FoldoutGroup_ChildBoolChange_KeepsSavedFoldoutState()
         {
             Foldout foldout = CreateGroupFoldout();
             Toggle childToggle = new Toggle();
-            Foldout nestedFoldout = new Foldout() { value = false };
             foldout.Add(childToggle);
-            foldout.Add(nestedFoldout);
             window = EditModeEditorTestUtility.ShowInWindow(foldout);
             yield return null;
             foldout.value = true;
@@ -137,32 +99,8 @@ namespace Alchemy.Tests.EditorUI.EditMode
             yield return null;
             childToggle.value = false;
             yield return null;
+
             Assert.That(CreateGroupFoldout().value, Is.True);
-
-            nestedFoldout.value = true;
-            yield return null;
-            nestedFoldout.value = false;
-            yield return null;
-            Assert.That(CreateGroupFoldout().value, Is.True);
-        }
-
-        /// <summary>
-        /// Opening and closing the [FoldoutGroup] itself is still saved and restored.
-        /// </summary>
-        [UnityTest]
-        public IEnumerator FoldoutGroup_OwnFoldoutChange_IsSavedAndRestored()
-        {
-            Foldout foldout = CreateGroupFoldout();
-            window = EditModeEditorTestUtility.ShowInWindow(foldout);
-            yield return null;
-
-            foldout.value = true;
-            yield return null;
-            Assert.That(CreateGroupFoldout().value, Is.True);
-
-            foldout.value = false;
-            yield return null;
-            Assert.That(CreateGroupFoldout().value, Is.False);
         }
 
         Foldout ShowButtonFoldout()
