@@ -31,6 +31,12 @@ Alternatively, you can add the following line to the dependencies block in your 
 }
 ```
 
+## Using Assembly Definition Files
+
+If your scripts are compiled by an assembly definition (`.asmdef`), add a reference to Alchemy's `Alchemy` assembly in the Assembly Definition References list. The `Alchemy.Editor` assembly is only needed for scripts that use editor-only Alchemy APIs, such as `AlchemyEditorWindow`; put those scripts in an assembly restricted to the Editor platform.
+
+The package already defines these assemblies. Add references from your own assemblies rather than creating or editing an assembly definition inside the Alchemy package. A `using` directive does not add an assembly reference.
+
 ## Install from a `.unitypackage` File
 
 You can also install Alchemy from a `.unitypackage` file.
